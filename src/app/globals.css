@@ -234,8 +234,19 @@ input { border-radius: var(--r-md) !important; }
 
 /* ── Selection ── */
 ::selection {
-  background: var(--accent-dim);
+  background: rgba(0, 0, 0, 0.16);
   color: var(--text);
+}
+
+.dark ::selection {
+  background: rgba(237, 237, 237, 0.28);
+  color: #FFFFFF;
+}
+
+.dark input::selection,
+.dark textarea::selection {
+  background: rgba(237, 237, 237, 0.9);
+  color: #0E0E0E;
 }
 
 /* ── Typography ── */

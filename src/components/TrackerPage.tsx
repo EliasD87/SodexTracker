@@ -2,26 +2,25 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { CornerMarks } from "@/components/CornerMarks";
 import { CountUp } from "@/components/CountUp";
 import { TokenIcon } from "@/components/TokenIcon";
 import { tickerLabel } from "@/lib/tokenIcons";
 import { cachedApiFetch, clearFetchCachePrefix } from "@/lib/fetchCache";
 import { FundFlowCard } from "@/components/FundFlowCard";
+import { supabase } from "@/lib/supabase";
 import {
   Search,
   X,
   Copy,
   Check,
   TrendingUp,
-  Trophy,
-  BarChart3,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
   ExternalLink,
   RefreshCw,
-  Layers,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -29,7 +28,12 @@ import {
   Link2,
   Unlink,
   Lock,
+  Plus,
+  Folder,
+  Palette,
+  UserRound,
 } from "lucide-react";
+import Link from "next/link";
 
 /* ════════════════════════════════════════════════════════════════
    Types
@@ -284,6 +288,65 @@ function timeAgo(ts: number): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+interface WatchlistEntry {
+  id: string;
+  name: string;
+  address: string;
+  color: string;
+  groupId: string;
+}
+
+interface WatchlistGroup {
+  id: string;
+  name: string;
+}
+
+interface WatchlistGroupRow {
+  id: string;
+  name: string;
+  user_id: string;
+}
+
+interface WatchlistAddressRow {
+  id: string;
+  name: string;
+  address: string;
+  color: string;
+  group_id: string;
+  user_id: string;
+}
+
+const WATCHLIST_STORAGE_KEY = "sodex-watchlist-v1";
+const WATCHLIST_GROUPS_STORAGE_KEY = "sodex-watchlist-groups-v1";
+const WATCHLIST_COLORS = ["#35C77F", "#60A5FA", "#F59E0B", "#F0616D", "#A78BFA", "#EDEDED"];
+
+const DEFAULT_WATCHLIST_GROUPS: WatchlistGroup[] = [
+  { id: "main", name: "Main" },
+  { id: "whales", name: "Whales" },
+];
+
+function readStoredWatchlistGroups(): WatchlistGroup[] {
+  if (typeof window === "undefined") return DEFAULT_WATCHLIST_GROUPS;
+  try {
+    const saved = window.localStorage.getItem(WATCHLIST_GROUPS_STORAGE_KEY);
+    if (!saved) return DEFAULT_WATCHLIST_GROUPS;
+    const parsed = JSON.parse(saved) as WatchlistGroup[];
+    return parsed.length > 0 ? parsed : DEFAULT_WATCHLIST_GROUPS;
+  } catch {
+    return DEFAULT_WATCHLIST_GROUPS;
+  }
+}
+
+function readStoredWatchlist(): WatchlistEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = window.localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    return saved ? (JSON.parse(saved) as WatchlistEntry[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -597,16 +660,240 @@ function SearchHero({
   setSearchFocused,
   searchRef,
   error,
+  onTrackAddress,
 }: {
   searchInput: string;
   setSearchInput: (v: string) => void;
   onSearch: () => void;
+  onTrackAddress: (addr: string) => void;
   searchPending: boolean;
   searchFocused: boolean;
   setSearchFocused: (v: boolean) => void;
   searchRef: React.RefObject<HTMLInputElement | null>;
   error: string | null;
 }) {
+  const [watchlist, setWatchlist] = useState<WatchlistEntry[]>([]);
+  const [groups, setGroups] = useState<WatchlistGroup[]>(DEFAULT_WATCHLIST_GROUPS);
+  const [activeGroupId, setActiveGroupId] = useState(DEFAULT_WATCHLIST_GROUPS[0].id);
+  const [entryName, setEntryName] = useState("");
+  const [entryAddress, setEntryAddress] = useState("");
+  const [entryColor, setEntryColor] = useState(WATCHLIST_COLORS[0]);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [watchlistError, setWatchlistError] = useState<string | null>(null);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  const loadRemoteWatchlist = useCallback(async (currentUser: User) => {
+    if (!supabase) return;
+    setWatchlistLoading(true);
+    setWatchlistError(null);
+
+    try {
+      let { data: groupRows, error: groupsError } = await supabase
+        .from("watchlist_groups")
+        .select("id,name,user_id")
+        .order("created_at", { ascending: true });
+
+      if (groupsError) throw groupsError;
+
+      if (!groupRows || groupRows.length === 0) {
+        const { data: createdGroups, error: createGroupsError } = await supabase
+          .from("watchlist_groups")
+          .insert(DEFAULT_WATCHLIST_GROUPS.map((group) => ({ name: group.name, user_id: currentUser.id })))
+          .select("id,name,user_id");
+
+        if (createGroupsError) throw createGroupsError;
+        groupRows = createdGroups;
+      }
+
+      const remoteGroups = ((groupRows ?? []) as WatchlistGroupRow[]).map((group) => ({
+        id: group.id,
+        name: group.name,
+      }));
+
+      const { data: addressRows, error: addressesError } = await supabase
+        .from("watchlist_addresses")
+        .select("id,name,address,color,group_id,user_id")
+        .order("created_at", { ascending: false });
+
+      if (addressesError) throw addressesError;
+
+      setGroups(remoteGroups.length > 0 ? remoteGroups : DEFAULT_WATCHLIST_GROUPS);
+      setActiveGroupId((current) => (
+        remoteGroups.some((group) => group.id === current) ? current : remoteGroups[0]?.id ?? DEFAULT_WATCHLIST_GROUPS[0].id
+      ));
+      setWatchlist(((addressRows ?? []) as WatchlistAddressRow[]).map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        address: entry.address,
+        color: entry.color,
+        groupId: entry.group_id,
+      })));
+    } catch (error) {
+      setWatchlistError(
+        error instanceof Error
+          ? `Could not load Supabase watchlist: ${error.message}`
+          : "Could not load Supabase watchlist. Check the SQL tables and RLS policies."
+      );
+    } finally {
+      setWatchlistLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      if (data.user) void loadRemoteWatchlist(data.user);
+      if (!data.user) {
+        const storedGroups = readStoredWatchlistGroups();
+        setGroups(storedGroups);
+        setActiveGroupId(storedGroups[0].id);
+        setWatchlist(readStoredWatchlist());
+      }
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        void loadRemoteWatchlist(session.user);
+      } else {
+        setGroups(readStoredWatchlistGroups());
+        setActiveGroupId(readStoredWatchlistGroups()[0].id);
+        setWatchlist(readStoredWatchlist());
+      }
+    });
+
+    return () => subscription.subscription.unsubscribe();
+  }, [loadRemoteWatchlist]);
+
+  useEffect(() => {
+    if (supabase) return;
+    const storedGroups = readStoredWatchlistGroups();
+    setGroups(storedGroups);
+    setActiveGroupId(storedGroups[0].id);
+    setWatchlist(readStoredWatchlist());
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(WATCHLIST_GROUPS_STORAGE_KEY, JSON.stringify(groups));
+  }, [groups]);
+
+  useEffect(() => {
+    window.localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist));
+  }, [watchlist]);
+
+  const activeEntries = watchlist.filter((entry) => entry.groupId === activeGroupId);
+
+  const addGroup = async () => {
+    const name = newGroupName.trim();
+    if (!name) return;
+
+    if (user && supabase) {
+      const { data: group, error: groupError } = await supabase
+        .from("watchlist_groups")
+        .insert({ name, user_id: user.id })
+        .select("id,name,user_id")
+        .single();
+
+      if (groupError || !group) {
+        setWatchlistError("Could not save group to Supabase.");
+        return;
+      }
+
+      setGroups((items) => [...items, { id: group.id, name: group.name }]);
+      setActiveGroupId(group.id);
+      setNewGroupName("");
+      return;
+    }
+
+    const group: WatchlistGroup = {
+      id: `${Date.now()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      name,
+    };
+    setGroups((items) => [...items, group]);
+    setActiveGroupId(group.id);
+    setNewGroupName("");
+  };
+
+  const addWatchlistEntry = async () => {
+    const name = entryName.trim();
+    const address = entryAddress.trim() || searchInput.trim();
+    if (!name || !address) {
+      setWatchlistError("Add a name and address.");
+      return;
+    }
+    if (watchlist.some((entry) => entry.address.toLowerCase() === address.toLowerCase())) {
+      setWatchlistError("This address is already saved.");
+      return;
+    }
+
+    if (user && supabase) {
+      const { data: entry, error: entryError } = await supabase
+        .from("watchlist_addresses")
+        .insert({
+          name,
+          address,
+          color: entryColor,
+          group_id: activeGroupId,
+          user_id: user.id,
+        })
+        .select("id,name,address,color,group_id,user_id")
+        .single();
+
+      if (entryError || !entry) {
+        setWatchlistError("Could not save address to Supabase.");
+        return;
+      }
+
+      setWatchlist((items) => [
+        {
+          id: entry.id,
+          name: entry.name,
+          address: entry.address,
+          color: entry.color,
+          groupId: entry.group_id,
+        },
+        ...items,
+      ]);
+      setEntryName("");
+      setEntryAddress("");
+      setWatchlistError(null);
+      return;
+    }
+
+    setWatchlist((items) => [
+      {
+        id: `${Date.now()}-${address.slice(0, 8)}`,
+        name,
+        address,
+        color: entryColor,
+        groupId: activeGroupId,
+      },
+      ...items,
+    ]);
+    setEntryName("");
+    setEntryAddress("");
+    setWatchlistError(null);
+  };
+
+  const removeWatchlistEntry = async (id: string) => {
+    if (user && supabase) {
+      const { error: deleteError } = await supabase
+        .from("watchlist_addresses")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        setWatchlistError("Could not remove address from Supabase.");
+        return;
+      }
+    }
+
+    setWatchlist((items) => items.filter((entry) => entry.id !== id));
+  };
+
   return (
     <div className="flex flex-col items-center justify-center text-center py-20 px-5">
       {/* Icon */}
@@ -713,23 +1000,213 @@ function SearchHero({
 
       </div>
 
-      {/* Feature hints */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 sm:mt-16 max-w-[640px] fade-up fade-up-4 w-full">
-        {[
-          { icon: TrendingUp, label: "PnL TRACKING" },
-          { icon: BarChart3, label: "VOLUME STATS" },
-          { icon: Trophy, label: "LIVE RANKING" },
-          { icon: Layers, label: "TRADE HISTORY" },
-        ].map(({ icon: Icon, label }) => (
-          <div
-            key={label}
-            className="flex flex-col items-center gap-2 py-4"
-            style={{ border: "1px solid var(--border)", background: "var(--bg-surface)" }}
-          >
-            <Icon size={18} style={{ color: "var(--accent)" }} />
-            <span className="tag" style={{ color: "var(--text-faint)" }}>{label}</span>
+      {/* Watchlist workspace */}
+      <div
+        className="w-full max-w-[820px] mt-8 sm:mt-14 fade-up fade-up-4 text-left overflow-hidden"
+        style={{ border: "1px solid var(--border)", background: "var(--bg-surface)" }}
+      >
+        <div
+          className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5"
+          style={{ borderBottom: "1px solid var(--border-subtle)" }}
+        >
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Bookmark size={14} style={{ color: "var(--accent)" }} />
+              <span className="tag" style={{ color: "var(--accent)" }}>WATCHLIST</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold leading-tight" style={{ color: "var(--text)" }}>
+              Saved addresses
+            </h2>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+              Name wallets, color them, group them, then track with one click.
+            </p>
           </div>
-        ))}
+
+          <div className="flex flex-col sm:flex-row gap-2 lg:min-w-[300px]">
+            <div className="relative flex-1">
+              <Folder size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-faint)" }} />
+              <input
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void addGroup();
+                }}
+                placeholder="New group"
+                className="w-full bg-transparent outline-none text-sm py-2.5 pl-9 pr-3"
+                style={{ border: "1px solid var(--border)", color: "var(--text)" }}
+              />
+            </div>
+            <button
+              onClick={() => void addGroup()}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 tag font-bold"
+              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+            >
+              <Plus size={13} />
+              GROUP
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3"
+          style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--spotlight)" }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="flex items-center justify-center shrink-0"
+              style={{ width: 34, height: 34, border: "1px solid var(--border)", background: "var(--bg-surface)" }}
+            >
+              {user ? <UserRound size={15} style={{ color: "var(--green)" }} /> : <Lock size={15} style={{ color: "var(--text-faint)" }} />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
+                {user ? user.email : "Local watchlist"}
+              </p>
+              <p className="text-xs" style={{ color: watchlistError ? "var(--red)" : "var(--text-muted)" }}>
+                {watchlistLoading ? "Loading saved watchlist..." : watchlistError ?? (user ? "Synced account" : "Sign in to sync across devices")}
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/account"
+            className="flex items-center justify-center px-4 py-2 tag font-bold"
+            style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)" }}
+          >
+            {user ? "ACCOUNT" : "SIGN IN"}
+          </Link>
+        </div>
+
+        <div className="flex flex-wrap gap-2 p-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          {groups.map((group) => {
+            const count = watchlist.filter((entry) => entry.groupId === group.id).length;
+            const active = group.id === activeGroupId;
+            return (
+              <button
+                key={group.id}
+                onClick={() => setActiveGroupId(group.id)}
+                className="flex items-center gap-2 px-3 py-2 tag transition-colors"
+                style={{
+                  border: "1px solid var(--border)",
+                  background: active ? "var(--accent)" : "transparent",
+                  color: active ? "var(--accent-fg)" : "var(--text-muted)",
+                }}
+              >
+                {group.name}
+                <span
+                  className="mono text-[10px] px-1.5 py-0.5"
+                  style={{
+                    border: `1px solid ${active ? "rgba(0,0,0,0.18)" : "var(--border-subtle)"}`,
+                    color: active ? "var(--accent-fg)" : "var(--text-faint)",
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid lg:grid-cols-[320px_1fr]">
+          <div className="p-4 lg:border-r" style={{ borderColor: "var(--border-subtle)" }}>
+            <div className="grid gap-3">
+              <input
+                value={entryName}
+                onChange={(e) => setEntryName(e.target.value)}
+                placeholder="Wallet name"
+                className="w-full bg-transparent outline-none text-sm px-3 py-3"
+                style={{ border: "1px solid var(--border)", color: "var(--text)" }}
+              />
+              <input
+                value={entryAddress}
+                onChange={(e) => setEntryAddress(e.target.value)}
+                placeholder={searchInput.trim() ? "Use typed address or paste another" : "Wallet address"}
+                className="w-full bg-transparent outline-none mono text-sm px-3 py-3"
+                style={{ border: "1px solid var(--border)", color: "var(--text)" }}
+              />
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Palette size={14} style={{ color: "var(--text-faint)" }} />
+                  <span className="tag" style={{ color: "var(--text-faint)" }}>COLOR</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {WATCHLIST_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setEntryColor(color)}
+                      aria-label={`Pick ${color}`}
+                      className="w-6 h-6 transition-transform"
+                      style={{
+                        background: color,
+                        border: entryColor === color ? "2px solid var(--text)" : "1px solid var(--border)",
+                        transform: entryColor === color ? "scale(1.08)" : "scale(1)",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {watchlistError && (
+                <span className="mono text-xs" style={{ color: "var(--red)" }}>{watchlistError}</span>
+              )}
+
+              <button
+                onClick={addWatchlistEntry}
+                className="flex items-center justify-center gap-2 px-4 py-3 tag font-bold"
+                style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+              >
+                <Plus size={14} />
+                ADD ADDRESS
+              </button>
+            </div>
+          </div>
+
+          <div className="min-h-[220px]">
+            {activeEntries.length === 0 ? (
+              <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-center px-6">
+                <Wallet size={24} style={{ color: "var(--text-faint)" }} />
+                <p className="mt-3 font-semibold" style={{ color: "var(--text)" }}>No addresses in this group yet</p>
+                <p className="text-sm max-w-sm mt-1" style={{ color: "var(--text-muted)" }}>
+                  Save the wallets you check often so you do not have to paste them every time.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+                {activeEntries.map((entry) => (
+                  <div key={entry.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-3 h-10 shrink-0" style={{ background: entry.color }} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold truncate" style={{ color: "var(--text)" }}>{entry.name}</span>
+                          {entry.address === searchInput.trim() && <Check size={13} style={{ color: "var(--green)" }} />}
+                        </div>
+                        <span className="mono text-xs break-all" style={{ color: "var(--text-faint)" }}>{entry.address}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => onTrackAddress(entry.address)}
+                        className="px-3 py-2 tag font-bold"
+                        style={{ border: "1px solid var(--border)", color: "var(--text)" }}
+                      >
+                        TRACK
+                      </button>
+                      <button
+                        onClick={() => removeWatchlistEntry(entry.id)}
+                        className="flex items-center justify-center w-9 h-9"
+                        style={{ border: "1px solid var(--border)", color: "var(--text-faint)" }}
+                        title="Remove address"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -2273,9 +2750,10 @@ export function TrackerPage({
     return { trackerData, chartData };
   }, []);
 
-  const handleSearch = async () => {
-    const addr = searchInput.trim();
+  const performSearch = async (rawAddress: string) => {
+    const addr = rawAddress.trim();
     if (!addr) return;
+    setSearchInput(addr);
     setSearchPending(true);
     setError(null);
     setLoading(true);
@@ -2294,6 +2772,10 @@ export function TrackerPage({
       setSearchPending(false);
       setLoading(false);
     }
+  };
+
+  const handleSearch = async () => {
+    await performSearch(searchInput);
   };
 
   const handleReset = () => {
@@ -2401,6 +2883,7 @@ export function TrackerPage({
               searchInput={searchInput}
               setSearchInput={setSearchInput}
               onSearch={handleSearch}
+              onTrackAddress={performSearch}
               searchPending={searchPending}
               searchFocused={searchFocused}
               setSearchFocused={setSearchFocused}

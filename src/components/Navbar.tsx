@@ -2,9 +2,11 @@
 
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type NavLink = { kind: "link"; label: string; href: string };
 type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean };
@@ -226,6 +228,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Markets", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
+  { label: "Account", href: "/account", icon: UserRound },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Trade History", href: "/trade-history", icon: History, comingSoon: true },
   { label: "Journal", href: "#", icon: BookOpen, comingSoon: true },
@@ -239,6 +242,9 @@ export function Navbar() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const accountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -254,6 +260,17 @@ export function Navbar() {
     return () => { document.body.style.overflow = ""; };
   }, [moreOpen]);
 
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
   const isActive = (href: string) => {
     const path = href.split("#")[0];
     if (path === "/" || path === "") return pathname === "/";
@@ -262,6 +279,15 @@ export function Navbar() {
 
   const isDropdownActive = (item: NavDropdown) =>
     item.items.some((child) => isActive(child.href));
+
+  const showAccount = () => {
+    if (accountTimerRef.current) clearTimeout(accountTimerRef.current);
+    setAccountOpen(true);
+  };
+
+  const hideAccount = () => {
+    accountTimerRef.current = setTimeout(() => setAccountOpen(false), 180);
+  };
 
   return (
     <>
@@ -314,6 +340,88 @@ export function Navbar() {
 
           {/* Right controls (desktop only) */}
           <div className="hidden md:flex items-center gap-2">
+            <div
+              className="relative"
+              onMouseEnter={showAccount}
+              onMouseLeave={hideAccount}
+              onFocus={showAccount}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAccountOpen(false);
+              }}
+            >
+              <Link
+                href="/account"
+                className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
+                style={{
+                  color: isActive("/account") || accountOpen ? "var(--text)" : "var(--text-muted)",
+                  background: accountOpen ? "var(--bg-elevated)" : "transparent",
+                }}
+                aria-label="Account"
+              >
+                <UserRound size={16} />
+              </Link>
+
+              {accountOpen && (
+                <div
+                  className="absolute right-0 top-full pt-2 w-[260px]"
+                  style={{
+                    zIndex: 70,
+                  }}
+                >
+                  <div
+                    className="p-3"
+                    style={{
+                      background: "var(--panel-bg)",
+                      backdropFilter: "blur(16px)",
+                      WebkitBackdropFilter: "blur(16px)",
+                      border: "1px solid var(--border)",
+                      boxShadow: "0 16px 44px rgba(0,0,0,0.28)",
+                      borderRadius: 12,
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="flex items-center justify-center shrink-0"
+                        style={{
+                          width: 36,
+                          height: 36,
+                          border: "1px solid var(--border)",
+                          background: "var(--bg-surface)",
+                          borderRadius: 10,
+                        }}
+                      >
+                        <UserRound size={16} style={{ color: user ? "var(--green)" : "var(--text-faint)" }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ background: user ? "var(--green)" : "var(--text-faint)" }}
+                          />
+                          <span className="tag" style={{ color: user ? "var(--green)" : "var(--text-faint)" }}>
+                            {user ? "SYNCED" : "LOCAL"}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
+                          {user?.email ?? "Signed out"}
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                          {user ? "Watchlist sync is active." : "Sign in to sync watchlists."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href="/account"
+                      className="mt-3 flex items-center justify-center px-3 py-2 tag font-bold"
+                      style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)", borderRadius: 9 }}
+                    >
+                      {user ? "MANAGE ACCOUNT" : "SIGN IN"}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
