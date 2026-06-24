@@ -4,6 +4,7 @@ import { Search, ArrowRight, BarChart3, Layers, Users, Landmark } from "lucide-r
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useMemo } from "react";
+import { TokenIcon } from "@/components/TokenIcon";
 import { VolumeCard } from "@/components/VolumeCard";
 import { OICard } from "@/components/OICard";
 import { UsersCard } from "@/components/UsersCard";
@@ -73,19 +74,15 @@ function MobileStatsGrid() {
     if (!expanded) return null;
 
     if (expanded === "volume") {
-      const max = data.volPairs[0]?.volume ?? 1;
       return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-1.5">
           <div className="tag text-[9px] mb-1" style={{ color: "var(--text-faint)" }}>TOP 5 PAIRS</div>
-          {data.volPairs.map(({ pair, volume }) => (
-            <div key={pair}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] mono font-medium" style={{ color: "var(--text)" }}>{pair}</span>
-                <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>{fmtVol(volume)}</span>
-              </div>
-              <div className="h-[3px] w-full rounded-full" style={{ background: "var(--border)" }}>
-                <div className="h-full rounded-full" style={{ width: `${(volume / max) * 100}%`, background: "var(--accent)" }} />
-              </div>
+          {data.volPairs.map(({ pair, volume }, i) => (
+            <div key={pair} className="flex items-center gap-2">
+              <span className="mono text-[9px] w-3" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
+              <TokenIcon symbol={pair} size={14} />
+              <span className="mono text-[10px] font-medium" style={{ color: "var(--text-muted)", minWidth: 48 }}>{pair}</span>
+              <span className="mono text-[10px] font-bold tabular-nums ml-auto" style={{ color: "var(--text-faint)" }}>{fmtVol(volume)}</span>
             </div>
           ))}
         </div>
@@ -93,19 +90,15 @@ function MobileStatsGrid() {
     }
 
     if (expanded === "oi") {
-      const max = data.oiPairs[0]?.value ?? 1;
       return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-1.5">
           <div className="tag text-[9px] mb-1" style={{ color: "var(--text-faint)" }}>TOP 5 BY OI</div>
-          {data.oiPairs.map(({ pair, value }) => (
-            <div key={pair}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] mono font-medium" style={{ color: "var(--text)" }}>{pair}</span>
-                <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>{fmtVol(value)}</span>
-              </div>
-              <div className="h-[3px] w-full rounded-full" style={{ background: "var(--border)" }}>
-                <div className="h-full rounded-full" style={{ width: `${(value / max) * 100}%`, background: "var(--accent)" }} />
-              </div>
+          {data.oiPairs.map(({ pair, value }, i) => (
+            <div key={pair} className="flex items-center gap-2">
+              <span className="mono text-[9px] w-3" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
+              <TokenIcon symbol={pair} size={14} />
+              <span className="mono text-[10px] font-medium" style={{ color: "var(--text-muted)", minWidth: 48 }}>{pair}</span>
+              <span className="mono text-[10px] font-bold tabular-nums ml-auto" style={{ color: "var(--text-faint)" }}>{fmtVol(value)}</span>
             </div>
           ))}
         </div>
