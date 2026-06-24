@@ -2959,9 +2959,9 @@ export function TrackerPage({
     return () => { cancelled = true; };
   }, [data?.account_id, selectedWindow]);
 
-  // Auto-focus search on mount
+  // Auto-focus search on mount (desktop only — mobile opens keyboard)
   useEffect(() => {
-    if (!data) searchRef.current?.focus();
+    if (!data && window.matchMedia("(min-width: 768px)").matches) searchRef.current?.focus();
   }, [data]);
 
   /* ── Search state ── */

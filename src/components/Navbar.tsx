@@ -3,7 +3,7 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -228,7 +228,6 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Markets", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
-  { label: "Account", href: "/account", icon: UserRound },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "Trade History", href: "/trade-history", icon: History, comingSoon: true },
   { label: "Journal", href: "#", icon: BookOpen, comingSoon: true },
@@ -309,6 +308,99 @@ export function Navbar() {
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>
           </Link>
+
+          {/* Mobile account icon (top-right) with dropdown */}
+          <div className="md:hidden relative">
+            <button
+              onClick={() => setAccountOpen((v) => !v)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
+              style={{
+                color: isActive("/account") || accountOpen ? "var(--accent)" : "var(--text-muted)",
+                background: accountOpen ? "var(--bg-elevated)" : "transparent",
+              }}
+              aria-label="Account"
+            >
+              {user ? <UserRound size={18} style={{ color: "var(--green)" }} /> : <UserRound size={18} />}
+            </button>
+
+            {accountOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-[65]"
+                  onClick={() => setAccountOpen(false)}
+                />
+                <div
+                  className="absolute right-0 top-full mt-1 w-[240px] z-[66] p-3"
+                  style={{
+                    background: "var(--panel-bg)",
+                    backdropFilter: "blur(16px)",
+                    WebkitBackdropFilter: "blur(16px)",
+                    border: "1px solid var(--border)",
+                    boxShadow: "0 16px 44px rgba(0,0,0,0.28)",
+                    borderRadius: 12,
+                  }}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div
+                      className="flex items-center justify-center shrink-0"
+                      style={{
+                        width: 34, height: 34,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-surface)",
+                        borderRadius: 9,
+                      }}
+                    >
+                      <UserRound size={15} style={{ color: user ? "var(--green)" : "var(--text-faint)" }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: user ? "var(--green)" : "var(--text-faint)" }} />
+                        <span className="tag" style={{ color: user ? "var(--green)" : "var(--text-faint)" }}>
+                          {user ? "SYNCED" : "LOCAL"}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
+                        {user?.email ?? "Signed out"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {user ? (
+                    <button
+                      onClick={async () => {
+                        if (supabase) await supabase.auth.signOut();
+                        setAccountOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 tag font-bold mb-2"
+                      style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)", borderRadius: 9 }}
+                    >
+                      <LogOut size={13} />
+                      SIGN OUT
+                    </button>
+                  ) : (
+                    <Link
+                      href="/account"
+                      onClick={() => setAccountOpen(false)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 tag font-bold mb-2"
+                      style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)", borderRadius: 9 }}
+                    >
+                      <Lock size={13} />
+                      SIGN IN
+                    </Link>
+                  )}
+
+                  <Link
+                    href="/account"
+                    onClick={() => setAccountOpen(false)}
+                    className="w-full flex items-center justify-center px-3 py-2 tag font-bold"
+                    style={{ border: "1px solid var(--border)", color: "var(--text-muted)", background: "var(--bg)", borderRadius: 9 }}
+                  >
+                    MANAGE ACCOUNT
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
