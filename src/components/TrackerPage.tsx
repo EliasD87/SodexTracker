@@ -6,6 +6,7 @@ import { CornerMarks } from "@/components/CornerMarks";
 import { CountUp } from "@/components/CountUp";
 import { TokenIcon } from "@/components/TokenIcon";
 import { tickerLabel } from "@/lib/tokenIcons";
+import { cachedApiFetch, clearFetchCachePrefix } from "@/lib/fetchCache";
 import { FundFlowCard } from "@/components/FundFlowCard";
 import {
   Search,
@@ -290,27 +291,7 @@ function timeAgo(ts: number): string {
    ════════════════════════════════════════════════════════════════ */
 
 async function apiFetch<T>(url: string, retries = 2): Promise<T> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (res.status === 429) {
-        if (attempt < retries) {
-          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-          continue;
-        }
-      }
-      const json = await res.json();
-      if (json.code !== 0) throw new Error(json.message || "API error");
-      return json.data as T;
-    } catch (err) {
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error("API error: max retries exceeded");
+  return cachedApiFetch<T>(url, retries);
 }
 
 async function fetchPerpsAccountState(addr: string) {
@@ -2328,6 +2309,7 @@ export function TrackerPage({
   const handleRefresh = async () => {
     if (!lastAddrRef.current) return;
     setRefreshing(true);
+    clearFetchCachePrefix(lastAddrRef.current);
     try {
       const { trackerData, chartData } = await fetchAllData(lastAddrRef.current);
       setData(trackerData);

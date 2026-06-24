@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { CornerMarks } from "@/components/CornerMarks";
 import { CountUp } from "@/components/CountUp";
 import { Search, ChevronLeft, ChevronRight, X, Copy, Check, Trophy } from "lucide-react";
+import { cachedApiFetch } from "@/lib/fetchCache";
 
 type WindowType = "24H" | "7D" | "30D" | "ALL_TIME";
 type SortBy = "pnl" | "volume";
@@ -440,12 +441,10 @@ export function LeaderboardPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(
+      const data = await cachedApiFetch<LeaderboardData>(
         `https://mainnet-data.sodex.dev/api/v1/leaderboard?window_type=${window}&sort_by=${sortBy}&page=${page}&page_size=${PAGE_SIZE}`
       );
-      const json = await res.json();
-      if (json.code !== 0) throw new Error(json.message);
-      setData(json.data);
+      setData(data);
     } catch {
       setError(true);
     } finally {
@@ -465,12 +464,10 @@ export function LeaderboardPage() {
     if (!addr) return;
     setSearchPending(true);
     try {
-      const res = await fetch(
+      const data = await cachedApiFetch<RankResult>(
         `https://mainnet-data.sodex.dev/api/v1/leaderboard/rank?window_type=${window}&sort_by=${sortBy}&wallet_address=${addr}`
       );
-      const json = await res.json();
-      if (json.code !== 0) throw new Error();
-      setSearchResult({ found: json.data.found, item: json.data.item, snapshot_ts: json.data.snapshot_ts });
+      setSearchResult({ found: data.found, item: data.item, snapshot_ts: data.snapshot_ts });
     } catch {
       setSearchResult({ found: false });
     } finally {

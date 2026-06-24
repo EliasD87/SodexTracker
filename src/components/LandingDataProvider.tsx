@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { cachedFetchJson } from "@/lib/fetchCache";
 
 const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
 const DATA_BASE = "https://mainnet-data.sodex.dev/api/v1";
@@ -19,8 +20,7 @@ function getUtcDateRange() {
 
 async function fetchJson(url: string, opts?: RequestInit): Promise<any> {
   try {
-    const res = await fetch(url, opts);
-    return await res.json();
+    return await cachedFetchJson(url, opts);
   } catch {
     return null;
   }

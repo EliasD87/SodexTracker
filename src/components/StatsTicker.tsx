@@ -123,7 +123,6 @@ export function StatsTicker() {
                 {(
                   [
                     ["Mark Price", fmtPrice(hovered.markPrice), "var(--text)"],
-                    ["Index Price", fmtPrice(hovered.indexPrice), "var(--text-muted)"],
                     ["Open Interest", fmtOI(hovered.openInterest, hovered.markPrice), "var(--text)"],
                     ["24H Volume", hovered.volume24h ? fmtUsd(hovered.volume24h) : "—", "var(--text)"],
                     [
@@ -191,7 +190,7 @@ export function StatsTicker() {
                   key={`${m.symbol}-${i}`}
                   onMouseEnter={(e) => handleItemEnter(m, e)}
                   onMouseLeave={() => setHovered(null)}
-                  className="flex items-center gap-2 px-3 sm:px-5 h-full cursor-default shrink-0"
+                  className="flex items-center gap-2 px-3 sm:px-5 h-full cursor-default shrink-0 pointer-events-none sm:pointer-events-auto"
                   style={{ borderRight: "1px solid var(--border)" }}
                 >
                   <TokenIcon symbol={m.symbol} size={16} />

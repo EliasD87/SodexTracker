@@ -450,7 +450,7 @@ export function VolumeChart() {
             />
 
             {/* Desktop buttons */}
-            <div className="hidden sm:flex items-center" style={{ border: "1px solid var(--border)", padding: 2, gap: 2 }}>
+            <div className="hidden sm:flex items-center" style={{ border: "1px solid var(--border)", padding: 2, gap: 2, borderRadius: "var(--r-md)" }}>
               {(["daily", "cumulative"] as Mode[]).map((m) => (
                 <button
                   key={m}
@@ -460,13 +460,14 @@ export function VolumeChart() {
                     background: mode === m ? "var(--accent)" : "transparent",
                     color: mode === m ? "var(--accent-fg)" : "var(--text-muted)",
                     cursor: "pointer",
+                    borderRadius: "var(--r-sm)",
                   }}
                 >
                   {m === "daily" ? "DAILY" : "CUMULATIVE"}
                 </button>
               ))}
             </div>
-            <div className="hidden sm:flex items-center" style={{ border: "1px solid var(--border)", padding: 2, gap: 2 }}>
+            <div className="hidden sm:flex items-center" style={{ border: "1px solid var(--border)", padding: 2, gap: 2, borderRadius: "var(--r-md)" }}>
               {RANGES.map((r) => (
                 <button
                   key={r.key}
@@ -476,6 +477,7 @@ export function VolumeChart() {
                     background: range === r.key ? "var(--accent)" : "transparent",
                     color: range === r.key ? "var(--accent-fg)" : "var(--text-muted)",
                     cursor: "pointer",
+                    borderRadius: "var(--r-sm)",
                   }}
                 >
                   {r.key}
@@ -694,25 +696,33 @@ export function VolumeChart() {
                   }}
                 >
                   <div
-                    className="px-3 py-2.5"
+                    className="px-2 py-1 sm:px-3 sm:py-2.5"
                     style={{
                       background: "var(--panel-bg)",
                       backdropFilter: "blur(16px)",
                       WebkitBackdropFilter: "blur(16px)",
                       border: "1px solid var(--panel-border)",
                       boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
-                      minWidth: selectedDay ? 240 : 160,
-                      maxWidth: 280,
+                      minWidth: selectedDay ? 160 : 110,
+                      maxWidth: 180,
                     }}
                   >
-                    {/* Header */}
-                    <div className="tag mb-2 flex items-center justify-between gap-3" style={{ color: "var(--text-faint)" }}>
+                    {/* Header — mobile: date only, desktop: date + mode */}
+                    <div className="tag mb-0.5 sm:mb-2 flex items-center justify-between gap-2" style={{ color: "var(--text-faint)", fontSize: 8 }}>
                       <span>{fmtDay(hovered.ts, true)}</span>
-                      <span style={{ color: "var(--accent)" }}>{mode === "daily" ? "DAILY" : "CUMUL."}</span>
+                      <span className="hidden sm:inline" style={{ color: "var(--accent)" }}>{mode === "daily" ? "DAILY" : "CUMUL."}</span>
                     </div>
 
-                    {/* Stats: total, spot, perps */}
-                    <div className="flex flex-col gap-1.5">
+                    {/* Mobile: total only */}
+                    <div className="sm:hidden flex items-center justify-between">
+                      <span className="tag" style={{ color: "var(--text-muted)", fontSize: 8 }}>TOTAL</span>
+                      <span className="mono text-[10px] font-bold tabular-nums" style={{ color: "var(--text)" }}>
+                        {fmtVol(getVal(hovered, "total", mode), 2)}
+                      </span>
+                    </div>
+
+                    {/* Desktop: all three series */}
+                    <div className="hidden sm:flex flex-col gap-1.5">
                       {SERIES.map((s) => (
                         <div key={s.key} className="flex items-center justify-between gap-4">
                           <span className="flex items-center gap-1.5">
@@ -726,11 +736,11 @@ export function VolumeChart() {
                       ))}
                     </div>
 
-                    {/* Expanded section: top 5 pairs */}
+                    {/* Expanded section: top pairs — 3 on mobile, 5 on desktop */}
                     {selectedDay ? (
-                      <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="tag" style={{ color: "var(--accent)" }}>TOP 5 PAIRS</span>
+                      <div className="mt-1 sm:mt-2 pt-1 sm:pt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="tag" style={{ color: "var(--accent)", fontSize: 8 }}>TOP PAIRS</span>
                           <button
                             onClick={() => { setSelectedDay(null); setDayPairs([]); }}
                             className="tag transition-colors"
@@ -742,8 +752,8 @@ export function VolumeChart() {
                           </button>
                         </div>
                         {dayPairsLoading ? (
-                          <div className="flex items-center gap-2 py-1.5">
-                            <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>Loading…</span>
+                          <div className="flex items-center gap-1.5 py-1">
+                            <span className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>Loading…</span>
                             <div className="flex gap-1">
                               {[0, 1, 2].map((i) => (
                                 <div key={i} className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--accent)", animationDelay: `${i * 100}ms` }} />
@@ -751,36 +761,29 @@ export function VolumeChart() {
                             </div>
                           </div>
                         ) : dayPairs.length === 0 ? (
-                          <div className="py-1.5">
-                            <span className="mono text-xs" style={{ color: "var(--text-faint)" }}>No pair data.</span>
+                          <div className="py-1">
+                            <span className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>No pair data.</span>
                           </div>
                         ) : (
-                          <div className="flex flex-col gap-1.5">
-                            {dayPairs.slice(0, 5).map((p, i) => {
-                              const maxVol = dayPairs[0].volume;
-                              const pct = (p.volume / maxVol) * 100;
-                              return (
-                                <div key={p.symbol} className="flex items-center gap-2">
-                                  <span className="mono text-[10px] w-3" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
-                                  <TokenIcon symbol={p.symbol} size={16} />
-                                  <span className="mono text-xs font-semibold" style={{ color: "var(--text)", minWidth: 52 }}>
-                                    {p.symbol}
-                                  </span>
-                                  <div className="flex-1 h-[2px] rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--accent)" }} />
-                                  </div>
-                                  <span className="mono text-[10px] font-bold tabular-nums" style={{ color: "var(--text)", minWidth: 48, textAlign: "right" }}>
-                                    {fmtVol(p.volume, 1)}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                          <div className="flex flex-col gap-0.5 sm:gap-1">
+                            {dayPairs.slice(0, 5).map((p, i) => (
+                              <div key={p.symbol} className={`flex items-center gap-1.5 ${i >= 3 ? "hidden sm:flex" : "flex"}`}>
+                                <span className="mono text-[9px] w-3" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
+                                <TokenIcon symbol={p.symbol} size={14} />
+                                <span className="mono text-[10px] font-medium" style={{ color: "var(--text-muted)", minWidth: 48 }}>
+                                  {p.symbol}
+                                </span>
+                                <span className="mono text-[10px] font-bold tabular-nums ml-auto" style={{ color: "var(--text-faint)" }}>
+                                  {fmtVol(p.volume, 1)}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                        <span className="tag" style={{ color: "var(--text-faint)", fontSize: 9 }}>DOUBLE-CLICK FOR TOP PAIRS</span>
+                      <div className="hidden sm:block mt-2 pt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                        <span className="tag" style={{ color: "var(--text-faint)", fontSize: 8 }}>DOUBLE-TAP FOR TOP PAIRS</span>
                       </div>
                     )}
                   </div>

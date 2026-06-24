@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Layers } from "lucide-react";
 import { StatCardShell } from "@/components/StatCardShell";
+import { TokenIcon } from "@/components/TokenIcon";
 import { useLandingData } from "@/components/LandingDataProvider";
 
 type PairOI = { pair: string; value: number };
@@ -41,8 +42,6 @@ export function OICard({ isExpanded, onMouseEnter, onMouseLeave }: Props) {
     return { total: current, delta: d, topPairs: sorted, loading: false, error: false };
   }, [oiRaw, loadingCards]);
 
-  const maxVal = topPairs[0]?.value ?? 1;
-
   return (
     <StatCardShell
       label="Open Interest"
@@ -56,24 +55,17 @@ export function OICard({ isExpanded, onMouseEnter, onMouseLeave }: Props) {
       value={fmt(total ?? 0)}
       rawValue={total ?? 0}
       format={fmt}
-      bars={topPairs.map((p) => p.value)}
       deltaLabel={delta?.label}
       deltaTone={delta ? (delta.up ? "up" : "down") : "neutral"}
       expandLabel="Top 5 by OI"
       expandContent={
-        <div className="flex flex-col gap-2.5">
-          {topPairs.map(({ pair, value }) => (
-            <div key={pair}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] mono font-medium" style={{ color: "var(--text)" }}>{pair}</span>
-                <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>{fmt(value)}</span>
-              </div>
-              <div className="h-[3px] w-full rounded-full" style={{ background: "var(--border)" }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${(value / maxVal) * 100}%`, background: "var(--accent)" }}
-                />
-              </div>
+        <div className="flex flex-col gap-1.5">
+          {topPairs.map(({ pair, value }, i) => (
+            <div key={pair} className="flex items-center gap-2">
+              <span className="mono text-[9px] w-3" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
+              <TokenIcon symbol={pair} size={14} />
+              <span className="mono text-[10px] font-medium" style={{ color: "var(--text-muted)", minWidth: 48 }}>{pair}</span>
+              <span className="mono text-[10px] font-bold tabular-nums ml-auto" style={{ color: "var(--text-faint)" }}>{fmt(value)}</span>
             </div>
           ))}
         </div>

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import { StatCardShell } from "@/components/StatCardShell";
+import { TokenIcon } from "@/components/TokenIcon";
 import { useLandingData } from "@/components/LandingDataProvider";
 
 type PairVolume = { pair: string; volume: number };
@@ -34,8 +35,6 @@ export function VolumeCard({ isExpanded, onMouseEnter, onMouseLeave }: Props) {
     return { total: t, topPairs: sorted, loading: false, error: false };
   }, [vol24hRaw, loadingCards]);
 
-  const maxVol = topPairs[0]?.volume ?? 1;
-
   return (
     <StatCardShell
       label="24H Volume"
@@ -49,22 +48,15 @@ export function VolumeCard({ isExpanded, onMouseEnter, onMouseLeave }: Props) {
       value={fmtVol(total ?? 0)}
       rawValue={total ?? 0}
       format={fmtVol}
-      bars={topPairs.map((p) => p.volume)}
       expandLabel="Top 5 pairs"
       expandContent={
-        <div className="flex flex-col gap-2.5">
-          {topPairs.map(({ pair, volume }) => (
-            <div key={pair}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] mono font-medium" style={{ color: "var(--text)" }}>{pair}</span>
-                <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>{fmtVol(volume)}</span>
-              </div>
-              <div className="h-[3px] w-full rounded-full" style={{ background: "var(--border)" }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${(volume / maxVol) * 100}%`, background: "var(--accent)" }}
-                />
-              </div>
+        <div className="flex flex-col gap-1.5">
+          {topPairs.map(({ pair, volume }, i) => (
+            <div key={pair} className="flex items-center gap-2">
+              <span className="mono text-[9px] w-3" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
+              <TokenIcon symbol={pair} size={14} />
+              <span className="mono text-[10px] font-medium" style={{ color: "var(--text-muted)", minWidth: 48 }}>{pair}</span>
+              <span className="mono text-[10px] font-bold tabular-nums ml-auto" style={{ color: "var(--text-faint)" }}>{fmtVol(volume)}</span>
             </div>
           ))}
         </div>
