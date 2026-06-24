@@ -1,26 +1,483 @@
 @import "tailwindcss";
 
+/* ── Mobile layout ── */
+@media (max-width: 767px) {
+  main { padding-bottom: 5rem; }
+
+  /* Podium cards — compact on mobile */
+  .podium-card { padding: 10px 10px !important; margin-top: 0 !important; }
+
+  /* Ledger — stacked vertical rows on mobile */
+  .lb-grid { grid-template-columns: 28px 1fr !important; gap: 8px !important; height: auto !important; padding: 10px 12px !important; }
+  .lb-grid > .lb-col-primary,
+  .lb-grid > .lb-col-secondary {
+    grid-column: 1 / -1;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left !important;
+    padding-top: 4px;
+  }
+  .lb-grid > .lb-col-primary::before,
+  .lb-grid > .lb-col-secondary::before {
+    content: attr(data-label);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .lb-grid-container { min-width: 0 !important; }
+
+  /* TopPairs table — 3 cols on mobile: rank | pair | volume */
+  .top-pairs-grid { grid-template-columns: 24px 28px 1fr 88px !important; gap: 8px !important; }
+  .top-pairs-col-price  { display: none !important; }
+  .top-pairs-col-oi     { display: none !important; }
+
+  /* TopTraders table rows — 3 cols: eye | address | pnl */
+  .traders-grid { grid-template-columns: 34px 1fr 88px !important; gap: 8px !important; }
+  .traders-col-extra { display: none !important; }
+
+  /* PnL chart — shorter on mobile */
+  .pnl-chart-svg { height: 160px !important; }
+
+  /* Volume chart — shorter on mobile */
+  .volume-chart-svg { aspect-ratio: 1000 / 320 !important; }
+
+  /* Calendar — compact cells on mobile, hide PNL text show only dot */
+  .heat-cell .heat-cell-value { display: none !important; }
+
+  /* Calendar left panel — bottom border on mobile, right border on desktop */
+  .cal-left-panel { border-bottom: 1px solid var(--border-subtle); border-right: none; }
+}
+
+@media (min-width: 640px) {
+  .cal-left-panel { border-right: 1px solid var(--border-subtle); border-bottom: none; width: 300px; }
+  .lb-grid { grid-template-columns: 52px minmax(150px,1fr) 110px 110px; }
+  .lb-grid-container { min-width: 700px; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SoDEX Tracker — minimal charcoal design system
+   ════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light — clean neutral off-white */
+  --panel-bg: rgba(250, 250, 249, 0.9);
+  --panel-border: rgba(0, 0, 0, 0.08);
+  --bg: #F5F5F4;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #EDEDEC;
+  --border: #E2E2DF;
+  --border-subtle: #EAEAE8;
+  --text: #1A1A19;
+  --text-muted: #6B6B69;
+  --text-faint: #A3A3A0;
+  /* monochrome UI accent */
+  --accent: #1A1A19;
+  --accent-bright: #000000;
+  --accent-dim: rgba(0, 0, 0, 0.07);
+  --accent-glow: rgba(0, 0, 0, 0.14);
+  --accent-fg: #ffffff;
+  /* semantic up / down */
+  --red: #DC2626;
+  --green: #16A34A;
+  --spotlight: rgba(0, 0, 0, 0.04);
+  --green-tint: rgba(22, 163, 74, 0.08);
+  --green-tint-med: rgba(22, 163, 74, 0.12);
+  --green-tint-strong: rgba(22, 163, 74, 0.16);
+  --green-edge: rgba(22, 163, 74, 0.26);
+  --cal-green: #16A34A;
+  --cal-green-tint: rgba(22, 163, 74, 0.08);
+  --cal-green-edge: rgba(22, 163, 74, 0.28);
+  --cal-red: #DC2626;
+  --cal-red-tint: rgba(220, 38, 38, 0.06);
+  --cal-red-edge: rgba(220, 38, 38, 0.28);
+
+  /* radii */
+  --r-card: 14px;
+  --r-md: 11px;
+  --r-sm: 8px;
+
+  /* grain strength */
+  --grain-opacity: 0.045;
+}
+
+.dark {
+  /* Neutral charcoal — no colour cast, matte & low-contrast */
+  --panel-bg: rgba(20, 20, 20, 0.86);
+  --panel-border: rgba(255, 255, 255, 0.07);
+  --bg: #0E0E0E;
+  --bg-surface: #151515;
+  --bg-elevated: #1C1C1C;
+  --border: #2A2A2A;
+  --border-subtle: #1F1F1F;
+  --text: #EAEAEA;
+  --text-muted: #8C8C8C;
+  --text-faint: #555555;
+  /* monochrome UI accent */
+  --accent: #EDEDED;
+  --accent-bright: #FFFFFF;
+  --accent-dim: rgba(255, 255, 255, 0.09);
+  --accent-glow: rgba(255, 255, 255, 0.16);
+  --accent-fg: #0E0E0E;
+  /* semantic up / down */
+  --red: #F0616D;
+  --green: #35C77F;
+  --spotlight: rgba(255, 255, 255, 0.035);
+  --green-tint: rgba(53, 199, 127, 0.08);
+  --green-tint-med: rgba(53, 199, 127, 0.12);
+  --green-tint-strong: rgba(53, 199, 127, 0.17);
+  --green-edge: rgba(53, 199, 127, 0.28);
+  --cal-green: #35C77F;
+  --cal-green-tint: rgba(53, 199, 127, 0.09);
+  --cal-green-edge: rgba(53, 199, 127, 0.28);
+  --cal-red: #F0616D;
+  --cal-red-tint: rgba(240, 97, 109, 0.07);
+  --cal-red-edge: rgba(240, 97, 109, 0.28);
+
+  --grain-opacity: 0.04;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-fg: var(--accent-fg);
+  --color-up: var(--green);
+  --color-down: var(--red);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-space-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* ── Matte paper grain — a fine, fixed fibre texture over everything ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 170px 170px;
+}
+
+/* ── Soft paper vignette — gentle darkening toward the edges ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(130% 120% at 50% 0%, transparent 55%, rgba(0,0,0,0.05) 100%);
+}
+.dark body::before {
+  background: radial-gradient(130% 120% at 50% 0%, transparent 52%, rgba(0,0,0,0.18) 100%);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Global softening — rounds the inline-styled cards / inputs / buttons
+   that are used throughout the app, without touching each file.
+   Inline border-radius (e.g. heatmap cells) always wins, so those
+   keep their own shape.
+   ════════════════════════════════════════════════════════════════ */
+[style*="border: 1px solid var(--border)"],
+[style*="border: 1px solid var(--border-subtle)"],
+[style*="border: 1px solid var(--accent)"],
+[style*="border: 1px solid var(--red)"] {
+  border-radius: var(--r-card);
+}
+button, input, select, textarea { border-radius: var(--r-md); }
+input { border-radius: var(--r-md) !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+/* ── Selection ── */
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+/* ── Typography ── */
+.mono {
+  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Brutalist mono micro-label → softened: smaller tracking, calmer */
+.tag {
+  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* stroke / outlined headline → solid, muted (no harsh outline) */
+.stroke-text {
+  color: var(--text-muted);
+}
+.dark .stroke-text { color: var(--text-muted); }
+
+.accent-text {
+  background: linear-gradient(120deg, var(--accent) 0%, var(--accent-bright) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Soft elevated card helper ── */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+/* ── Ticker animation ── */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track { animation: ticker 28s linear infinite; }
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ── Pulse dot ── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+.live-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+/* ── Card hover ── */
+.feature-card { transition: border-color 0.2s ease, background 0.2s ease; }
+.feature-card:hover {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+}
+
+/* ── Fade in up ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.5s ease both; }
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.12s; }
+.fade-up-3 { animation-delay: 0.20s; }
+.fade-up-4 { animation-delay: 0.28s; }
+.fade-up-5 { animation-delay: 0.36s; }
+.fade-up-6 { animation-delay: 0.44s; }
+
+/* ── Sideways "TRACKER" label (kept subtle if used) ── */
+.x-tracker {
+  position: absolute;
+  top: 50%;
+  right: 0.1em;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.5rem, 1vw, 0.9rem);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.x-tracker span { opacity: 0.6; }
+
+/* ── Scanline sweep — softened, barely-there ── */
+@keyframes scan {
+  0%   { transform: translateY(-120%); opacity: 0; }
+  12%  { opacity: 0.6; }
+  100% { transform: translateY(420%); opacity: 0; }
+}
+.scanline {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 40%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--accent-dim), transparent);
+  opacity: 0;
+}
+.scan-host:hover .scanline { animation: scan 0.9s ease-out; }
+
+/* ── Sparkbars ── */
+@keyframes spark-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes spark-wave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.5); } }
+@keyframes spark-wave-soft { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.74); } }
+.spark-bar {
+  transform-origin: 50% 100%;
+  animation: spark-grow 0.6s cubic-bezier(0.2, 0.85, 0.3, 1) both,
+             spark-wave-soft 2.2s ease-in-out infinite;
+}
+.spark-bar.is-live { animation: spark-wave 1.05s ease-in-out infinite; }
+
+/* ── Value reveal ── */
+@keyframes value-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.value-in { animation: value-in 0.45s ease forwards; }
+
+/* ── Button sheen → removed visual, kept class as no-op for compatibility ── */
+.sheen-host { position: relative; overflow: hidden; }
+
+/* ── Split-flap (departure board) headline ── */
+.flap-board {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0.06em;
+  vertical-align: baseline;
+  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.flap-unit {
+  position: relative;
+  display: inline-block;
+  width: 0.64em;
+  height: 0.8em;
+  perspective: 320px;
+  border-radius: 0.12em;
+  background: var(--bg-elevated);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.flap-blank { background: transparent; box-shadow: none; }
+.flap-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  backface-visibility: hidden;
+}
+.flap-top {
+  top: 0;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--bg);
+  border-radius: 0.12em 0.12em 0 0;
+}
+.flap-bottom {
+  bottom: 0;
+  align-items: flex-end;
+  border-radius: 0 0 0.12em 0.12em;
+}
+.flap-glyph {
+  position: absolute;
+  height: 0.8em;
+  line-height: 0.8em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  transform: translateY(0.04em);
+}
+.flap-top .flap-glyph { top: 0; }
+.flap-bottom .flap-glyph { bottom: 0; }
+
+@keyframes fold-down { 0% { transform: rotateX(0deg); } 100% { transform: rotateX(-90deg); } }
+@keyframes fold-up { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0deg); } }
+.fold-down {
+  transform-origin: 50% 100%;
+  z-index: 3;
+  background: var(--bg-elevated);
+  animation: fold-down 0.16s ease-in both;
+}
+.fold-up {
+  transform-origin: 50% 0%;
+  z-index: 3;
+  background: var(--bg-elevated);
+  animation: fold-up 0.16s ease-out both;
+}
+
+/* ── Leaderboard: staggered row entrance ── */
+@keyframes lb-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lb-row { animation: lb-in 0.42s cubic-bezier(0.2, 0.85, 0.3, 1) both; }
+
+/* ── Leaderboard: magnitude fill bar ── */
+@keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lb-bar { transform-origin: left center; animation: bar-grow 0.8s cubic-bezier(0.2, 0.85, 0.3, 1) both; }
+
+/* ── Podium card rise-in ── */
+@keyframes podium-rise {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.podium-card { animation: podium-rise 0.55s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+
+/* champion's soft glow — softened */
+@keyframes champ-glow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--accent-dim), 0 16px 50px -24px var(--accent-glow); }
+  50%      { box-shadow: 0 0 0 1px var(--accent-dim), 0 20px 64px -20px var(--accent-glow); }
+}
+.champ-glow { animation: champ-glow 3.6s ease-in-out infinite; }
+
+/* ── Volume chart: line draw-on + area fade ── */
+@keyframes chart-line { to { stroke-dashoffset: 0; } }
+.chart-line {
+  stroke-dasharray: 2600;
+  stroke-dashoffset: 2600;
+  animation: chart-line 1.4s cubic-bezier(0.3, 0.7, 0.3, 1) forwards;
+}
+@keyframes chart-area { from { opacity: 0; } to { opacity: 1; } }
+.chart-area { animation: chart-area 1.1s ease 0.25s both; }
+
+@keyframes chart-loading-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.chart-loading-bar { animation: chart-loading-bar 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+
+@keyframes chart-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.chart-shimmer {
+  background: linear-gradient(90deg, transparent 0%, var(--border-subtle) 20%, var(--border) 50%, var(--border-subtle) 80%, transparent 100%);
+  background-size: 200% 100%;
+  animation: chart-shimmer 1.4s ease-in-out infinite;
+}
+.chart-fade { transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* ── Heatmap cell entrance ── */
+@keyframes heat-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+.heat-cell { animation: heat-in 0.3s ease both; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track, .live-dot, .fade-up, .scanline, .value-in,
+  .fold-down, .fold-up, .spark-bar, .lb-row, .lb-bar, .podium-card, .champ-glow,
+  .chart-line, .chart-area, .chart-loading-bar, .chart-shimmer, .heat-cell {
+    animation: none !important;
+  }
+  .chart-line { stroke-dashoffset: 0; }
+  .spark-bar { transform: none; }
+  .lb-bar { transform: none; }
+  .fade-up { opacity: 1; transform: none; }
+  .fold-down { opacity: 0; }
 }
