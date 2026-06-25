@@ -5,6 +5,7 @@ import { CornerMarks } from "@/components/CornerMarks";
 import { TokenIcon } from "@/components/TokenIcon";
 import { Flame, ChevronDown } from "lucide-react";
 import { useLandingData } from "@/components/LandingDataProvider";
+import { cachedFetchJson } from "@/lib/fetchCache";
 
 type RangeKey = "7D" | "30D" | "90D" | "ALL";
 type SeriesKey = "total" | "perps" | "spot";
@@ -130,7 +131,7 @@ const getVal = (p: DayPoint, key: SeriesKey, mode: Mode): number =>
     : p.cSpot;
 
 export function VolumeChart() {
-  const { volumeAllRaw, volumeSpotRaw, volumeFutRaw, loadingVolume } = useLandingData();
+  const { volumeAllRaw, volumeSpotRaw, volumeFutRaw, loadingVolume, loadVolume } = useLandingData();
   const [range, setRange] = useState<RangeKey>("30D");
   const [mode, setMode] = useState<Mode>("daily");
   const [visible, setVisible] = useState<Record<SeriesKey, boolean>>({
@@ -144,6 +145,8 @@ export function VolumeChart() {
   const [dayPairsLoading, setDayPairsLoading] = useState(false);
   const lastTapRef = useRef<number>(0);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => { loadVolume(); }, [loadVolume]);
 
   // Build full dataset from context (fetched once for ALL history)
   const { points, loading, error } = useMemo(() => {
@@ -318,10 +321,9 @@ export function VolumeChart() {
   const fetchDayPairs = useCallback(async (date: string) => {
     setDayPairsLoading(true);
     try {
-      const res = await fetch(
+      const json = await cachedFetchJson<any>(
         `https://mainnet-data.sodex.dev/api/v1/dashboard/volume?start_date=${date}&end_date=${date}&market_type=all`
       );
-      const json = await res.json();
       const markets = json?.data?.data?.[0]?.markets ?? {};
       const pairs: DayPair[] = Object.entries(markets)
         .map(([symbol, vol]) => ({ symbol, volume: parseFloat(vol as string) }))

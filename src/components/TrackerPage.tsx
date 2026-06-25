@@ -181,6 +181,34 @@ interface PositionHistoryItem {
   funding_fee: string;
 }
 
+interface OpenPosition {
+  id: number;
+  symbol: string;
+  marginMode: number;
+  side: number;
+  size: string;
+  initialMargin: string;
+  avgEntryPrice: string;
+  cumOpenCost: string;
+  cumTradingFee: string;
+  cumClosedSize: string;
+  avgClosePrice: string;
+  maxSize: string;
+  realizedPnL: string;
+  leverage: number;
+  active: boolean;
+  isTakenOver: boolean;
+  takeOverPrice: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface OpenPositionsData {
+  blockTime: number;
+  blockHeight: number;
+  positions: OpenPosition[];
+}
+
 interface MergedTrade {
   id: string;
   market: string;
@@ -207,6 +235,7 @@ export interface TrackerData {
   allTimeVolumeRank: LeaderboardRankData | null;
   mergedTrades: MergedTrade[];
   positionHistory: PositionHistoryItem[];
+  openPositions: OpenPosition[];
   perpsSymbolMap: Map<number, string>;
   spotSymbolMap: Map<number, string>;
   spotBalances: SpotBalanceItem[];
@@ -404,6 +433,10 @@ async function fetchPerpsTrades(accountId: number, limit: number) {
 
 async function fetchPositionHistory(accountId: number, limit: number) {
   return apiFetch<PositionHistoryItem[]>(`${DATA_BASE}/perps/positions?account_id=${accountId}&limit=${limit}`);
+}
+
+async function fetchOpenPositions(addr: string) {
+  return apiFetch<OpenPositionsData>(`${GW_BASE}/perps/accounts/${addr}/positions`);
 }
 
 async function fetchPerpsSymbols() {
@@ -1774,7 +1807,7 @@ function RecentTradesTable({ trades }: { trades: MergedTrade[] }) {
       {/* Footer with pagination */}
       <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: "1px solid var(--border-subtle)" }}>
         <span className="tag text-[9px] sm:text-xs" style={{ color: "var(--text-faint)" }}>
-          {trades.length > 0 ? `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, trades.length)} of ${trades.length}` : "NO TRADES"}
+          {trades.length > 0 ? `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, trades.length)}` : "NO TRADES"}
         </span>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
@@ -2173,7 +2206,7 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
       {/* Footer with pagination */}
       <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: "1px solid var(--border-subtle)" }}>
         <span className="tag text-[9px] sm:text-xs" style={{ color: "var(--text-faint)" }}>
-          {positions.length > 0 ? `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, positions.length)} of ${positions.length}` : "NO POSITIONS"}
+          {positions.length > 0 ? `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, positions.length)}` : "NO POSITIONS"}
         </span>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
@@ -2199,6 +2232,221 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Open Positions — active perps positions from GW
+   ════════════════════════════════════════════════════════════════ */
+
+function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
+  const [markPrices, setMarkPrices] = useState<Map<string, number>>(new Map());
+  const [loadingPrices, setLoadingPrices] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${GW_BASE}/perps/markets/mark-prices`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const m = new Map<string, number>();
+        for (const item of json?.data ?? []) {
+          m.set(item.symbol, parseFloat(item.markPrice));
+        }
+        setMarkPrices(m);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingPrices(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const rows = positions
+    .filter((p) => p.active && parseFloat(p.size) !== 0)
+    .map((p) => {
+      const size = parseFloat(p.size);
+      const isLong = size > 0;
+      const absSize = Math.abs(size);
+      const entryPrice = parseFloat(p.avgEntryPrice);
+      const markPrice = markPrices.get(p.symbol) ?? 0;
+      const unrealizedPnl = markPrice > 0 && entryPrice > 0
+        ? (isLong ? (markPrice - entryPrice) : (entryPrice - markPrice)) * absSize
+        : 0;
+      const margin = parseFloat(p.initialMargin);
+      const roiPct = margin > 0 ? (unrealizedPnl / margin) * 100 : 0;
+      return {
+        ...p,
+        isLong,
+        absSize,
+        entryPrice,
+        markPrice,
+        unrealizedPnl,
+        margin,
+        roiPct,
+      };
+    })
+    .sort((a, b) => Math.abs(b.unrealizedPnl) - Math.abs(a.unrealizedPnl));
+
+  const totalMargin = rows.reduce((sum, r) => sum + r.margin, 0);
+  const totalPnl = rows.reduce((sum, r) => sum + r.unrealizedPnl, 0);
+
+  return (
+    <div className="relative" style={{ border: "1px solid var(--border)", background: "var(--bg-surface)" }}>
+      <CornerMarks size={8} inset={-1} thickness={1} opacity={0.5} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        <div className="flex items-center gap-2">
+          <TrendingUp size={14} style={{ color: "var(--accent)" }} />
+          <span className="tag" style={{ color: "var(--accent)" }}>OPEN POSITIONS</span>
+          {loadingPrices && <RefreshCw size={11} className="animate-spin" style={{ color: "var(--text-faint)" }} />}
+        </div>
+        {rows.length > 0 && (
+          <span className="mono text-xs font-bold" style={{ color: totalPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+            {totalPnl >= 0 ? "+" : ""}{fmt(totalPnl)}
+          </span>
+        )}
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="flex items-center justify-center py-10">
+          <span className="mono text-sm" style={{ color: "var(--text-faint)" }}>No open positions</span>
+        </div>
+      ) : (
+        <>
+          {/* Desktop: table */}
+          <div className="hidden sm:block overflow-x-auto">
+            <div style={{ minWidth: 620 }}>
+              {/* Header */}
+              <div
+                className="grid items-center px-4 py-3"
+                style={{ gridTemplateColumns: "minmax(90px,1fr) 60px 80px 90px 90px 90px 90px", gap: 12, borderBottom: "1px solid var(--border)" }}
+              >
+                <span className="tag" style={{ color: "var(--text-faint)" }}>MARKET</span>
+                <span className="tag text-center" style={{ color: "var(--text-faint)" }}>SIDE</span>
+                <span className="tag text-right" style={{ color: "var(--text-faint)" }}>SIZE</span>
+                <span className="tag text-right" style={{ color: "var(--text-faint)" }}>ENTRY</span>
+                <span className="tag text-right" style={{ color: "var(--text-faint)" }}>MARK</span>
+                <span className="tag text-right" style={{ color: "var(--text-faint)" }}>MARGIN</span>
+                <span className="tag text-right" style={{ color: "var(--text-faint)" }}>U-PNL</span>
+              </div>
+
+              {/* Rows */}
+              {rows.map((r, i) => (
+                <div
+                  key={r.id}
+                  className="lb-row grid items-center px-4 group"
+                  style={{
+                    gridTemplateColumns: "minmax(90px,1fr) 60px 80px 90px 90px 90px 90px",
+                    gap: 12,
+                    height: 48,
+                    borderBottom: i < rows.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                    animationDelay: `${i * 30}ms`,
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TokenIcon symbol={r.symbol} size={20} />
+                    <div className="min-w-0">
+                      <span className="mono text-xs font-bold truncate block" style={{ color: "var(--text)" }}>{tickerLabel(r.symbol)}</span>
+                      <span className="mono text-[9px]" style={{ color: "var(--text-faint)" }}>{r.leverage}x</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <span
+                      className="tag px-1.5 py-0.5"
+                      style={{
+                        color: r.isLong ? "var(--green)" : "var(--red)",
+                        border: `1px solid ${r.isLong ? "var(--green)" : "var(--red)"}`,
+                        borderRadius: 3,
+                        fontSize: 9,
+                      }}
+                    >
+                      {r.isLong ? "LONG" : "SHORT"}
+                    </span>
+                  </div>
+                  <span className="mono text-xs text-right tabular-nums" style={{ color: "var(--text)" }}>
+                    {r.absSize.toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                  </span>
+                  <span className="mono text-xs text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
+                    ${r.entryPrice.toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                  </span>
+                  <span className="mono text-xs text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
+                    {r.markPrice > 0 ? `$${r.markPrice.toLocaleString("en-US", { maximumFractionDigits: 4 })}` : loadingPrices ? "…" : "—"}
+                  </span>
+                  <span className="mono text-xs text-right tabular-nums" style={{ color: "var(--text)" }}>
+                    {fmt(r.margin)}
+                  </span>
+                  <span className="mono text-xs text-right font-bold tabular-nums" style={{ color: r.unrealizedPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+                    {r.unrealizedPnl >= 0 ? "+" : ""}{fmt(r.unrealizedPnl)}
+                    <span className="text-[9px] font-normal" style={{ opacity: 0.7 }}> {r.roiPct >= 0 ? "+" : ""}{r.roiPct.toFixed(1)}%</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile: compact cards */}
+          <div className="sm:hidden flex flex-col gap-2 p-3">
+            {rows.map((r) => (
+              <div
+                key={r.id}
+                className="px-3 py-2.5"
+                style={{ border: "1px solid var(--border-subtle)", borderRadius: 4, background: "var(--bg)" }}
+              >
+                {/* Row 1: icon + symbol + side + pnl */}
+                <div className="flex items-center gap-2 mb-1.5">
+                  <TokenIcon symbol={r.symbol} size={18} />
+                  <span className="mono text-xs font-bold" style={{ color: "var(--text)" }}>{tickerLabel(r.symbol)}</span>
+                  <span className="mono text-[9px]" style={{ color: "var(--text-faint)" }}>{r.leverage}x</span>
+                  <span
+                    className="tag ml-auto px-1.5 py-0.5"
+                    style={{
+                      color: r.isLong ? "var(--green)" : "var(--red)",
+                      border: `1px solid ${r.isLong ? "var(--green)" : "var(--red)"}`,
+                      borderRadius: 3,
+                      fontSize: 8,
+                    }}
+                  >
+                    {r.isLong ? "LONG" : "SHORT"}
+                  </span>
+                </div>
+                {/* Row 2: size + entry + mark */}
+                <div className="flex items-center justify-between">
+                  <span className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>
+                    {r.absSize.toLocaleString("en-US", { maximumFractionDigits: 4 })} @ ${r.entryPrice.toLocaleString("en-US", { maximumFractionDigits: 4 })}
+                  </span>
+                  <span className="mono text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    {r.markPrice > 0 ? `$${r.markPrice.toLocaleString("en-US", { maximumFractionDigits: 4 })}` : "…"}
+                  </span>
+                </div>
+                {/* Row 3: margin + pnl */}
+                <div className="flex items-center justify-between mt-1">
+                  <span className="mono text-[10px]" style={{ color: "var(--text-faint)" }}>
+                    Margin: {fmt(r.margin)}
+                  </span>
+                  <span className="mono text-xs font-bold tabular-nums" style={{ color: r.unrealizedPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+                    {r.unrealizedPnl >= 0 ? "+" : ""}{fmt(r.unrealizedPnl)}
+                    <span className="text-[9px] font-normal" style={{ opacity: 0.7 }}> {r.roiPct >= 0 ? "+" : ""}{r.roiPct.toFixed(1)}%</span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer summary */}
+          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+            <span className="tag text-[9px] sm:text-xs" style={{ color: "var(--text-faint)" }}>
+              {rows.length} {rows.length === 1 ? "POSITION" : "POSITIONS"} · MARGIN {fmt(totalMargin)}
+            </span>
+            <span className="mono text-xs font-bold" style={{ color: totalPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+              TOTAL: {totalPnl >= 0 ? "+" : ""}{fmt(totalPnl)}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -2449,9 +2697,9 @@ function ActivityTabs({
   perpsMap: Map<number, string>;
 }) {
   const [tab, setTab] = useState<"trades" | "positions">("trades");
-  const TABS: { id: "trades" | "positions"; label: string; count: number }[] = [
-    { id: "trades", label: "RECENT TRADES", count: trades.length },
-    { id: "positions", label: "POSITIONS", count: positions.length },
+  const TABS: { id: "trades" | "positions"; label: string }[] = [
+    { id: "trades", label: "RECENT TRADES" },
+    { id: "positions", label: "POSITIONS" },
   ];
   return (
     <div>
@@ -2470,7 +2718,6 @@ function ActivityTabs({
               }}
             >
               {t.label}
-              <span style={{ opacity: 0.6 }}>{fmtNum(t.count)}</span>
             </button>
           );
         })}
@@ -2813,16 +3060,17 @@ export function TrackerPage({
     const [spotTrades, perpsTrades, positions] = await Promise.all([
       fetchSpotTrades(accountId, 100).catch(() => [] as SpotTrade[]),
       fetchPerpsTrades(accountId, 100).catch(() => [] as PerpsTrade[]),
-      fetchPositionHistory(accountId, 50).catch(() => [] as PositionHistoryItem[]),
+      fetchPositionHistory(accountId, 200).catch(() => [] as PositionHistoryItem[]),
     ]);
     await sleep(150);
 
-    // Batch 4: ALL_TIME leaderboard ranks (pnl + volume) + spot balances + coins
-    const [allTimePnlRank, allTimeVolumeRank, spotBalancesData, spotCoinsMap] = await Promise.all([
+    // Batch 4: ALL_TIME leaderboard ranks (pnl + volume) + spot balances + coins + open positions
+    const [allTimePnlRank, allTimeVolumeRank, spotBalancesData, spotCoinsMap, openPositionsData] = await Promise.all([
       fetchLeaderboardRank(addr, "ALL_TIME", "pnl").catch(() => null),
       fetchLeaderboardRank(addr, "ALL_TIME", "volume").catch(() => null),
       fetchSpotBalances(addr).catch(() => null),
       fetchSpotCoins().catch(() => new Map<string, number>()),
+      fetchOpenPositions(addr).catch(() => null),
     ]);
 
     if (!overviewData) {
@@ -2843,6 +3091,7 @@ export function TrackerPage({
       allTimeVolumeRank,
       mergedTrades,
       positionHistory: positions,
+      openPositions: openPositionsData?.positions ?? [],
       perpsSymbolMap,
       spotSymbolMap,
       spotBalances: spotBalancesData?.balances ?? [],
@@ -3176,6 +3425,12 @@ export function TrackerPage({
         <SectionLabel>DAILY PNL</SectionLabel>
         <div className="mb-3">
           <PnlCalendar chart={chart} windowShort={windowShort} />
+        </div>
+
+        {/* Open Positions */}
+        <SectionLabel hint="PERPS">OPEN POSITIONS</SectionLabel>
+        <div className="mb-3">
+          <OpenPositionsCard positions={data!.openPositions} />
         </div>
 
         {/* Spot Holdings */}

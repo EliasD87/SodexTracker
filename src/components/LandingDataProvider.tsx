@@ -1,10 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { cachedFetchJson } from "@/lib/fetchCache";
 
 const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
 const DATA_BASE = "https://mainnet-data.sodex.dev/api/v1";
+
+const USERS_TTL = 30 * 60 * 1000; // 30 min — users count changes slowly
 
 function getUtcDateRange() {
   const now = new Date();
@@ -18,9 +20,9 @@ function getUtcDateRange() {
   };
 }
 
-async function fetchJson(url: string, opts?: RequestInit): Promise<any> {
+async function fetchJson(url: string, opts?: RequestInit, ttl?: number): Promise<any> {
   try {
-    return await cachedFetchJson(url, opts);
+    return await cachedFetchJson(url, opts, ttl);
   } catch {
     return null;
   }
@@ -38,10 +40,12 @@ interface LandingData {
   volumeSpotRaw: any;
   volumeFutRaw: any;
   loadingVolume: boolean;
+  loadVolume: () => void;
 
   pnlLeadersRaw: any;
   volLeadersRaw: any;
   loadingLeaders: boolean;
+  loadLeaders: () => void;
 }
 
 const LandingContext = createContext<LandingData | null>(null);
@@ -64,23 +68,24 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
   const [volumeSpotRaw, setVolumeSpotRaw] = useState<any>(null);
   const [volumeFutRaw, setVolumeFutRaw] = useState<any>(null);
   const [loadingVolume, setLoadingVolume] = useState(true);
+  const [volumeRequested, setVolumeRequested] = useState(false);
 
   const [pnlLeadersRaw, setPnlLeadersRaw] = useState<any>(null);
   const [volLeadersRaw, setVolLeadersRaw] = useState<any>(null);
   const [loadingLeaders, setLoadingLeaders] = useState(true);
+  const [leadersRequested, setLeadersRequested] = useState(false);
 
+  // Batch 1: above-the-fold cards + mark prices (5 parallel requests)
   useEffect(() => {
     let cancelled = false;
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-    async function fetchAll() {
+    async function fetchCards() {
       const { start, end, today } = getUtcDateRange();
 
-      // Batch 1: top 4 cards + mark prices (5 parallel requests)
       const [vol24h, oi, users, tvl, markPrices] = await Promise.all([
         fetchJson(`${DATA_BASE}/dashboard/volume?start_date=${start}&end_date=${end}&market_type=all`),
         fetchJson(`${DATA_BASE}/dashboard/open-interest?start_date=${start}&end_date=${end}`),
-        fetchJson(`${DATA_BASE}/dashboard/users?start_date=2024-01-01&end_date=${today}`),
+        fetchJson(`${DATA_BASE}/dashboard/users?start_date=2024-01-01&end_date=${today}`, undefined, USERS_TTL),
         fetchJson(`${DATA_BASE}/mirror/tvl/history`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -95,11 +100,24 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
       setTvlRaw(tvl);
       setMarkPricesRaw(markPrices);
       setLoadingCards(false);
+    }
 
-      await sleep(200);
-      if (cancelled) return;
+    fetchCards();
+    return () => { cancelled = true; };
+  }, []);
 
-      // Batch 2: volume over time — ALL history (3 parallel requests)
+  // Batch 2: volume chart — lazy-loaded when VolumeChart mounts
+  const loadVolume = useCallback(() => {
+    setVolumeRequested(true);
+  }, []);
+
+  useEffect(() => {
+    if (!volumeRequested) return;
+    let cancelled = false;
+
+    async function fetchVolume() {
+      const { today } = getUtcDateRange();
+
       const [allRes, spotRes, futRes] = await Promise.all([
         fetchJson(`${DATA_BASE}/dashboard/volume?start_date=2020-01-01&end_date=${today}&market_type=all`),
         fetchJson(`${DATA_BASE}/dashboard/volume?start_date=2020-01-01&end_date=${today}&market_type=spot`),
@@ -110,11 +128,22 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
       setVolumeSpotRaw(spotRes);
       setVolumeFutRaw(futRes);
       setLoadingVolume(false);
+    }
 
-      await sleep(200);
-      if (cancelled) return;
+    fetchVolume();
+    return () => { cancelled = true; };
+  }, [volumeRequested]);
 
-      // Batch 3: leaderboard (2 parallel requests)
+  // Batch 3: leaderboard — lazy-loaded when TopTraders mounts
+  const loadLeaders = useCallback(() => {
+    setLeadersRequested(true);
+  }, []);
+
+  useEffect(() => {
+    if (!leadersRequested) return;
+    let cancelled = false;
+
+    async function fetchLeaders() {
       const [pnl, vol] = await Promise.all([
         fetchJson(`${DATA_BASE}/leaderboard?window_type=24H&page=1&page_size=10&sort_order=desc&sort_by=pnl`),
         fetchJson(`${DATA_BASE}/leaderboard?window_type=24H&page=1&page_size=10&sort_order=desc&sort_by=volume`),
@@ -125,9 +154,9 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
       setLoadingLeaders(false);
     }
 
-    fetchAll();
+    fetchLeaders();
     return () => { cancelled = true; };
-  }, []);
+  }, [leadersRequested]);
 
   return (
     <LandingContext.Provider
@@ -142,9 +171,11 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
         volumeSpotRaw,
         volumeFutRaw,
         loadingVolume,
+        loadVolume,
         pnlLeadersRaw,
         volLeadersRaw,
         loadingLeaders,
+        loadLeaders,
       }}
     >
       {children}

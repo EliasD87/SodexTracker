@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Eye } from "lucide-react";
 import Link from "next/link";
 import { TraderModal } from "@/components/TraderModal";
@@ -227,9 +227,11 @@ function VolTable({ data, loading, onView }: { data: LeaderEntry[]; loading: boo
 }
 
 export function TopTraders() {
-  const { pnlLeadersRaw, volLeadersRaw, loadingLeaders } = useLandingData();
+  const { pnlLeadersRaw, volLeadersRaw, loadingLeaders, loadLeaders } = useLandingData();
   const [tab, setTab] = useState<"pnl" | "volume">("pnl");
   const [viewing, setViewing] = useState<LeaderEntry | null>(null);
+
+  useEffect(() => { loadLeaders(); }, [loadLeaders]);
 
   const { pnlData, volData, loading } = useMemo<{ pnlData: LeaderData | null; volData: LeaderData | null; loading: boolean }>(() => {
     return {
