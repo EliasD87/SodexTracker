@@ -447,10 +447,10 @@ export function SoPointsEditor() {
             <button
               onClick={download}
               disabled={downloading}
-              className="mt-3 sm:mt-4 w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="mt-3 sm:mt-4 w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 text-[13px] sm:text-[15px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
               style={{ background: "var(--accent)", color: "var(--accent-fg)", borderRadius: 12 }}
             >
-              <Download size={16} />
+              <Download size={15} />
               {downloading ? "Rendering…" : "Download PNG"}
             </button>
           </div>
@@ -467,7 +467,7 @@ export function SoPointsEditor() {
                     <button
                       key={t.key}
                       onClick={() => setTier(t.key)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 transition-all"
+                      className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-2 sm:py-2.5 transition-all"
                       style={{
                         borderRadius: 11,
                         border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
@@ -475,19 +475,17 @@ export function SoPointsEditor() {
                       }}
                     >
                       <span
-                        className="flex items-center justify-center shrink-0"
+                        className="flex items-center justify-center shrink-0 w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]"
                         style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 8,
+                          borderRadius: 7,
                           background: t.swatch,
                           border: "1px solid rgba(128,128,128,0.35)",
                         }}
                       >
-                        <TIcon size={14} color="#fff" strokeWidth={2.2} />
+                        <TIcon size={13} color="#fff" strokeWidth={2.2} />
                       </span>
                       <span
-                        className="text-[12.5px] font-semibold"
+                        className="text-[11.5px] sm:text-[12.5px] font-semibold"
                         style={{ color: active ? "var(--text)" : "var(--text-muted)" }}
                       >
                         {t.label}
@@ -512,7 +510,7 @@ export function SoPointsEditor() {
                     <button
                       key={k}
                       onClick={() => setCardType(k)}
-                      className="flex-1 flex flex-col items-center gap-1 py-2.5 transition-all"
+                      className="flex-1 flex flex-col items-center gap-0.5 sm:gap-1 py-2 sm:py-2.5 transition-all"
                       style={{
                         borderRadius: 11,
                         border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
@@ -520,9 +518,9 @@ export function SoPointsEditor() {
                         color: active ? "var(--text)" : "var(--text-muted)",
                       }}
                     >
-                      <CIcon size={16} />
-                      <span className="text-[12.5px] font-semibold">{label}</span>
-                      <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>
+                      <CIcon size={15} />
+                      <span className="text-[11.5px] sm:text-[12.5px] font-semibold">{label}</span>
+                      <span className="text-[9.5px] sm:text-[10px]" style={{ color: "var(--text-faint)" }}>
                         {sub}
                       </span>
                     </button>
@@ -569,14 +567,14 @@ export function SoPointsEditor() {
                   placeholder="sodex.com/join/trading"
                 />
               </Field>
-              <label className="flex items-center gap-2.5 mt-1 cursor-pointer select-none">
+              <label className="flex items-center gap-2 sm:gap-2.5 mt-1 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={showQR}
                   onChange={(e) => setShowQR(e.target.checked)}
-                  style={{ accentColor: "var(--text)", width: 15, height: 15 }}
+                  style={{ accentColor: "var(--text)", width: 14, height: 14 }}
                 />
-                <span className="text-[12.5px]" style={{ color: "var(--text-muted)" }}>
+                <span className="text-[11.5px] sm:text-[12.5px]" style={{ color: "var(--text-muted)" }}>
                   Show QR code (from URL)
                 </span>
               </label>
@@ -597,7 +595,7 @@ export function SoPointsEditor() {
                     <button
                       key={k}
                       onClick={() => setBgMode(k)}
-                      className="flex-1 flex flex-col items-center gap-1.5 py-2.5 transition-all"
+                      className="flex-1 flex flex-col items-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 transition-all"
                       style={{
                         borderRadius: 11,
                         border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
@@ -605,8 +603,8 @@ export function SoPointsEditor() {
                         color: active ? "var(--text)" : "var(--text-muted)",
                       }}
                     >
-                      <BIcon size={16} />
-                      <span className="text-[11.5px] font-medium">{label}</span>
+                      <BIcon size={15} />
+                      <span className="text-[10.5px] sm:text-[11.5px] font-medium">{label}</span>
                     </button>
                   );
                 })}
@@ -649,7 +647,7 @@ export function SoPointsEditor() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[12.5px] font-semibold"
+                      className="flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 text-[11.5px] sm:text-[12.5px] font-semibold"
                       style={{
                         borderRadius: 11,
                         border: "1px solid var(--border)",
