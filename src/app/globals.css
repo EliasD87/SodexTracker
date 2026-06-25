@@ -60,6 +60,20 @@
   .lb-grid-container { min-width: 700px; }
 }
 
+/* ── SoPoints colour picker (react-colorful) — touch friendly ── */
+.sopoints-picker { width: 232px; max-width: calc(100vw - 48px); }
+.sopoints-picker .react-colorful { width: 100%; height: 180px; gap: 10px; }
+.sopoints-picker .react-colorful__saturation { border-radius: 10px; }
+.sopoints-picker .react-colorful__hue { height: 22px; border-radius: 999px; }
+.sopoints-picker .react-colorful__pointer { width: 20px; height: 20px; }
+
+@media (max-width: 639px) {
+  .sopoints-picker { width: 100%; }
+  .sopoints-picker .react-colorful { height: 200px; }
+  .sopoints-picker .react-colorful__hue { height: 26px; }
+  .sopoints-picker .react-colorful__pointer { width: 24px; height: 24px; }
+}
+
 @keyframes sheetSlideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }

@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { toPng } from "html-to-image";
+import QRCode from "qrcode";
+import { HexColorPicker } from "react-colorful";
+import { parseGIF, decompressFrames } from "gifuct-js";
+import { GIFEncoder, quantize, applyPalette } from "gifenc";
 import {
   Gem,
   Crown,
@@ -31,7 +35,7 @@ type TierConfig = {
   /** subtle top-left sheen for depth */
   sheen: string;
   icon: React.ElementType;
-  /** per-icon visual-size multiplier so every glyph reads the same size */
+  /** optical size correction so every glyph reads at the same visual size */
   iconScale: number;
   /** swatch shown in the tier picker */
   swatch: string;
@@ -46,7 +50,7 @@ const TIERS: Record<TierKey, TierConfig> = {
     gradient: "linear-gradient(150deg, #cf935f 0%, #a86a3a 52%, #834f28 100%)",
     sheen: "radial-gradient(120% 110% at 12% 0%, rgba(255,255,255,0.18), transparent 52%)",
     icon: Medal,
-    iconScale: 0.98,
+    iconScale: 1.18,
     swatch: "#b27542",
   },
   silver: {
@@ -55,7 +59,7 @@ const TIERS: Record<TierKey, TierConfig> = {
     gradient: "linear-gradient(150deg, #aab4c1 0%, #8089a0 55%, #69707f 100%)",
     sheen: "radial-gradient(120% 110% at 12% 0%, rgba(255,255,255,0.24), transparent 52%)",
     icon: Shield,
-    iconScale: 0.95,
+    iconScale: 1.0,
     swatch: "#8b95a6",
   },
   gold: {
@@ -64,7 +68,7 @@ const TIERS: Record<TierKey, TierConfig> = {
     gradient: "linear-gradient(150deg, #f0c233 0%, #d6a31d 50%, #b5840f 100%)",
     sheen: "radial-gradient(120% 110% at 12% 0%, rgba(255,255,255,0.28), transparent 52%)",
     icon: Crown,
-    iconScale: 1.12,
+    iconScale: 1.85,
     swatch: "#dca81f",
   },
   diamond: {
@@ -73,7 +77,7 @@ const TIERS: Record<TierKey, TierConfig> = {
     gradient: "linear-gradient(150deg, #8482ee 0%, #6663d6 52%, #524ac2 100%)",
     sheen: "radial-gradient(120% 110% at 12% 0%, rgba(255,255,255,0.22), transparent 52%)",
     icon: Gem,
-    iconScale: 0.9,
+    iconScale: 1.12,
     swatch: "#6a67d8",
   },
   epic: {
@@ -82,7 +86,7 @@ const TIERS: Record<TierKey, TierConfig> = {
     gradient: "radial-gradient(125% 145% at 50% -12%, #2b2b30 0%, #161618 40%, #0a0a0b 100%)",
     sheen: "radial-gradient(120% 110% at 12% 0%, rgba(255,255,255,0.05), transparent 50%)",
     icon: Crown,
-    iconScale: 1.12,
+    iconScale: 1.85,
     swatch: "#161618",
     pattern: {
       backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1.3px)",
@@ -93,6 +97,38 @@ const TIERS: Record<TierKey, TierConfig> = {
 
 type BgMode = "tier" | "solid" | "image";
 
+/* CSS filter presets for uploaded image / GIF backgrounds. The same string is
+   applied to the live <img> (so PNG export captures it) and to the canvas
+   context during GIF export, so all three stay in sync. */
+type EffectKey =
+  | "none"
+  | "mono"
+  | "noir"
+  | "sepia"
+  | "vivid"
+  | "warm"
+  | "cool"
+  | "fade"
+  | "dramatic"
+  | "blur";
+
+const EFFECTS: { key: EffectKey; label: string; css: string }[] = [
+  { key: "none", label: "Original", css: "none" },
+  { key: "vivid", label: "Vivid", css: "saturate(1.55) contrast(1.08)" },
+  { key: "dramatic", label: "Dramatic", css: "contrast(1.4) saturate(1.1) brightness(0.95)" },
+  { key: "warm", label: "Warm", css: "sepia(0.28) saturate(1.35) hue-rotate(-12deg)" },
+  { key: "cool", label: "Cool", css: "saturate(1.15) hue-rotate(15deg) brightness(1.03)" },
+  { key: "fade", label: "Fade", css: "contrast(0.85) brightness(1.1) saturate(0.82)" },
+  { key: "sepia", label: "Sepia", css: "sepia(0.65) contrast(1.05) saturate(1.1)" },
+  { key: "mono", label: "B&W", css: "grayscale(1) contrast(1.06)" },
+  { key: "noir", label: "Noir", css: "grayscale(1) contrast(1.42) brightness(0.94)" },
+  { key: "blur", label: "Blur", css: "blur(3px) brightness(1.02)" },
+];
+
+const EFFECT_CSS: Record<EffectKey, string> = Object.fromEntries(
+  EFFECTS.map((e) => [e.key, e.css])
+) as Record<EffectKey, string>;
+
 /* format an arbitrary string of digits with thousands separators */
 function formatNumber(raw: string): string {
   const digits = raw.replace(/[^\d]/g, "");
@@ -101,13 +137,48 @@ function formatNumber(raw: string): string {
 }
 
 /* ──────────────────────────────────────────────────────────────
+   TierIcon — every lucide glyph fills a different portion of its
+   24×24 viewBox (Crown is wide & flat, Medal is tall & narrow…), so
+   a fixed render size makes them look unequal. Each tier carries an
+   explicit `scale` optical-correction factor so they all read at the
+   same visual size.
+   ────────────────────────────────────────────────────────────── */
+function TierIcon({
+  icon: Icon,
+  scale = 1,
+  strokeWidth = 2,
+}: {
+  icon: React.ElementType;
+  scale?: number;
+  strokeWidth?: number;
+}) {
+  const Cmp = Icon as React.ForwardRefExoticComponent<
+    React.SVGProps<SVGSVGElement> & React.RefAttributes<SVGSVGElement>
+  >;
+
+  return (
+    <Cmp
+      strokeWidth={strokeWidth}
+      color="#fff"
+      style={{
+        width: "62%",
+        height: "62%",
+        transform: `scale(${scale})`,
+        transformOrigin: "center",
+        transition: "transform 0.12s",
+      }}
+    />
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────
    SoDEX wordmark — official logo (orange cube + white wordmark)
    ────────────────────────────────────────────────────────────── */
-function SodexMark() {
+function SodexMark({ dark = false }: { dark?: boolean }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/sodex-logo.svg"
+      src={dark ? "/sodex-logo-dark.svg" : "/sodex-logo.svg"}
       alt="SoDEX"
       style={{ width: "22%", maxWidth: 150, height: "auto", display: "block" }}
     />
@@ -129,6 +200,8 @@ export function SoPointsEditor() {
   const [percentile, setPercentile] = useState("TOP 0.04% GLOBALLY");
   const [url, setUrl] = useState("sodex.com/join/trading");
   const [showQR, setShowQR] = useState(true);
+  // SoDEX logo colour — white reads on dark backgrounds, dark on light ones
+  const [logoDark, setLogoDark] = useState(false);
 
   // weekly cards show a "MY WEEK n SOPOINTS" label and a "+" gain prefix;
   // total cards show "MY SOPOINTS" with the raw amount.
@@ -140,7 +213,14 @@ export function SoPointsEditor() {
   const [bgMode, setBgMode] = useState<BgMode>("tier");
   const [solidColor, setSolidColor] = useState("#5b21b6");
   const [bgImage, setBgImage] = useState<string | null>(null);
+  const [bgIsGif, setBgIsGif] = useState(false);
+  const [imgEffect, setImgEffect] = useState<EffectKey>("none");
   const [overlay, setOverlay] = useState(0.55);
+  // CSS filter for the uploaded image/GIF background (preview + both exports)
+  const imgFilter = EFFECT_CSS[imgEffect];
+  // when true the card renders without its background image / base so we can
+  // snapshot just the text+QR overlay (transparent) for per-frame GIF compositing
+  const [captureOverlay, setCaptureOverlay] = useState(false);
 
   // ── derived ──
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -149,8 +229,8 @@ export function SoPointsEditor() {
   const cfg = TIERS[tier];
   const Icon = cfg.icon;
 
-  /* Generate a QR code from the URL (fetched as a data URL so export never
-     taints the canvas with a cross-origin image). */
+  /* Generate a QR code from the typed URL, locally (as a data URL so export
+     never taints the canvas and the code always matches the join link). */
   useEffect(() => {
     const clean = url.trim();
     if (!clean) {
@@ -158,31 +238,27 @@ export function SoPointsEditor() {
       return;
     }
     let cancelled = false;
-    const t = setTimeout(async () => {
-      try {
-        const target = clean.startsWith("http") ? clean : `https://${clean}`;
-        const api = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&qzone=1&data=${encodeURIComponent(
-          target
-        )}`;
-        const res = await fetch(api);
-        const blob = await res.blob();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (!cancelled) setQrDataUrl(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
-      } catch {
+    const target = clean.startsWith("http") ? clean : `https://${clean}`;
+    QRCode.toDataURL(target, {
+      width: 440,
+      margin: 1,
+      errorCorrectionLevel: "M",
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQrDataUrl(dataUrl);
+      })
+      .catch(() => {
         if (!cancelled) setQrDataUrl(null);
-      }
-    }, 400);
+      });
     return () => {
       cancelled = true;
-      clearTimeout(t);
     };
   }, [url]);
 
   const onUpload = (file?: File | null) => {
     if (!file) return;
+    setBgIsGif(file.type === "image/gif");
     const reader = new FileReader();
     reader.onload = () => {
       setBgImage(reader.result as string);
@@ -190,6 +266,132 @@ export function SoPointsEditor() {
     };
     reader.readAsDataURL(file);
   };
+
+  /* snapshot the card to a PNG data URL, with a font-embed fallback */
+  const snapshotCard = useCallback(async (node: HTMLElement, ratio: number) => {
+    const withTimeout = <T,>(p: Promise<T>, ms: number) =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error("render-timeout")), ms)
+        ),
+      ]);
+    try {
+      return await withTimeout(toPng(node, { pixelRatio: ratio, cacheBust: true }), 9000);
+    } catch {
+      return await withTimeout(
+        toPng(node, { pixelRatio: ratio, cacheBust: true, skipFonts: true }),
+        9000
+      );
+    }
+  }, []);
+
+  /* GIF export — composite the static card overlay onto every frame of the
+     uploaded GIF and re-encode an animated GIF. */
+  const exportGif = useCallback(async () => {
+    const node = cardRef.current;
+    if (!node || !bgImage) return;
+
+    // cap the output width — GIF size grows with the pixel count (quadratically
+    // with dimensions), so 540px keeps the file shareable.
+    const rect = node.getBoundingClientRect();
+    const scale = 540 / rect.width;
+    const W = Math.round(rect.width * scale);
+    const H = Math.round(rect.height * scale);
+
+    // 1) capture the overlay (text/QR/logo) on a transparent card
+    setCaptureOverlay(true);
+    await new Promise((r) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => r(null)))
+    );
+    let overlayUrl: string;
+    try {
+      overlayUrl = await snapshotCard(node, scale);
+    } finally {
+      setCaptureOverlay(false);
+    }
+    const overlayImg = await new Promise<HTMLImageElement>((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = overlayUrl;
+    });
+
+    // 2) decode the GIF frames
+    const buff = await (await fetch(bgImage)).arrayBuffer();
+    const gif = parseGIF(buff);
+    const frames = decompressFrames(gif, true);
+    if (!frames.length) throw new Error("no-frames");
+    const gw = gif.lsd.width;
+    const gh = gif.lsd.height;
+
+    // accumulation canvas at the GIF's logical size (handles frame disposal)
+    const acc = document.createElement("canvas");
+    acc.width = gw;
+    acc.height = gh;
+    const actx = acc.getContext("2d")!;
+    const patch = document.createElement("canvas");
+    const ptctx = patch.getContext("2d")!;
+
+    // output canvas (card size) + cover-fit transform for the background
+    const out = document.createElement("canvas");
+    out.width = W;
+    out.height = H;
+    const octx = out.getContext("2d")!;
+    const cover = Math.max(W / gw, H / gh);
+    const dw = gw * cover;
+    const dh = gh * cover;
+    const dx = (W - dw) / 2;
+    const dy = (H - dh) / 2;
+
+    // keep at most ~MAX_FRAMES frames; every frame is still processed so the
+    // disposal/accumulation stays correct, but only kept frames are encoded and
+    // the dropped frames' duration is folded into the next kept one.
+    const MAX_FRAMES = 24;
+    const stride = Math.max(1, Math.ceil(frames.length / MAX_FRAMES));
+
+    const enc = GIFEncoder();
+    let prevDisposal = 0;
+    let prev = { x: 0, y: 0, w: 0, h: 0 };
+    let pendingDelay = 0;
+
+    frames.forEach((f, i) => {
+      if (prevDisposal === 2) actx.clearRect(prev.x, prev.y, prev.w, prev.h);
+      const { width: fw, height: fh, top, left } = f.dims;
+      patch.width = fw;
+      patch.height = fh;
+      ptctx.putImageData(new ImageData(f.patch, fw, fh), 0, 0);
+      actx.drawImage(patch, left, top);
+      prevDisposal = f.disposalType;
+      prev = { x: left, y: top, w: fw, h: fh };
+      pendingDelay += f.delay || 100;
+
+      const kept = i % stride === 0 || i === frames.length - 1;
+      if (!kept) return;
+
+      // background frame (cover, with the chosen effect) + the static overlay
+      octx.clearRect(0, 0, W, H);
+      octx.filter = imgFilter === "none" ? "none" : imgFilter;
+      octx.drawImage(acc, dx, dy, dw, dh);
+      octx.filter = "none";
+      octx.drawImage(overlayImg, 0, 0, W, H);
+
+      const { data } = octx.getImageData(0, 0, W, H);
+      const palette = quantize(data, 256);
+      const index = applyPalette(data, palette);
+      enc.writeFrame(index, W, H, { palette, delay: pendingDelay });
+      pendingDelay = 0;
+    });
+    enc.finish();
+
+    const blob = new Blob([enc.bytes()], { type: "image/gif" });
+    const aurl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.download = `sopoints-${tier}-${cardType}.gif`;
+    a.href = aurl;
+    a.click();
+    URL.revokeObjectURL(aurl);
+  }, [bgImage, tier, cardType, snapshotCard, imgFilter]);
 
   const download = useCallback(async () => {
     const node = cardRef.current;
@@ -203,32 +405,15 @@ export function SoPointsEditor() {
         /* ignore */
       }
 
+      if (bgMode === "image" && bgIsGif && bgImage) {
+        await exportGif();
+        return;
+      }
+
       // render at ~1080px wide regardless of preview size, capped so phones
       // don't choke on a huge canvas
       const ratio = Math.min(Math.max(1080 / node.offsetWidth, 1), 2.5);
-
-      const withTimeout = <T,>(p: Promise<T>, ms: number) =>
-        Promise.race([
-          p,
-          new Promise<T>((_, reject) =>
-            setTimeout(() => reject(new Error("render-timeout")), ms)
-          ),
-        ]);
-
-      let dataUrl: string;
-      try {
-        // first try embedding the fonts for a pixel-perfect result
-        dataUrl = await withTimeout(
-          toPng(node, { pixelRatio: ratio, cacheBust: true }),
-          9000
-        );
-      } catch {
-        // font embedding is the usual cause of a stall — fall back without it
-        dataUrl = await withTimeout(
-          toPng(node, { pixelRatio: ratio, cacheBust: true, skipFonts: true }),
-          9000
-        );
-      }
+      const dataUrl = await snapshotCard(node, ratio);
 
       const a = document.createElement("a");
       a.download = `sopoints-${tier}-${cardType}.png`;
@@ -240,13 +425,24 @@ export function SoPointsEditor() {
     } finally {
       setDownloading(false);
     }
-  }, [tier, cardType, downloading]);
+  }, [tier, cardType, downloading, bgMode, bgIsGif, bgImage, exportGif, snapshotCard]);
 
-  /* the card background, depending on the chosen mode */
+  /* the card background, depending on the chosen mode. During overlay capture
+     (GIF export) the image base goes transparent so only the overlay is drawn. */
   const cardBackground =
-    bgMode === "solid" ? solidColor : bgMode === "image" ? "#0b0b0b" : cfg.gradient;
+    captureOverlay && bgMode === "image"
+      ? "transparent"
+      : bgMode === "solid"
+      ? solidColor
+      : bgMode === "image"
+      ? "#0b0b0b"
+      : cfg.gradient;
 
   const displayPoints = `${showPlus ? "+" : ""}${points || "0"}`;
+
+  // colour for the on-screen-only glow behind the card (never in the export)
+  const glowColor =
+    bgMode === "solid" ? solidColor : bgMode === "image" ? "#555555" : cfg.swatch;
 
   return (
     <div className="min-h-screen pt-[60px] sm:pt-[72px] pb-20 sm:pb-24" style={{ background: "var(--bg)" }}>
@@ -274,6 +470,17 @@ export function SoPointsEditor() {
         <div className="grid lg:grid-cols-[1fr_360px] gap-4 sm:gap-8 mt-4 sm:mt-8 items-start">
           {/* ════════ LIVE PREVIEW ════════ */}
           <div className="lg:sticky lg:top-[80px]">
+            {/* glow wrapper — a subtle colour glow shown on the website only;
+                it is on this wrapper, not the card, so the exported PNG
+                (html-to-image captures the inner card ref) never includes it */}
+            <div
+              className="relative"
+              style={{
+                borderRadius: 22,
+                boxShadow: `0 8px 40px -10px ${glowColor}b3, 0 0 16px -2px ${glowColor}66`,
+                transition: "box-shadow 0.3s ease",
+              }}
+            >
             <div
               ref={cardRef}
               className="relative w-full overflow-hidden select-none"
@@ -288,14 +495,14 @@ export function SoPointsEditor() {
                 containerType: "inline-size",
               }}
             >
-              {/* uploaded image layer */}
-              {bgMode === "image" && bgImage && (
+              {/* uploaded image layer (hidden during GIF overlay capture) */}
+              {bgMode === "image" && bgImage && !captureOverlay && (
                 <img
                   src={bgImage}
                   alt=""
                   crossOrigin="anonymous"
                   className="absolute inset-0 w-full h-full object-cover"
-                  style={{ pointerEvents: "none" }}
+                  style={{ pointerEvents: "none", filter: imgFilter }}
                 />
               )}
 
@@ -339,11 +546,7 @@ export function SoPointsEditor() {
                         border: "1px solid rgba(255,255,255,0.18)",
                       }}
                     >
-                      <Icon
-                        style={{ width: `${56 * cfg.iconScale}%`, height: `${56 * cfg.iconScale}%` }}
-                        strokeWidth={2}
-                        color="#fff"
-                      />
+                      <TierIcon icon={Icon} scale={cfg.iconScale} />
                     </span>
                     <span
                       style={{
@@ -356,7 +559,7 @@ export function SoPointsEditor() {
                       {cfg.label}
                     </span>
                   </div>
-                  <SodexMark />
+                  <SodexMark dark={logoDark} />
                 </div>
 
                 {/* middle: points */}
@@ -480,6 +683,7 @@ export function SoPointsEditor() {
                 </span>
               )}
             </div>
+            </div>
 
             {/* export button */}
             <button
@@ -489,7 +693,11 @@ export function SoPointsEditor() {
               style={{ background: "var(--accent)", color: "var(--accent-fg)", borderRadius: 12 }}
             >
               <Download size={15} />
-              {downloading ? "Rendering…" : "Download PNG"}
+              {downloading
+                ? "Rendering…"
+                : bgMode === "image" && bgIsGif
+                ? "Download GIF"
+                : "Download PNG"}
             </button>
           </div>
 
@@ -605,17 +813,12 @@ export function SoPointsEditor() {
                   placeholder="sodex.com/join/trading"
                 />
               </Field>
-              <label className="flex items-center gap-2 sm:gap-2.5 mt-1 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showQR}
-                  onChange={(e) => setShowQR(e.target.checked)}
-                  style={{ accentColor: "var(--text)", width: 14, height: 14 }}
-                />
-                <span className="text-[11.5px] sm:text-[12.5px]" style={{ color: "var(--text-muted)" }}>
-                  Show QR code (from URL)
-                </span>
-              </label>
+              <Toggle checked={showQR} onChange={setShowQR} label="Show QR code (from URL)" />
+              <Toggle
+                checked={logoDark}
+                onChange={setLogoDark}
+                label="Dark SoDEX logo (for light backgrounds)"
+              />
             </Section>
 
             {/* background */}
@@ -650,26 +853,7 @@ export function SoPointsEditor() {
 
               {bgMode === "solid" && (
                 <Field label="Card colour">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={solidColor}
-                      onChange={(e) => setSolidColor(e.target.value)}
-                      style={{
-                        width: 44,
-                        height: 36,
-                        padding: 2,
-                        background: "var(--bg-surface)",
-                        border: "1px solid var(--border)",
-                        cursor: "pointer",
-                      }}
-                    />
-                    <input
-                      value={solidColor}
-                      onChange={(e) => setSolidColor(e.target.value)}
-                      className="ed-input flex-1 mono"
-                    />
-                  </div>
+                  <ColorField value={solidColor} onChange={setSolidColor} />
                 </Field>
               )}
 
@@ -700,6 +884,7 @@ export function SoPointsEditor() {
                       <button
                         onClick={() => {
                           setBgImage(null);
+                          setBgIsGif(false);
                           setBgMode("tier");
                         }}
                         className="flex items-center justify-center px-3"
@@ -716,6 +901,31 @@ export function SoPointsEditor() {
                     )}
                   </div>
                   {bgImage && (
+                    <Field label="Effect">
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                        {EFFECTS.map((e) => {
+                          const active = imgEffect === e.key;
+                          return (
+                            <button
+                              key={e.key}
+                              type="button"
+                              onClick={() => setImgEffect(e.key)}
+                              className="py-1.5 sm:py-2 text-[11px] sm:text-[12px] font-medium transition-all"
+                              style={{
+                                borderRadius: 9,
+                                border: `1px solid ${active ? "var(--text)" : "var(--border)"}`,
+                                background: active ? "var(--bg-elevated)" : "var(--bg-surface)",
+                                color: active ? "var(--text)" : "var(--text-muted)",
+                              }}
+                            >
+                              {e.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Field>
+                  )}
+                  {bgImage && (
                     <Field label={`Darken overlay · ${Math.round(overlay * 100)}%`}>
                       <input
                         type="range"
@@ -729,10 +939,15 @@ export function SoPointsEditor() {
                       />
                     </Field>
                   )}
+                  {bgImage && bgIsGif && (
+                    <p className="text-[11.5px]" style={{ color: "var(--text-muted)" }}>
+                      Animated GIF detected — the card will export as an animated GIF.
+                    </p>
+                  )}
                   {!bgImage && (
                     <p className="text-[11.5px]" style={{ color: "var(--text-faint)" }}>
-                      Upload any image to use as the card background. A dark overlay keeps your
-                      text readable.
+                      Upload any image (incl. animated GIFs) to use as the card background. A dark
+                      overlay keeps your text readable.
                     </p>
                   )}
                 </div>
@@ -805,6 +1020,143 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </span>
       {children}
+    </label>
+  );
+}
+
+/* Modern colour picker — swatch opens a react-colorful popover */
+const SWATCHES = ["#5b21b6", "#0f172a", "#dc2626", "#0891b2", "#16a34a", "#ea580c", "#db2777"];
+
+function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: Event) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Pick colour"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 999,
+            background: value,
+            border: "2px solid var(--border)",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.25)",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        />
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="ed-input flex-1 mono"
+        />
+      </div>
+
+      <div className="flex gap-1.5 mt-2.5">
+        {SWATCHES.map((c) => {
+          const active = value.toLowerCase() === c;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onChange(c)}
+              aria-label={c}
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                background: c,
+                cursor: "pointer",
+                border: `2px solid ${active ? "var(--text)" : "transparent"}`,
+                boxShadow: active ? "0 0 0 1px var(--text)" : "inset 0 1px 2px rgba(0,0,0,0.25)",
+                transition: "border-color 0.15s, box-shadow 0.15s",
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {open && (
+        <div
+          className="sopoints-picker mt-3"
+          style={{
+            padding: 12,
+            borderRadius: 14,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 12px 34px rgba(0,0,0,0.4)",
+          }}
+        >
+          <HexColorPicker color={value} onChange={onChange} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Modern sliding toggle switch */
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 mt-1 cursor-pointer select-none">
+      <span className="text-[11.5px] sm:text-[12.5px]" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        style={{
+          position: "relative",
+          flexShrink: 0,
+          width: 38,
+          height: 22,
+          borderRadius: 999,
+          border: "1px solid var(--border)",
+          background: checked ? "var(--text)" : "var(--bg-surface)",
+          transition: "background 0.18s ease",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            top: 2,
+            left: checked ? 18 : 2,
+            width: 16,
+            height: 16,
+            borderRadius: 999,
+            background: checked ? "var(--bg-surface)" : "var(--text-muted)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+            transition: "left 0.18s ease, background 0.18s ease",
+          }}
+        />
+      </button>
     </label>
   );
 }
