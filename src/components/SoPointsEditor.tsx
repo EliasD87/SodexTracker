@@ -360,7 +360,7 @@ export function SoPointsEditor() {
       const { width: fw, height: fh, top, left } = f.dims;
       patch.width = fw;
       patch.height = fh;
-      ptctx.putImageData(new ImageData(f.patch, fw, fh), 0, 0);
+      ptctx.putImageData(new ImageData(new Uint8ClampedArray(f.patch), fw, fh), 0, 0);
       actx.drawImage(patch, left, top);
       prevDisposal = f.disposalType;
       prev = { x: left, y: top, w: fw, h: fh };
@@ -384,7 +384,7 @@ export function SoPointsEditor() {
     });
     enc.finish();
 
-    const blob = new Blob([enc.bytes()], { type: "image/gif" });
+    const blob = new Blob([new Uint8Array(enc.bytes())], { type: "image/gif" });
     const aurl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.download = `sopoints-${tier}-${cardType}.gif`;
