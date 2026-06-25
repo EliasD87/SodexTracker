@@ -625,11 +625,10 @@ export function SoPointsEditor() {
                     <span
                       className="flex items-center gap-2"
                       style={{
-                        background: "rgba(0,0,0,0.30)",
+                        background: "rgba(0,0,0,0.38)",
                         border: "1px solid rgba(255,255,255,0.14)",
                         borderRadius: 999,
                         padding: "2.2% 4%",
-                        backdropFilter: "blur(4px)",
                       }}
                     >
                       <span
