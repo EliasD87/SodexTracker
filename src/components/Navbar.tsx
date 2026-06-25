@@ -3,7 +3,7 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -65,7 +65,22 @@ const NAV_ITEMS: NavItem[] = [
     kind: "dropdown",
     label: "More",
     icon: <MoreHorizontal size={13} />,
-    items: [],
+    items: [
+      {
+        label: "Copy Trading",
+        href: "#",
+        description: "Mirror trades from top traders",
+        icon: <Copy size={14} />,
+        comingSoon: true,
+      },
+      {
+        label: "Trading Bots",
+        href: "#",
+        description: "Automate your strategies",
+        icon: <Bot size={14} />,
+        comingSoon: true,
+      },
+    ],
   },
 ];
 
@@ -234,6 +249,8 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Demo Trading", href: "#", icon: PlayCircle, comingSoon: true },
   { label: "Accrued Funding", href: "#", icon: Coins, comingSoon: true },
   { label: "Reverse Search", href: "#", icon: SearchX, comingSoon: true },
+  { label: "Copy Trading", href: "#", icon: Copy, comingSoon: true },
+  { label: "Trading Bots", href: "#", icon: Bot, comingSoon: true },
 ];
 
 export function Navbar() {
