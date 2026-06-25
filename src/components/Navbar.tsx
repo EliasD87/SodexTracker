@@ -3,12 +3,12 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type NavLink = { kind: "link"; label: string; href: string };
+type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode };
 type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean };
 type NavDropdown = { kind: "dropdown"; label: string; badge?: string; icon: React.ReactNode; items: DropdownItem[] };
 type NavItem = NavLink | NavDropdown;
@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Tracker", href: "/tracker" },
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
+  { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} /> },
   {
     kind: "dropdown",
     label: "Beta",
@@ -244,6 +245,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Tracker", href: "/tracker", icon: Search },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
+  { label: "SoPoints", href: "/sopoints", icon: Zap },
   { label: "Trade History", href: "/trade-history", icon: History, comingSoon: true },
   { label: "Journal", href: "#", icon: BookOpen, comingSoon: true },
   { label: "Demo Trading", href: "#", icon: PlayCircle, comingSoon: true },
@@ -428,11 +430,12 @@ export function Navbar() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors"
                     style={{ color: active ? "var(--text)" : "var(--text-muted)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
                     onMouseLeave={(e) => (e.currentTarget.style.color = active ? "var(--text)" : "var(--text-muted)")}
                   >
+                    {item.icon}
                     {item.label}
                   </Link>
                 );
