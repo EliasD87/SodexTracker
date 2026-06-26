@@ -30,6 +30,12 @@ const NAV_ITEMS: NavItem[] = [
         description: "Full trade export & analytics",
         icon: <History size={14} />,
       },
+      {
+        label: "Accrued Funding",
+        href: "/accrued-funding",
+        description: "Track funding payments over time",
+        icon: <Coins size={14} />,
+      },
     ],
   },
   {
@@ -51,12 +57,6 @@ const NAV_ITEMS: NavItem[] = [
         description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
         comingSoon: true,
-      },
-      {
-        label: "Accrued Funding",
-        href: "/accrued-funding",
-        description: "Track funding payments over time",
-        icon: <Coins size={14} />,
       },
       {
         label: "Reverse Search",
