@@ -53,10 +53,9 @@ const NAV_ITEMS: NavItem[] = [
       },
       {
         label: "Demo Trading",
-        href: "#",
+        href: "/trade/BTC-USD",
         description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
-        comingSoon: true,
       },
       {
         label: "Reverse Search",
@@ -147,20 +146,12 @@ function NavDropdownMenu({
             boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
             borderRadius: 10,
             zIndex: 60,
-            minWidth: item.items.length >= 4 ? 300 : 180,
+            minWidth: 160,
           }}
           onMouseEnter={show}
           onMouseLeave={hide}
         >
-          {/* 2-col grid for 4+ items, single col otherwise */}
-          <div
-            className="p-1.5"
-            style={{
-              display: "grid",
-              gridTemplateColumns: item.items.length >= 4 ? "1fr 1fr" : "1fr",
-              gap: 2,
-            }}
-          >
+          <div className="p-1" style={{display:"flex",flexDirection:"column",gap:1}}>
             {item.items.map((child) => {
               const isSoon = child.comingSoon;
               const isFlashing = flashedHref === child.href + child.label;
@@ -170,26 +161,26 @@ function NavDropdownMenu({
                   <button
                     key={child.href + child.label}
                     onClick={() => handleComingSoon(child.href + child.label)}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md w-full text-left transition-colors"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-md w-full text-left transition-colors"
                     style={{ background: isFlashing ? "var(--bg-elevated)" : "transparent" }}
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; }}
                     onMouseLeave={(e) => { if (!isFlashing) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                   >
                     <span className="shrink-0" style={{ color: "var(--text-faint)" }}>{child.icon}</span>
-                    <span className="text-[12.5px] font-medium flex-1 text-left" style={{ color: "var(--text-muted)" }}>
+                    <span className="text-[11.5px] font-medium flex-1 text-left" style={{ color: "var(--text-muted)" }}>
                       {child.label}
                     </span>
                     <span
-                      className="text-[8px] font-bold px-1 py-0.5 leading-none shrink-0"
+                      className="text-[8px] font-bold px-1 leading-none shrink-0"
                       style={{
-                        background: isFlashing ? "var(--accent-dim)" : "transparent",
                         color: isFlashing ? "var(--accent)" : "var(--text-faint)",
                         border: `1px solid ${isFlashing ? "var(--accent)" : "var(--border)"}`,
                         letterSpacing: "0.04em",
+                        borderRadius: 3,
                         transition: "all 0.2s",
                       }}
                     >
-                      {isFlashing ? "SOON" : "SOON"}
+                      SOON
                     </span>
                   </button>
                 );
@@ -199,7 +190,7 @@ function NavDropdownMenu({
                 <Link
                   key={child.href}
                   href={child.href}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
                   style={{ color: "var(--text-muted)" }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
@@ -212,7 +203,7 @@ function NavDropdownMenu({
                   onClick={() => setOpen(false)}
                 >
                   <span className="shrink-0" style={{ color: "var(--accent)" }}>{child.icon}</span>
-                  <span className="text-[12.5px] font-medium" style={{ color: "var(--text)" }}>
+                  <span className="text-[11.5px] font-medium" style={{ color: "var(--text)" }}>
                     {child.label}
                   </span>
                 </Link>
@@ -243,7 +234,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "SoPoints", href: "/sopoints", icon: Zap },
   { label: "Trade History", href: "/trade-history", icon: History },
   { label: "Journal", href: "#", icon: BookOpen, comingSoon: true },
-  { label: "Demo Trading", href: "#", icon: PlayCircle, comingSoon: true },
+  { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "#", icon: SearchX, comingSoon: true },
   { label: "Copy Trading", href: "#", icon: Copy, comingSoon: true },
@@ -470,60 +461,29 @@ export function Navbar() {
 
               {accountOpen && (
                 <div
-                  className="absolute right-0 top-full pt-2 w-[260px]"
-                  style={{
-                    zIndex: 70,
+                  className="absolute top-full mt-1.5"
+                  style={{ right: 0, zIndex: 70, minWidth: 180,
+                    background: "var(--panel-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                    border: "1px solid var(--border)", boxShadow: "0 8px 32px rgba(0,0,0,0.28)", borderRadius: 10,
                   }}
                 >
-                  <div
-                    className="p-3"
-                    style={{
-                      background: "var(--panel-bg)",
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
-                      border: "1px solid var(--border)",
-                      boxShadow: "0 16px 44px rgba(0,0,0,0.28)",
-                      borderRadius: 12,
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="flex items-center justify-center shrink-0"
-                        style={{
-                          width: 36,
-                          height: 36,
-                          border: "1px solid var(--border)",
-                          background: "var(--bg-surface)",
-                          borderRadius: 10,
-                        }}
-                      >
-                        <UserRound size={16} style={{ color: user ? "var(--green)" : "var(--text-faint)" }} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: user ? "var(--green)" : "var(--text-faint)" }}
-                          />
-                          <span className="tag" style={{ color: user ? "var(--green)" : "var(--text-faint)" }}>
-                            {user ? "SYNCED" : "LOCAL"}
-                          </span>
-                        </div>
-                        <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
-                          {user?.email ?? "Signed out"}
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                          {user ? "Watchlist sync is active." : "Sign in to sync watchlists."}
-                        </p>
-                      </div>
+                  <div className="p-2" style={{display:"flex",flexDirection:"column",gap:4}}>
+                    {/* Status row */}
+                    <div className="flex items-center gap-1.5 px-1.5 py-1">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: user ? "var(--green)" : "var(--text-faint)" }}/>
+                      <span className="text-[11px] font-semibold truncate" style={{ color: user ? "var(--green)" : "var(--text-faint)" }}>
+                        {user ? user.email : "Signed out"}
+                      </span>
                     </div>
-
                     <Link
                       href="/account"
-                      className="mt-3 flex items-center justify-center px-3 py-2 tag font-bold"
-                      style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)", borderRadius: 9 }}
+                      className="flex items-center justify-center px-2.5 py-1.5 rounded-md text-[11.5px] font-semibold transition-colors"
+                      style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)" }}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="var(--bg-elevated)";}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="var(--bg-surface)";}}
+                      onClick={() => setAccountOpen(false)}
                     >
-                      {user ? "MANAGE ACCOUNT" : "SIGN IN"}
+                      {user ? "Manage account" : "Sign in"}
                     </Link>
                   </div>
                 </div>
@@ -556,7 +516,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* ── Mobile bottom nav bar ── */}
+      {/* ── Mobile bottom nav bar — hidden on trade pages (they have their own tab bar) ── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
         style={{
@@ -566,6 +526,7 @@ export function Navbar() {
           borderTop: "1px solid var(--border)",
           height: 60,
           paddingBottom: "env(safe-area-inset-bottom)",
+          display: undefined,
         }}
       >
         {BOTTOM_NAV.map(({ label, href, icon: Icon }) => {

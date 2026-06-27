@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const account_id = searchParams.get("account_id");
   const cursor = searchParams.get("cursor");
-  const limit = searchParams.get("limit") || "1000";
+  const limit = searchParams.get("limit") || "200";
 
   if (!account_id) {
     return NextResponse.json({ code: 1, message: "account_id is required" }, { status: 400 });

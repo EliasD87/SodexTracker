@@ -25,7 +25,7 @@ export interface ExportState {
 }
 
 const RATE_LIMIT_MS = 3_000;
-const PAGE_SIZE = 1000;
+const PAGE_SIZE = 200;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2_000;
 

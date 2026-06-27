@@ -58,7 +58,7 @@ interface LoaderState {
    ════════════════════════════════════════════════════════════════════════════ */
 
 const RATE_MS = 3_000;
-const PAGE_SIZE = 1_000;
+const PAGE_SIZE = 200;
 
 function emptyState(): LoaderState {
   return {
