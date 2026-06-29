@@ -3,7 +3,7 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -294,6 +294,22 @@ export function Navbar() {
 
   return (
     <>
+      {/* ── Watchlist icon animation keyframes ── */}
+      <style>{`
+        @keyframes wlStamp {
+          0%, 72%, 100% { transform: rotate(0deg) scale(1); }
+          78% { transform: rotate(-12deg) scale(0.92); }
+          84% { transform: rotate(8deg) scale(1.08); }
+          90% { transform: rotate(-4deg) scale(0.98); }
+          95% { transform: rotate(0deg) scale(1); }
+        }
+        @keyframes wlGlow {
+          0%, 72%, 100% { filter: drop-shadow(0 0 0 transparent); }
+          82% { filter: drop-shadow(0 0 4px var(--accent)); }
+          90% { filter: drop-shadow(0 0 0 transparent); }
+        }
+      `}</style>
+
       {/* ── Desktop / top navbar ── */}
       <nav
         className="fixed top-0 left-0 right-0 z-50"
@@ -313,8 +329,23 @@ export function Navbar() {
             </span>
           </Link>
 
-          {/* Mobile account icon (top-right) with dropdown */}
-          <div className="md:hidden relative">
+          {/* Mobile watchlist + account icons (top-right) */}
+          <div className="md:hidden flex items-center gap-1 relative">
+            <Link
+              href="/watchlist"
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors relative"
+              style={{
+                color: isActive("/watchlist") ? "var(--accent)" : "var(--text-muted)",
+                background: isActive("/watchlist") ? "var(--bg-elevated)" : "transparent",
+              }}
+              aria-label="Watchlist"
+            >
+              <span style={{ animation: "wlStamp 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ animation: "wlGlow 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Bookmark size={18} />
+                </span>
+              </span>
+            </Link>
             <button
               onClick={() => setAccountOpen((v) => !v)}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
@@ -437,6 +468,24 @@ export function Navbar() {
 
           {/* Right controls (desktop only) */}
           <div className="hidden md:flex items-center gap-2">
+            {/* Watchlist icon with stamp animation + glow */}
+            <Link
+              href="/watchlist"
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors relative"
+              style={{
+                color: isActive("/watchlist") ? "var(--accent)" : "var(--text-muted)",
+                background: isActive("/watchlist") ? "var(--bg-elevated)" : "transparent",
+              }}
+              aria-label="Watchlist"
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+              onMouseLeave={(e) => { if (!isActive("/watchlist")) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; } }}
+            >
+              <span style={{ animation: "wlStamp 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ animation: "wlGlow 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Bookmark size={16} />
+                </span>
+              </span>
+            </Link>
             <div
               className="relative"
               onMouseEnter={showAccount}
