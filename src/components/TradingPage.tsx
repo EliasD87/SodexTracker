@@ -20,8 +20,8 @@ interface Kline { t: number; o: string; h: string; l: string; c: string; v: stri
 interface Book  { bids: [string, string][]; asks: [string, string][]; }
 interface MkTrd { T: number; p: string; q: string; S: "BUY" | "SELL"; }
 
-interface DemoPos  { id: string; sym: string; side: "LONG"|"SHORT"; size: number; entry: number; lev: number; margin: number; }
-interface DemoOrd  { id: string; sym: string; side: "Buy"|"Sell"; limitPx: number; qty: number; notional: number; margin: number; lev: number; ts: number; }
+interface DemoPos  { id: string; sym: string; side: "LONG"|"SHORT"; size: number; entry: number; lev: number; margin: number; tp?: number; sl?: number; }
+interface DemoOrd  { id: string; sym: string; side: "Buy"|"Sell"; limitPx: number; qty: number; notional: number; margin: number; lev: number; ts: number; tp?: number; sl?: number; }
 interface DemoFill { id: string; sym: string; side: "Buy"|"Sell"; price: number; qty: number; notional: number; fee: number; pnl?: number; ts: number; }
 interface Demo     { bal: number; pos: DemoPos[]; ord: DemoOrd[]; fills: DemoFill[]; }
 
@@ -43,6 +43,31 @@ const liq  = (side:"LONG"|"SHORT", entry:number, lev:number) => side==="LONG" ? 
 const cdwn = (ts:number) => { const d=ts-Date.now(); if(d<=0) return "00:00:00"; const h=Math.floor(d/3.6e6),m=Math.floor(d%3.6e6/6e4),s=Math.floor(d%6e4/1e3); return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; };
 const rD   = ():Demo => { try { const r=localStorage.getItem(KEY); return r?JSON.parse(r):{bal:BAL0,pos:[],ord:[],fills:[]}; } catch { return {bal:BAL0,pos:[],ord:[],fills:[]}; }};
 const sD   = (d:Demo) => { try { localStorage.setItem(KEY,JSON.stringify(d)); } catch{} };
+
+/* ── Notifications ───────────────────────────────────────────────────────────── */
+
+interface Toast { id:string; text:string; kind:"success"|"error"|"info"; ts:number; }
+
+function ToastStack({toasts,onClose}:{toasts:Toast[];onClose:(id:string)=>void}) {
+  return createPortal(
+    <div style={{position:"fixed",top:70,right:16,zIndex:10000,display:"flex",flexDirection:"column",gap:6,pointerEvents:"none",maxWidth:340}}>
+      {toasts.map(t=>{
+        const color = t.kind==="success"?"var(--green)":t.kind==="error"?"var(--red)":"var(--text-muted)";
+        const bg = t.kind==="success"?"var(--green-tint)":t.kind==="error"?"var(--cal-red-tint)":"var(--spotlight)";
+        const Icon = t.kind==="success"?CheckCircle2:t.kind==="error"?AlertCircle:TrendingUp;
+        return (
+          <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:bg,border:`1px solid ${color}33`,boxShadow:"0 4px 16px rgba(0,0,0,.3)",pointerEvents:"auto",animation:"slideIn 0.2s ease"}}>
+            <Icon size={13} style={{color,flexShrink:0}}/>
+            <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:11,color,fontWeight:500,flex:1}}>{t.text}</span>
+            <button onClick={()=>onClose(t.id)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-faint)",padding:0,display:"flex"}}><X size={11}/></button>
+          </div>
+        );
+      })}
+      <style>{`@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
+    </div>,
+    document.body
+  );
+}
 
 /* ── Token icon ──────────────────────────────────────────────────────────────── */
 
@@ -92,13 +117,15 @@ function chartTheme(dark:boolean) {
   };
 }
 
-function Chart({klines,live,sym,iv}:{klines:Kline[];live:Kline|null;sym:string;iv:IV}) {
+function Chart({klines,live,sym,iv,fills}:{klines:Kline[];live:Kline|null;sym:string;iv:IV;fills:DemoFill[]}) {
   const boxRef  = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const lw      = useRef<{chart:any;cs:any;vs:any}|null>(null);
   const ready   = useRef(false);
   const klinesRef = useRef<Kline[]>(klines);
   klinesRef.current = klines;
+  const fillsRef = useRef<DemoFill[]>(fills);
+  fillsRef.current = fills;
   const isDark = useIsDark();
   const isDarkRef = useRef(isDark);
   isDarkRef.current = isDark;
@@ -171,6 +198,27 @@ function Chart({klines,live,sym,iv}:{klines:Kline[];live:Kline|null;sym:string;i
     lw.current.cs.update({time:t,open:+live.o,high:+live.h,low:+live.l,close:+live.c});
     lw.current.vs.update({time:t,value:+live.v,color:+live.c>=+live.o?volUp:volDown});
   },[live,isDark]);
+
+  // Update markers when fills change
+  useEffect(()=>{
+    if(!lw.current?.cs) return;
+    const symFills = fillsRef.current.filter(f=>f.sym===sym);
+    if(!symFills.length) { lw.current.cs.setMarkers([]); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const markers:any[] = symFills.slice(0,50).reverse().map(f=>{
+      const isBuy = f.side==="Buy";
+      const isClose = f.pnl!=null;
+      return {
+        time: Math.floor(f.ts/1000),
+        position: isBuy ? "belowBar" : "aboveBar",
+        color: isBuy ? (isDarkRef.current?"#35C77F":"#16A34A") : (isDarkRef.current?"#F0616D":"#DC2626"),
+        shape: isClose ? (isBuy ? "arrowUp" : "arrowDown") : (isBuy ? "arrowUp" : "arrowDown"),
+        text: isClose ? `${isBuy?"Close Short":"Close Long"} ${f.pnl!=null&&f.pnl>=0?"+":""}${f.pnl?.toFixed(0)??"0"}` : `${isBuy?"Long":"Short"} @ ${$(f.price)}`,
+      };
+    });
+    lw.current.cs.setMarkers(markers);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[fills,sym]);
 
   return (
     <div className="relative w-full h-full">
@@ -325,13 +373,16 @@ function MktTrades({trades,info}:{trades:MkTrd[];info:Sym|null}) {
 function TradePanel({symbol,info,ticker,demo,lev,setLev,limitHint,onOrder,onReset}:{
   symbol:string; info:Sym|null; ticker:Tick|null; demo:Demo;
   lev:number; setLev:(n:number)=>void; limitHint:string;
-  onOrder:(side:"Buy"|"Sell",type:"Market"|"Limit",amount:number,limitPx?:number)=>string|null;
+  onOrder:(side:"Buy"|"Sell",type:"Market"|"Limit",amount:number,limitPx?:number,tp?:number,sl?:number)=>string|null;
   onReset:()=>void;
 }) {
   const [side,setSide]=useState<"Buy"|"Sell">("Buy");
   const [type,setType]=useState<"Market"|"Limit">("Market");
   const [amtStr,setAmtStr]=useState("");
   const [limStr,setLimStr]=useState(limitHint);
+  const [tpStr,setTpStr]=useState("");
+  const [slStr,setSlStr]=useState("");
+  const [showTPSL,setShowTPSL]=useState(false);
   const [levOpen,setLevOpen]=useState(false);
   const [msg,setMsg]=useState<{text:string;ok:boolean}|null>(null);
 
@@ -353,8 +404,10 @@ function TradePanel({symbol,info,ticker,demo,lev,setLev,limitHint,onOrder,onRese
   function go(){
     if(amount<=0){flash("Enter an amount",false);return;}
     if(!mark){flash("Price unavailable",false);return;}
-    const err=onOrder(side,type,amount,type==="Limit"?(+limStr||undefined):undefined);
-    if(err) flash(err,false); else {flash(`${side} order placed`,true);setAmtStr("");}
+    const tp=tpStr?+tpStr:undefined;
+    const sl=slStr?+slStr:undefined;
+    const err=onOrder(side,type,amount,type==="Limit"?(+limStr||undefined):undefined,tp,sl);
+    if(err) flash(err,false); else {flash(`${side} order placed`,true);setAmtStr("");setTpStr("");setSlStr("");}
   }
   function pct(p:number){setAmtStr((demo.bal*p/100).toFixed(2));}
 
@@ -469,6 +522,27 @@ function TradePanel({symbol,info,ticker,demo,lev,setLev,limitHint,onOrder,onRese
           ))}
         </div>
 
+        {/* TP/SL toggle */}
+        <button onClick={()=>setShowTPSL(v=>!v)}
+          style={{display:"flex",alignItems:"center",gap:4,padding:"4px 0",fontFamily:"var(--font-space-grotesk)",fontSize:9,fontWeight:600,cursor:"pointer",background:"transparent",border:"none",color:showTPSL?accent:"var(--text-faint)",transition:"color 0.15s"}}>
+          <span style={{fontSize:9}}>TP / SL</span>
+          <span style={{fontSize:8,opacity:0.6}}>{showTPSL?"▾":"▸"}</span>
+        </button>
+        {showTPSL&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            <div>
+              <label style={{display:"block",fontFamily:"var(--font-space-grotesk)",fontSize:8,color:"var(--green)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:3}}>Take Profit</label>
+              <input value={tpStr} onChange={e=>setTpStr(e.target.value)} placeholder="—" inputMode="decimal"
+                style={{width:"100%",padding:"5px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:11,background:"var(--bg-elevated)",border:"1px solid var(--border)",borderRadius:5,color:"var(--text)",outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <label style={{display:"block",fontFamily:"var(--font-space-grotesk)",fontSize:8,color:"var(--red)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:3}}>Stop Loss</label>
+              <input value={slStr} onChange={e=>setSlStr(e.target.value)} placeholder="—" inputMode="decimal"
+                style={{width:"100%",padding:"5px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:11,background:"var(--bg-elevated)",border:"1px solid var(--border)",borderRadius:5,color:"var(--text)",outline:"none",boxSizing:"border-box"}}/>
+            </div>
+          </div>
+        )}
+
         {/* Summary card */}
         {qtyV>0&&(
           <div style={{borderRadius:8,padding:"8px 10px",display:"flex",flexDirection:"column",gap:4,background:"var(--spotlight)"}}>
@@ -511,6 +585,39 @@ function TradePanel({symbol,info,ticker,demo,lev,setLev,limitHint,onOrder,onRese
             <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:11,color:"var(--text-muted)",fontVariantNumeric:"tabular-nums"}}>
               {pos.size.toFixed(info?.quantityPrecision??4)} {info?.baseCoin} · entry ${$(pos.entry)}
             </span>
+            {/* Live PnL + Liq */}
+            {(()=>{
+              const mp=mark||pos.entry;
+              const pnl=pos.side==="LONG"?(mp-pos.entry)*pos.size:(pos.entry-mp)*pos.size;
+              const liqP=liq(pos.side,pos.entry,pos.lev);
+              const pnlPct=pos.margin>0?(pnl/pos.margin*100):0;
+              return (
+                <div style={{display:"flex",gap:8,marginTop:5,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",flexDirection:"column"}}>
+                    <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:8,color:"var(--text-faint)",textTransform:"uppercase"}}>PnL</span>
+                    <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:11,fontWeight:700,fontVariantNumeric:"tabular-nums",color:pnl>=0?"var(--green)":"var(--red)"}}>
+                      {pnl>=0?"+":""}{pnl.toFixed(2)} ({pnlPct>=0?"+":""}{pnlPct.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column"}}>
+                    <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:8,color:"var(--text-faint)",textTransform:"uppercase"}}>Liq.</span>
+                    <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:11,fontWeight:600,fontVariantNumeric:"tabular-nums",color:"var(--text-muted)"}}>${$(liqP)}</span>
+                  </div>
+                  {pos.tp&&(
+                    <div style={{display:"flex",flexDirection:"column"}}>
+                      <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:8,color:"var(--text-faint)",textTransform:"uppercase"}}>TP</span>
+                      <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:11,fontWeight:600,fontVariantNumeric:"tabular-nums",color:"var(--green)"}}>${$(pos.tp)}</span>
+                    </div>
+                  )}
+                  {pos.sl&&(
+                    <div style={{display:"flex",flexDirection:"column"}}>
+                      <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:8,color:"var(--text-faint)",textTransform:"uppercase"}}>SL</span>
+                      <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:11,fontWeight:600,fontVariantNumeric:"tabular-nums",color:"var(--red)"}}>${$(pos.sl)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -538,8 +645,14 @@ function TradePanel({symbol,info,ticker,demo,lev,setLev,limitHint,onOrder,onRese
 
 type BTab="pos"|"ord"|"fills";
 
-function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Tick>;onClose:(id:string,mp:number)=>void;onCancel:(id:string)=>void}) {
+function Bottom({demo,tickers,onClose,onCancel,onEditTPSL,onLimitClose}:{demo:Demo;tickers:Map<string,Tick>;onClose:(id:string,mp:number)=>void;onCancel:(id:string)=>void;onEditTPSL:(id:string,tp?:number,sl?:number)=>void;onLimitClose:(id:string,limitPx:number)=>void}) {
   const [tab,setTab]=useState<BTab>("pos");
+  const [closeId,setCloseId]=useState<string|null>(null);
+  const [editId,setEditId]=useState<string|null>(null);
+  const [editTp,setEditTp]=useState("");
+  const [editSl,setEditSl]=useState("");
+  const [limitCloseId,setLimitCloseId]=useState<string|null>(null);
+  const [limitClosePx,setLimitClosePx]=useState("");
 
   const Th=({cols}:{cols:string[]})=>(
     <tr style={{borderBottom:"1px solid var(--border-subtle)"}}>
@@ -556,6 +669,28 @@ function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Ti
     {id:"fills",label:"History"},
   ];
 
+  function startEdit(posId:string,tp?:number,sl?:number){
+    setEditId(posId); setEditTp(tp?String(tp):""); setEditSl(sl?String(sl):"");
+    setCloseId(null);
+  }
+  function saveEdit(){
+    if(!editId)return;
+    const tp=editTp?+editTp:undefined;
+    const sl=editSl?+editSl:undefined;
+    onEditTPSL(editId,tp,sl);
+    setEditId(null);
+  }
+  function startLimitClose(posId:string,markPx:number){
+    setLimitCloseId(posId);
+    setLimitClosePx(String(markPx.toFixed(2)));
+    setCloseId(null);
+  }
+  function confirmLimitClose(){
+    if(!limitCloseId||!limitClosePx)return;
+    onLimitClose(limitCloseId,+limitClosePx);
+    setLimitCloseId(null); setLimitClosePx("");
+  }
+
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",borderBottom:"1px solid var(--border-subtle)",flexShrink:0,gap:0}}>
@@ -564,6 +699,8 @@ function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Ti
             style={{padding:"0 14px",height:34,fontFamily:"var(--font-space-grotesk)",fontSize:11,fontWeight:500,cursor:"pointer",background:"transparent",border:"none",
               color:tab===t.id?"var(--text)":"var(--text-faint)"}}>
             {t.label}
+            {t.id==="pos"&&demo.pos.length>0&&<span style={{marginLeft:4,fontSize:9,opacity:0.6}}>{demo.pos.length}</span>}
+            {t.id==="ord"&&demo.ord.length>0&&<span style={{marginLeft:4,fontSize:9,opacity:0.6}}>{demo.ord.length}</span>}
           </button>
         ))}
       </div>
@@ -573,11 +710,13 @@ function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Ti
           demo.pos.length===0
             ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:50,fontFamily:"var(--font-space-grotesk)",fontSize:10,color:"var(--text-faint)"}}>No open positions</div>
             : <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><Th cols={["Symbol","Side","Size","Entry","Mark","Unr. PnL","Liq.",""]}/></thead>
+                <thead><Th cols={["Symbol","Side","Size","Entry","Mark","Unr. PnL","Liq.","TP","SL",""]}/></thead>
                 <tbody>
                   {demo.pos.map(p=>{
                     const t=tickers.get(p.sym), mp=t?+t.markPrice:p.entry;
                     const pnl=p.side==="LONG"?(mp-p.entry)*p.size:(p.entry-mp)*p.size;
+                    const pnlPct=p.margin>0?(pnl/p.margin*100):0;
+                    const isEditing=editId===p.id;
                     return (
                       <tr key={p.id} style={{borderBottom:"1px solid var(--border-subtle)"}}>
                         <Td><div style={{display:"flex",alignItems:"center",gap:6}}><Coin sym={p.sym} size={14}/><span style={{color:"var(--text)",fontWeight:600}}>{p.sym}</span><span style={{fontSize:8,padding:"1px 3px",background:"var(--bg-elevated)",color:"var(--text-faint)",borderRadius:2}}>{p.lev}×</span></div></Td>
@@ -585,13 +724,80 @@ function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Ti
                         <Td>{p.size.toFixed(4)}</Td>
                         <Td>${$(p.entry)}</Td>
                         <Td color="var(--text)">{mp>0?"$"+$(mp):"—"}</Td>
-                        <Td color={pnl>=0?"var(--green)":"var(--red)"}><b>{pnl>=0?"+":""}{pnl.toFixed(2)}</b></Td>
+                        <Td color={pnl>=0?"var(--green)":"var(--red)"}><b>{pnl>=0?"+":""}{pnl.toFixed(2)}</b><span style={{fontSize:9,opacity:0.7}}> ({pnlPct>=0?"+":""}{pnlPct.toFixed(1)}%)</span></Td>
                         <Td color="var(--text-faint)">${$(liq(p.side,p.entry,p.lev))}</Td>
-                        <td style={{padding:"5px 12px"}}>
-                          <button onClick={()=>onClose(p.id,mp)}
-                            style={{padding:"2px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:9,fontWeight:600,cursor:"pointer",border:"1px solid var(--red)",borderRadius:3,color:"var(--red)",background:"transparent"}}>
-                            Close
-                          </button>
+                        {/* TP cell — editable */}
+                        <td style={{padding:"3px 12px"}}>
+                          {isEditing?(
+                            <input value={editTp} onChange={e=>setEditTp(e.target.value)} placeholder="—" inputMode="decimal"
+                              onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape")setEditId(null);}}
+                              style={{width:64,padding:"3px 6px",fontFamily:"var(--font-space-grotesk)",fontSize:10,background:"var(--bg-elevated)",border:"1px solid var(--green)",borderRadius:4,color:"var(--text)",outline:"none",boxSizing:"border-box"}}/>
+                          ):(
+                            <button onClick={()=>startEdit(p.id,p.tp,p.sl)} style={{background:"transparent",border:"none",cursor:"pointer",padding:0,fontFamily:"var(--font-space-grotesk)",fontSize:11,color:p.tp?"var(--green)":"var(--text-faint)",whiteSpace:"nowrap"}}>
+                              {p.tp?"$"+$(p.tp):"—"}
+                            </button>
+                          )}
+                        </td>
+                        {/* SL cell — editable */}
+                        <td style={{padding:"3px 12px"}}>
+                          {isEditing?(
+                            <input value={editSl} onChange={e=>setEditSl(e.target.value)} placeholder="—" inputMode="decimal"
+                              onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape")setEditId(null);}}
+                              style={{width:64,padding:"3px 6px",fontFamily:"var(--font-space-grotesk)",fontSize:10,background:"var(--bg-elevated)",border:"1px solid var(--red)",borderRadius:4,color:"var(--text)",outline:"none",boxSizing:"border-box"}}/>
+                          ):(
+                            <button onClick={()=>startEdit(p.id,p.tp,p.sl)} style={{background:"transparent",border:"none",cursor:"pointer",padding:0,fontFamily:"var(--font-space-grotesk)",fontSize:11,color:p.sl?"var(--red)":"var(--text-faint)",whiteSpace:"nowrap"}}>
+                              {p.sl?"$"+$(p.sl):"—"}
+                            </button>
+                          )}
+                        </td>
+                        <td style={{padding:"5px 12px",position:"relative"}}>
+                          {isEditing?(
+                            <div style={{display:"flex",gap:4}}>
+                              <button onClick={saveEdit} style={{padding:"2px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:9,fontWeight:600,cursor:"pointer",border:"1px solid var(--green)",borderRadius:3,color:"var(--green)",background:"transparent"}}>Save</button>
+                              <button onClick={()=>setEditId(null)} style={{padding:"2px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:9,fontWeight:600,cursor:"pointer",border:"1px solid var(--border)",borderRadius:3,color:"var(--text-faint)",background:"transparent"}}>Cancel</button>
+                            </div>
+                          ):(
+                            <>
+                              <button onClick={()=>setCloseId(closeId===p.id?null:p.id)}
+                                style={{padding:"2px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:9,fontWeight:600,cursor:"pointer",border:"1px solid var(--border)",borderRadius:3,color:"var(--text-muted)",background:"transparent"}}>
+                                Close ▾
+                              </button>
+                              {closeId===p.id&&(
+                                <>
+                                  <div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setCloseId(null)}/>
+                                  <div style={{position:"absolute",top:"100%",right:0,zIndex:100,background:"var(--bg-surface)",border:"1px solid var(--border)",borderRadius:6,boxShadow:"0 8px 24px rgba(0,0,0,.4)",padding:4,display:"flex",flexDirection:"column",gap:2,minWidth:130}}>
+                                    <button onClick={()=>{onClose(p.id,mp);setCloseId(null);}}
+                                      style={{padding:"5px 10px",fontFamily:"var(--font-space-grotesk)",fontSize:10,fontWeight:600,cursor:"pointer",border:"none",borderRadius:4,color:"var(--text)",background:"transparent",textAlign:"left",whiteSpace:"nowrap"}}>
+                                      Market Close
+                                    </button>
+                                    <button onClick={()=>{startLimitClose(p.id,mp);}}
+                                      style={{padding:"5px 10px",fontFamily:"var(--font-space-grotesk)",fontSize:10,fontWeight:600,cursor:"pointer",border:"none",borderRadius:4,color:"var(--text-muted)",background:"transparent",textAlign:"left",whiteSpace:"nowrap"}}>
+                                      Limit Close…
+                                    </button>
+                                    <button onClick={()=>{onClose(p.id,p.entry);setCloseId(null);}}
+                                      style={{padding:"5px 10px",fontFamily:"var(--font-space-grotesk)",fontSize:10,fontWeight:600,cursor:"pointer",border:"none",borderRadius:4,color:"var(--text-faint)",background:"transparent",textAlign:"left",whiteSpace:"nowrap"}}>
+                                      Close at Entry
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                              {limitCloseId===p.id&&(
+                                <>
+                                  <div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setLimitCloseId(null)}/>
+                                  <div style={{position:"absolute",top:"100%",right:0,zIndex:100,background:"var(--bg-surface)",border:"1px solid var(--border)",borderRadius:6,boxShadow:"0 8px 24px rgba(0,0,0,.4)",padding:8,display:"flex",flexDirection:"column",gap:6,minWidth:180}}>
+                                    <span style={{fontFamily:"var(--font-space-grotesk)",fontSize:9,color:"var(--text-faint)",textTransform:"uppercase"}}>Limit Close Price</span>
+                                    <input value={limitClosePx} onChange={e=>setLimitClosePx(e.target.value)} inputMode="decimal"
+                                      onKeyDown={e=>{if(e.key==="Enter")confirmLimitClose();if(e.key==="Escape")setLimitCloseId(null);}}
+                                      style={{width:"100%",padding:"5px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:11,background:"var(--bg-elevated)",border:"1px solid var(--border)",borderRadius:4,color:"var(--text)",outline:"none",boxSizing:"border-box"}}/>
+                                    <div style={{display:"flex",gap:4}}>
+                                      <button onClick={confirmLimitClose} style={{flex:1,padding:"4px 0",fontFamily:"var(--font-space-grotesk)",fontSize:10,fontWeight:600,cursor:"pointer",border:"none",borderRadius:4,color:"#fff",background:"var(--accent)"}}>Place</button>
+                                      <button onClick={()=>setLimitCloseId(null)} style={{padding:"4px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:10,fontWeight:600,cursor:"pointer",border:"1px solid var(--border)",borderRadius:4,color:"var(--text-faint)",background:"transparent"}}>Cancel</button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </>
+                          )}
                         </td>
                       </tr>
                     );
@@ -604,7 +810,7 @@ function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Ti
           demo.ord.length===0
             ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:50,fontFamily:"var(--font-space-grotesk)",fontSize:10,color:"var(--text-faint)"}}>No open orders</div>
             : <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><Th cols={["Time","Symbol","Side","Limit Price","Qty","Notional",""]}/></thead>
+                <thead><Th cols={["Time","Symbol","Side","Limit Price","Qty","Notional","Lev.","TP","SL",""]}/></thead>
                 <tbody>
                   {demo.ord.map(o=>(
                     <tr key={o.id} style={{borderBottom:"1px solid var(--border-subtle)"}}>
@@ -614,6 +820,9 @@ function Bottom({demo,tickers,onClose,onCancel}:{demo:Demo;tickers:Map<string,Ti
                       <Td>${$(o.limitPx)}</Td>
                       <Td>{o.qty.toFixed(4)}</Td>
                       <Td>${o.notional.toFixed(2)}</Td>
+                      <Td color="var(--text-faint)">{o.lev}×</Td>
+                      <Td color={o.tp?"var(--green)":"var(--text-faint)"}>{o.tp?"$"+$(o.tp):"—"}</Td>
+                      <Td color={o.sl?"var(--red)":"var(--text-faint)"}>{o.sl?"$"+$(o.sl):"—"}</Td>
                       <td style={{padding:"5px 12px"}}>
                         <button onClick={()=>onCancel(o.id)}
                           style={{padding:"2px 8px",fontFamily:"var(--font-space-grotesk)",fontSize:9,fontWeight:600,cursor:"pointer",border:"1px solid var(--border)",borderRadius:3,color:"var(--text-faint)",background:"transparent"}}>
@@ -675,6 +884,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
   const [dragging,setDragging]=useState(false);
   const [demo,setDemo]=useState<Demo>(rD);
   const [mTab,setMTab]=useState<"trade"|"book"|"positions">("trade");
+  const [toasts,setToasts]=useState<Toast[]>([]);
   const isMobile=useMobile();
   const wsRef=useRef<WebSocket|null>(null);
 
@@ -683,6 +893,13 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
   const mark=+(tick?.markPrice??0);
   const pct =tick?.changePct??0;
   const col =pct>=0?"var(--green)":"var(--red)";
+
+  function pushToast(text:string,kind:Toast["kind"]="info"){
+    const id=uid();
+    setToasts(prev=>[...prev,{id,text,kind,ts:Date.now()}]);
+    setTimeout(()=>setToasts(prev=>prev.filter(t=>t.id!==id)),4000);
+  }
+  function closeToast(id:string){setToasts(prev=>prev.filter(t=>t.id!==id));}
 
   /* load symbols */
   useEffect(()=>{
@@ -745,10 +962,43 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
     return()=>{try{ws.close();}catch{}wsRef.current=null;};
   },[sym,iv]);
 
-  /* auto-fill limits */
+  /* auto-fill limits + TP/SL monitoring */
   useEffect(()=>{
-    if(!mark||!demo.ord.length)return;
-    const hit=demo.ord.filter(o=>(o.side==="Buy"&&mark<=o.limitPx)||(o.side==="Sell"&&mark>=o.limitPx));
+    if(!mark)return;
+    // Check TP/SL on ALL open positions (not just current symbol)
+    const tpHit=demo.pos.filter(p=>{
+      const t=tickers.get(p.sym), mp=t?+t.markPrice:p.entry;
+      if(!mp)return false;
+      return (p.side==="LONG"&&p.tp&&mp>=p.tp)||
+             (p.side==="SHORT"&&p.tp&&mp<=p.tp)||
+             (p.side==="LONG"&&p.sl&&mp<=p.sl)||
+             (p.side==="SHORT"&&p.sl&&mp>=p.sl);
+    });
+    if(tpHit.length){
+      setDemo(prev=>{
+        let bal=prev.bal; const pos=[...prev.pos], fills=[...prev.fills];
+        for(const p of tpHit){
+          const xi=pos.findIndex(x=>x.id===p.id); if(xi<0)continue;
+          const ex=pos[xi];
+          const t=tickers.get(ex.sym), mp=t?+t.markPrice:ex.entry;
+          const closePx=(ex.side==="LONG"&&ex.tp&&mp>=ex.tp)?ex.tp:
+                        (ex.side==="SHORT"&&ex.tp&&mp<=ex.tp)?ex.tp:
+                        (ex.side==="LONG"&&ex.sl&&mp<=ex.sl)?ex.sl:ex.sl!;
+          const takFee=+(info?.takerFee??"0.0004");
+          const pnl=ex.side==="LONG"?(closePx-ex.entry)*ex.size:(ex.entry-closePx)*ex.size;
+          const fee=ex.size*closePx*takFee;
+          fills.unshift({id:uid(),sym:ex.sym,side:ex.side==="LONG"?"Sell":"Buy",price:closePx,qty:ex.size,notional:ex.size*closePx,fee,pnl:pnl-fee,ts:Date.now()});
+          bal+=ex.margin+pnl-fee; pos.splice(xi,1);
+          const reason=(ex.side==="LONG"&&ex.tp&&mp>=ex.tp)||(ex.side==="SHORT"&&ex.tp&&mp<=ex.tp)?"TP":"SL";
+          pushToast(`${ex.sym} ${ex.side} closed by ${reason} — PnL ${pnl>=0?"+":""}${pnl.toFixed(2)}`,pnl>=0?"success":"error");
+        }
+        const ns:Demo={bal:Math.max(0,bal),pos,ord:prev.ord,fills:fills.slice(0,200)};sD(ns);return ns;
+      });
+      return;
+    }
+    // Check limit orders for current symbol only (mark price is for current sym)
+    if(!demo.ord.length)return;
+    const hit=demo.ord.filter(o=>o.sym===sym&&((o.side==="Buy"&&mark<=o.limitPx)||(o.side==="Sell"&&mark>=o.limitPx)));
     if(!hit.length)return;
     setDemo(prev=>{
       let bal=prev.bal;
@@ -761,15 +1011,17 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
           const ex=pos[xi];
           const pnl=ex.side==="LONG"?(o.limitPx-ex.entry)*ex.size:(ex.entry-o.limitPx)*ex.size;
           f.pnl=pnl-fee; bal+=ex.margin+pnl-fee; pos.splice(xi,1);
+          pushToast(`${o.sym} limit ${o.side} filled — Position closed, PnL ${pnl>=0?"+":""}${pnl.toFixed(2)}`,pnl>=0?"success":"error");
         } else {
-          pos.push({id:uid(),sym:o.sym,side:o.side==="Buy"?"LONG":"SHORT",size:o.qty,entry:o.limitPx,lev:o.lev,margin:o.margin});
+          pos.push({id:uid(),sym:o.sym,side:o.side==="Buy"?"LONG":"SHORT",size:o.qty,entry:o.limitPx,lev:o.lev,margin:o.margin,tp:o.tp,sl:o.sl});
+          pushToast(`${o.sym} limit ${o.side} filled — ${o.side==="Buy"?"LONG":"SHORT"} opened`, "success");
         }
         fills.unshift(f);
       }
       const ns:Demo={bal:Math.max(0,bal),pos,ord,fills:fills.slice(0,200)};sD(ns);return ns;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[mark,demo.ord]);
+  },[mark,demo.ord,demo.pos,tickers]);
 
   /* resize drag */
   useEffect(()=>{
@@ -782,7 +1034,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
 
   function pick(s:string){setSym(s);setShowPicker(false);router.replace(`/trade/${encodeURIComponent(s)}`);}
 
-  function handleOrder(side:"Buy"|"Sell",type:"Market"|"Limit",amount:number,limitPx?:number):string|null{
+  function handleOrder(side:"Buy"|"Sell",type:"Market"|"Limit",amount:number,limitPx?:number,tp?:number,sl?:number):string|null{
     if(!mark)return "Price unavailable";
     const execPx=type==="Market"?mark:(limitPx??mark);
     const takFee=+(info?.takerFee??"0.0004");
@@ -797,14 +1049,18 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
           const cf=ex.size*execPx*takFee;
           fills.unshift({id:uid(),sym,side,price:execPx,qty:ex.size,notional:ex.size*execPx,fee:cf,pnl:pnl-cf,ts:Date.now()});
           bal+=ex.margin+pnl-cf; pos.splice(xi,1);
+          pushToast(`${sym} ${ex.side} closed — PnL ${pnl>=0?"+":""}${pnl.toFixed(2)}`,pnl>=0?"success":"error");
         } else {
           bal-=amount+fee;
           fills.unshift({id:uid(),sym,side,price:execPx,qty:qtyV,notional,fee,ts:Date.now()});
-          pos.push({id:uid(),sym,side:side==="Buy"?"LONG":"SHORT",size:qtyV,entry:execPx,lev,margin:amount});
+          pos.push({id:uid(),sym,side:side==="Buy"?"LONG":"SHORT",size:qtyV,entry:execPx,lev,margin:amount,tp,sl});
+          const sideLabel=side==="Buy"?"LONG":"SHORT";
+          pushToast(`${sym} ${sideLabel} opened @ $${$(execPx)}${tp?" TP $"+$(tp):""}${sl?" SL $"+$(sl):""}`,"success");
         }
       } else {
         bal-=amount;
-        ord.push({id:uid(),sym,side,limitPx:execPx,qty:qtyV,notional,margin:amount,lev,ts:Date.now()});
+        ord.push({id:uid(),sym,side,limitPx:execPx,qty:qtyV,notional,margin:amount,lev,ts:Date.now(),tp,sl});
+        pushToast(`${sym} limit ${side} @ $${$(execPx)} placed`,"info");
       }
       const ns:Demo={bal:Math.max(0,bal),pos,ord,fills:fills.slice(0,200)};sD(ns);return ns;
     });
@@ -819,6 +1075,26 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
       const f:DemoFill={id:uid(),sym:p.sym,side:p.side==="LONG"?"Sell":"Buy",price:mp,qty:p.size,notional:p.size*mp,fee,pnl:pnl-fee,ts:Date.now()};
       const ns:Demo={bal:Math.max(0,prev.bal+p.margin+pnl-fee),pos:prev.pos.filter(x=>x.id!==id),ord:prev.ord,fills:[f,...prev.fills].slice(0,200)};sD(ns);return ns;
     });
+    pushToast(`Position market closed`, "info");
+  }
+
+  function handleEditTPSL(id:string,tp?:number,sl?:number){
+    setDemo(prev=>{
+      const pos=prev.pos.map(p=>p.id===id?{...p,tp,sl}:p);
+      const ns:Demo={...prev,pos};sD(ns);return ns;
+    });
+    const p=demo.pos.find(x=>x.id===id);
+    if(p) pushToast(`${p.sym} TP/SL updated${tp?" TP $"+$(tp):""}${sl?" SL $"+$(sl):""}`, "info");
+  }
+
+  function handleLimitClose(id:string,limitPx:number){
+    setDemo(prev=>{
+      const p=prev.pos.find(x=>x.id===id); if(!p)return prev;
+      const closeSide=p.side==="LONG"?"Sell":"Buy";
+      const ord:DemoOrd={id:uid(),sym:p.sym,side:closeSide,limitPx,qty:p.size,notional:p.size*limitPx,margin:0,lev:p.lev,ts:Date.now()};
+      const ns:Demo={...prev,ord:[...prev.ord,ord]};sD(ns);return ns;
+    });
+    pushToast(`Limit close order placed`, "info");
   }
 
   function handleCancel(id:string){
@@ -826,6 +1102,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
       const o=prev.ord.find(x=>x.id===id); if(!o)return prev;
       const ns:Demo={...prev,bal:prev.bal+o.margin,ord:prev.ord.filter(x=>x.id!==id)};sD(ns);return ns;
     });
+    pushToast(`Order cancelled`, "info");
   }
 
   function handleReset(){
@@ -838,7 +1115,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
     <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
       <div style={{flex:1,overflow:"hidden",minHeight:0}}>
         {klines.length>0
-          ? <Chart klines={klines} live={liveK} sym={sym} iv={iv}/>
+          ? <Chart klines={klines} live={liveK} sym={sym} iv={iv} fills={demo.fills}/>
           : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontFamily:"var(--font-space-grotesk)",fontSize:11,color:"var(--text-faint)"}}>Loading chart…</div>
         }
       </div>
@@ -880,6 +1157,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100dvh",background:"var(--bg)",overflow:"hidden",paddingBottom:isMobile?60:0}}>
       <Navbar/>
+      <ToastStack toasts={toasts} onClose={closeToast}/>
 
       {/* ══ MOBILE LAYOUT ══ */}
       {isMobile ? (
@@ -925,7 +1203,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
                 {/* Chart fixed height */}
                 <div style={{height:260,flexShrink:0,overflow:"hidden"}}>
                   {klines.length>0
-                    ? <Chart klines={klines} live={liveK} sym={sym} iv={iv}/>
+                    ? <Chart klines={klines} live={liveK} sym={sym} iv={iv} fills={demo.fills}/>
                     : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontFamily:"var(--font-space-grotesk)",fontSize:11,color:"var(--text-faint)"}}>Loading chart…</div>
                   }
                 </div>
@@ -954,7 +1232,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
             )}
             {mTab==="positions" && (
               <div style={{minHeight:300}}>
-                <Bottom demo={demo} tickers={tickers} onClose={handleClose} onCancel={handleCancel}/>
+                <Bottom demo={demo} tickers={tickers} onClose={handleClose} onCancel={handleCancel} onEditTPSL={handleEditTPSL} onLimitClose={handleLimitClose}/>
               </div>
             )}
           </div>
@@ -1054,7 +1332,7 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
 
           {/* ── Bottom card ── */}
           <div style={{height:bottomH,margin:"0 8px 8px",borderRadius:12,border:"1px solid var(--border-subtle)",background:"var(--bg-surface)",flexShrink:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-            <Bottom demo={demo} tickers={tickers} onClose={handleClose} onCancel={handleCancel}/>
+            <Bottom demo={demo} tickers={tickers} onClose={handleClose} onCancel={handleCancel} onEditTPSL={handleEditTPSL} onLimitClose={handleLimitClose}/>
           </div>
         </>
       )}

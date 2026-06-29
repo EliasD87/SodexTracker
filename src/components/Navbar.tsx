@@ -36,6 +36,12 @@ const NAV_ITEMS: NavItem[] = [
         description: "Track funding payments over time",
         icon: <Coins size={14} />,
       },
+      {
+        label: "Reverse Search",
+        href: "/reverse-search",
+        description: "Find wallets by address characters",
+        icon: <SearchX size={14} />,
+      },
     ],
   },
   {
@@ -56,12 +62,6 @@ const NAV_ITEMS: NavItem[] = [
         href: "/trade/BTC-USD",
         description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
-      },
-      {
-        label: "Reverse Search",
-        href: "/reverse-search",
-        description: "Find wallets by address characters",
-        icon: <SearchX size={14} />,
       },
       {
         label: "Copy Trading",
