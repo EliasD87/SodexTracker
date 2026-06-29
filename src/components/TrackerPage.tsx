@@ -9,6 +9,8 @@ import { TokenIcon } from "@/components/TokenIcon";
 import { tickerLabel } from "@/lib/tokenIcons";
 import { cachedApiFetch, clearFetchCachePrefix } from "@/lib/fetchCache";
 import { FundFlowCard } from "@/components/FundFlowCard";
+import { PositionShareCard } from "@/components/PositionShareCard";
+import type { ShareablePosition } from "@/components/PositionShareCard";
 import { supabase } from "@/lib/supabase";
 import {
   Search,
@@ -31,6 +33,7 @@ import {
   Plus,
   Folder,
   UserRound,
+  Share2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -2080,15 +2083,18 @@ function PnlChart({ chart, windowShort }: { chart: ChartPoint[]; windowShort: st
    Position history table
    ════════════════════════════════════════════════════════════════ */
 
-const POS_COLS = "minmax(90px,1fr) 60px 70px 80px 80px 90px 90px";
+const POS_COLS = "minmax(90px,1fr) 60px 70px 80px 80px 90px 90px 36px";
 
 function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHistoryItem[]; perpsMap: Map<number, string> }) {
   const [page, setPage] = useState(0);
+  const [sharePos, setSharePos] = useState<ShareablePosition | null>(null);
   const pageSize = 7;
   const totalPages = Math.ceil(positions.length / pageSize);
   const pagePositions = positions.slice(page * pageSize, (page + 1) * pageSize);
 
   return (
+    <>
+    {sharePos && <PositionShareCard position={sharePos} onClose={() => setSharePos(null)} />}
     <div className="relative" style={{ border: "1px solid var(--border)", background: "var(--bg-surface)" }}>
       <CornerMarks size={8} inset={-1} thickness={1} opacity={0.5} />
 
@@ -2107,6 +2113,7 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
             <span className="tag text-right" style={{ color: "var(--text-faint)" }}>ENTRY</span>
             <span className="tag text-right" style={{ color: "var(--text-faint)" }}>EXIT</span>
             <span className="tag text-right" style={{ color: "var(--text-faint)" }}>REALIZED PNL</span>
+            <span />
           </div>
 
           {/* Rows */}
@@ -2132,6 +2139,7 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)")}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
               >
+
                 {/* Market */}
                 <div className="flex items-center gap-2 min-w-0">
                   <TokenIcon symbol={name} size={20} />
@@ -2170,6 +2178,29 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
                 >
                   {positive ? "+" : ""}{fmt(realizedPnl)}
                 </span>
+
+                {/* Share */}
+                <button
+                  onClick={() => setSharePos({
+                    symbol: name,
+                    side: p.position_side === 1 ? "LONG" : "SHORT",
+                    leverage: p.leverage,
+                    entryPrice: entry,
+                    exitPrice: exit > 0 ? exit : null,
+                    markPrice: null,
+                    pnl: realizedPnl,
+                    roiPct: entry > 0 && parseFloat(p.initial_margin) > 0 ? (realizedPnl / parseFloat(p.initial_margin)) * 100 : realizedPnl,
+                    createdAt: p.created_at,
+                    updatedAt: p.updated_at,
+                  })}
+                  className="flex items-center justify-center w-7 h-7 transition-colors opacity-0 group-hover:opacity-100"
+                  style={{ borderRadius: 6, color: "var(--text-faint)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--accent-dim)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-faint)"; e.currentTarget.style.background = "transparent"; }}
+                  title="Share"
+                >
+                  <Share2 size={13} />
+                </button>
               </div>
             );
           })}
@@ -2251,6 +2282,7 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
         )}
       </div>
     </div>
+    </>
   );
 }
 
@@ -2261,6 +2293,7 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
 function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
   const [markPrices, setMarkPrices] = useState<Map<string, number>>(new Map());
   const [loadingPrices, setLoadingPrices] = useState(true);
+  const [sharePos, setSharePos] = useState<ShareablePosition | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -2309,6 +2342,8 @@ function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
   const totalPnl = rows.reduce((sum, r) => sum + r.unrealizedPnl, 0);
 
   return (
+    <>
+    {sharePos && <PositionShareCard position={sharePos} onClose={() => setSharePos(null)} />}
     <div className="relative" style={{ border: "1px solid var(--border)", background: "var(--bg-surface)" }}>
       <CornerMarks size={8} inset={-1} thickness={1} opacity={0.5} />
 
@@ -2338,7 +2373,7 @@ function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
               {/* Header */}
               <div
                 className="grid items-center px-4 py-3"
-                style={{ gridTemplateColumns: "minmax(90px,1fr) 60px 80px 90px 90px 90px 90px", gap: 12, borderBottom: "1px solid var(--border)" }}
+                style={{ gridTemplateColumns: "minmax(90px,1fr) 60px 80px 90px 90px 90px 90px 36px", gap: 12, borderBottom: "1px solid var(--border)" }}
               >
                 <span className="tag" style={{ color: "var(--text-faint)" }}>MARKET</span>
                 <span className="tag text-center" style={{ color: "var(--text-faint)" }}>SIDE</span>
@@ -2347,6 +2382,7 @@ function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
                 <span className="tag text-right" style={{ color: "var(--text-faint)" }}>MARK</span>
                 <span className="tag text-right" style={{ color: "var(--text-faint)" }}>MARGIN</span>
                 <span className="tag text-right" style={{ color: "var(--text-faint)" }}>U-PNL</span>
+                <span />
               </div>
 
               {/* Rows */}
@@ -2355,7 +2391,7 @@ function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
                   key={r.id}
                   className="lb-row grid items-center px-4 group"
                   style={{
-                    gridTemplateColumns: "minmax(90px,1fr) 60px 80px 90px 90px 90px 90px",
+                    gridTemplateColumns: "minmax(90px,1fr) 60px 80px 90px 90px 90px 90px 36px",
                     gap: 12,
                     height: 48,
                     borderBottom: i < rows.length - 1 ? "1px solid var(--border-subtle)" : "none",
@@ -2401,6 +2437,27 @@ function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
                     {r.unrealizedPnl >= 0 ? "+" : ""}{fmt(r.unrealizedPnl)}
                     <span className="text-[9px] font-normal" style={{ opacity: 0.7 }}> {r.roiPct >= 0 ? "+" : ""}{r.roiPct.toFixed(1)}%</span>
                   </span>
+                  <button
+                    onClick={() => setSharePos({
+                      symbol: tickerLabel(r.symbol),
+                      side: r.isLong ? "LONG" : "SHORT",
+                      leverage: r.leverage,
+                      entryPrice: r.entryPrice,
+                      markPrice: r.markPrice > 0 ? r.markPrice : null,
+                      exitPrice: null,
+                      pnl: r.unrealizedPnl,
+                      roiPct: r.roiPct,
+                      createdAt: r.createdAt,
+                      updatedAt: r.updatedAt,
+                    })}
+                    className="flex items-center justify-center w-7 h-7 transition-colors opacity-0 group-hover:opacity-100"
+                    style={{ borderRadius: 6, color: "var(--text-faint)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "var(--accent-dim)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-faint)"; e.currentTarget.style.background = "transparent"; }}
+                    title="Share"
+                  >
+                    <Share2 size={13} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -2466,6 +2523,7 @@ function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
         </>
       )}
     </div>
+    </>
   );
 }
 
