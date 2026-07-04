@@ -36,6 +36,7 @@ import {
   Share2,
 } from "lucide-react";
 import Link from "next/link";
+import { TradeLoader } from "@/components/TradeLoader";
 
 /* ════════════════════════════════════════════════════════════════
    Types
@@ -3331,22 +3332,7 @@ export function TrackerPage({
   if (loading && !data) {
     return (
       <div className="min-h-screen pt-[72px] pb-20 flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="flex items-center justify-center rounded-sm"
-            style={{
-              width: 56,
-              height: 56,
-              background: "var(--bg-surface)",
-              border: "1px solid var(--accent)",
-            }}
-          >
-            <RefreshCw size={22} className="animate-spin" style={{ color: "var(--accent)" }} />
-          </div>
-          <span className="mono text-sm" style={{ color: "var(--text-faint)" }}>
-            LOADING PROFILE…
-          </span>
-        </div>
+        <TradeLoader label="LOADING PROFILE" />
       </div>
     );
   }

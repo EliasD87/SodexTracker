@@ -23,9 +23,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setTheme = (t: Theme) => {
+    const root = document.documentElement;
+    root.classList.add("no-transition");
     setThemeState(t);
     localStorage.setItem("theme", t);
-    document.documentElement.classList.toggle("dark", t === "dark");
+    root.classList.toggle("dark", t === "dark");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.remove("no-transition");
+      });
+    });
   };
 
   return (

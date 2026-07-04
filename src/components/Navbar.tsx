@@ -188,6 +188,7 @@ function NavDropdownMenu({
                 <Link
                   key={child.href}
                   href={child.href}
+                  prefetch={true}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
                   style={{ color: "var(--text-muted)" }}
                   onMouseEnter={(e) => {
@@ -223,7 +224,7 @@ const BOTTOM_NAV = [
 ];
 
 /* ── All pages shown in the More sheet ── */
-type SheetPage = { label: string; href: string; icon: React.ElementType; comingSoon?: boolean };
+type SheetPage = { label: string; href: string; icon: React.ElementType; comingSoon?: boolean; beta?: boolean };
 const SHEET_PAGES: SheetPage[] = [
   { label: "Markets", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
@@ -231,8 +232,8 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap },
   { label: "Trade History", href: "/trade-history", icon: History },
-  { label: "Journal", href: "/journal", icon: BookOpen },
-  { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
+  { label: "Journal", href: "/journal", icon: BookOpen, beta: true },
+  { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle, beta: true },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
   { label: "Copy Trading", href: "#", icon: Copy, comingSoon: true },
@@ -322,7 +323,7 @@ export function Navbar() {
       >
         <div className="max-w-[1200px] mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
           {/* Wordmark */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Link href="/" prefetch={true} className="flex items-center gap-2 shrink-0">
             <span className="font-semibold tracking-tight text-[15px]" style={{ color: "var(--text)" }}>
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>
@@ -332,6 +333,7 @@ export function Navbar() {
           <div className="md:hidden flex items-center gap-1 relative">
             <Link
               href="/watchlist"
+              prefetch={true}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors relative"
               style={{
                 color: isActive("/watchlist") ? "var(--accent)" : "var(--text-muted)",
@@ -414,6 +416,7 @@ export function Navbar() {
                   ) : (
                     <Link
                       href="/account"
+                      prefetch={true}
                       onClick={() => setAccountOpen(false)}
                       className="w-full flex items-center justify-center gap-2 px-3 py-2 tag font-bold mb-2"
                       style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)", borderRadius: 9 }}
@@ -425,6 +428,7 @@ export function Navbar() {
 
                   <Link
                     href="/account"
+                    prefetch={true}
                     onClick={() => setAccountOpen(false)}
                     className="w-full flex items-center justify-center px-3 py-2 tag font-bold"
                     style={{ border: "1px solid var(--border)", color: "var(--text-muted)", background: "var(--bg)", borderRadius: 9 }}
@@ -445,6 +449,7 @@ export function Navbar() {
                   <Link
                     key={item.label}
                     href={item.href}
+                    prefetch={true}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors"
                     style={{ color: active ? "var(--text)" : "var(--text-muted)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
@@ -470,6 +475,7 @@ export function Navbar() {
             {/* Watchlist icon with stamp animation + glow */}
             <Link
               href="/watchlist"
+              prefetch={true}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors relative"
               style={{
                 color: isActive("/watchlist") ? "var(--accent)" : "var(--text-muted)",
@@ -496,6 +502,7 @@ export function Navbar() {
             >
               <Link
                 href="/account"
+                prefetch={true}
                 className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors"
                 style={{
                   color: isActive("/account") || accountOpen ? "var(--text)" : "var(--text-muted)",
@@ -524,6 +531,7 @@ export function Navbar() {
                     </div>
                     <Link
                       href="/account"
+                      prefetch={true}
                       className="flex items-center justify-center px-2.5 py-1.5 rounded-md text-[11.5px] font-semibold transition-colors"
                       style={{ border: "1px solid var(--border)", color: "var(--text)", background: "var(--bg-surface)" }}
                       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="var(--bg-elevated)";}}
@@ -554,6 +562,7 @@ export function Navbar() {
             </button>
             <Link
               href="/tracker"
+              prefetch={true}
               className="flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
               style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
             >
@@ -582,6 +591,7 @@ export function Navbar() {
             <Link
               key={label}
               href={href}
+              prefetch={true}
               className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors"
               style={{ color: active ? "var(--accent)" : "var(--text-faint)" }}
             >
@@ -686,8 +696,9 @@ export function Navbar() {
               <Link
                 key={page.label}
                 href={page.href}
+                prefetch={true}
                 onClick={() => setMoreOpen(false)}
-                className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl transition-colors active:scale-95"
+                className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl transition-colors active:scale-95 relative"
                 style={{
                   background: active ? "var(--accent-dim)" : "var(--bg-elevated)",
                   border: `1px solid ${active ? "var(--accent)" : "var(--border-subtle)"}`,
@@ -698,6 +709,14 @@ export function Navbar() {
               >
                 <Icon size={22} strokeWidth={active ? 2 : 1.5} />
                 <span className="text-[11px] font-medium text-center leading-tight">{page.label}</span>
+                {page.beta && (
+                  <span
+                    className="absolute top-2 right-2 text-[8px] font-bold px-1 py-0.5 rounded leading-none"
+                    style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent)", letterSpacing: "0.04em" }}
+                  >
+                    BETA
+                  </span>
+                )}
               </Link>
             );
           })}

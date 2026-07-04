@@ -199,6 +199,14 @@ input[type="number"] {
 
 html { scroll-behavior: smooth; }
 
+/* Disable all transitions during theme toggle to prevent paint storm */
+.no-transition,
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+  transition: none !important;
+}
+
 body {
   background: var(--bg);
   color: var(--text);

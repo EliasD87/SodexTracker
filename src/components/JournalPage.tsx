@@ -1475,7 +1475,7 @@ function AutoFetchButton({
   const isBusy = fetchState.status === "loading" || fetchState.status === "resolving";
 
   return (
-    <div ref={dropdownRef} className="relative" style={{ zIndex: 9999 }}>
+    <div ref={dropdownRef} className="relative" style={{ zIndex: 20 }}>
       <button
         onClick={() => fetchState.status === "idle" || fetchState.status === "done" || fetchState.status === "error" ? setOpen(!open) : handleCancel()}
         className="flex items-center gap-1.5 px-3 py-2 transition-all"
@@ -1495,25 +1495,25 @@ function AutoFetchButton({
 
       {open && !isBusy && (
         <div
-          className="absolute top-full right-0 mt-1 w-80"
+          className="absolute top-full right-0 mt-1 w-[calc(100vw-24px)] sm:w-80 max-w-80"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border)",
             borderRadius: "var(--r-card)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
-            padding: 16,
-            zIndex: 9999,
+            padding: "12px 14px",
+            zIndex: 20,
           }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <Wallet size={14} style={{ color: "var(--accent)" }} />
-            <span className="text-sm font-bold" style={{ color: "var(--text)" }}>Import from Address</span>
+          <div className="flex items-center gap-2 mb-2.5">
+            <Wallet size={13} style={{ color: "var(--accent)" }} />
+            <span className="text-xs sm:text-sm font-bold" style={{ color: "var(--text)" }}>Import from Address</span>
           </div>
 
           {/* Month picker */}
-          <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center justify-between mb-2.5 px-0.5">
             <span className="tag" style={{ color: "var(--text-faint)", fontSize: 8 }}>FETCH MONTH</span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setFetchMonth((prev) => new Date(Date.UTC(prev.getUTCFullYear(), prev.getUTCMonth() - 1, 1)))}
                 className="flex items-center justify-center w-6 h-6 transition-colors"
@@ -1523,7 +1523,7 @@ function AutoFetchButton({
               >
                 <ChevronLeft size={12} />
               </button>
-              <span className="mono text-xs font-bold" style={{ color: "var(--text)", minWidth: 80, textAlign: "center" }}>
+              <span className="mono text-[11px] sm:text-xs font-bold" style={{ color: "var(--text)", minWidth: 72, textAlign: "center" }}>
                 {fetchMonth.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}
               </span>
               <button
@@ -1538,12 +1538,12 @@ function AutoFetchButton({
             </div>
           </div>
 
-          <p className="text-[11px] leading-relaxed mb-3" style={{ color: "var(--text-faint)" }}>
-            Fetches {fetchMonth.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}'s position history (1000 per page, cursor pagination). Imported positions appear as trades in your journal.
+          <p className="text-[10px] sm:text-[11px] leading-relaxed mb-2.5" style={{ color: "var(--text-faint)" }}>
+            Fetches {fetchMonth.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}'s position history. Imported positions appear as trades.
           </p>
 
-          <div className="flex flex-col gap-2 mb-2">
-            <div className="flex gap-1.5">
+          <div className="flex flex-col gap-2 mb-1">
+            <div className="flex flex-col sm:flex-row gap-1.5">
               <input
                 type="text"
                 value={address}
@@ -1566,7 +1566,7 @@ function AutoFetchButton({
               <button
                 onClick={handleStart}
                 disabled={!address.trim()}
-                className="flex items-center gap-1 px-3 py-2 transition-all"
+                className="flex items-center justify-center gap-1 px-3 py-2 transition-all"
                 style={{
                   background: address.trim() ? "var(--accent)" : "var(--bg-elevated)",
                   color: address.trim() ? "var(--accent-fg)" : "var(--text-faint)",
@@ -1582,7 +1582,7 @@ function AutoFetchButton({
             {savedAddrs.length > 0 && (
               <div className="flex flex-col gap-1">
                 <span className="tag" style={{ color: "var(--text-faint)", fontSize: 8 }}>RECENT</span>
-                {savedAddrs.slice(0, 5).map((a) => (
+                {savedAddrs.slice(0, 4).map((a) => (
                   <button
                     key={a}
                     onClick={() => setAddress(a)}
@@ -1591,8 +1591,8 @@ function AutoFetchButton({
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg)"; }}
                   >
-                    <Wallet size={11} style={{ color: "var(--text-faint)" }} />
-                    <span className="mono text-[10px]" style={{ color: "var(--text-muted)" }}>{a.slice(0, 10)}…{a.slice(-8)}</span>
+                    <Wallet size={10} style={{ color: "var(--text-faint)" }} />
+                    <span className="mono text-[10px]" style={{ color: "var(--text-muted)" }}>{a.slice(0, 8)}…{a.slice(-6)}</span>
                   </button>
                 ))}
               </div>
@@ -1600,17 +1600,17 @@ function AutoFetchButton({
           </div>
 
           {fetchState.status === "error" && (
-            <div className="flex items-center gap-1.5 px-2.5 py-2 mb-2" style={{ background: "var(--cal-red-tint)", borderRadius: "var(--r-sm)" }}>
+            <div className="flex items-center gap-1.5 px-2.5 py-2 mb-1" style={{ background: "var(--cal-red-tint)", borderRadius: "var(--r-sm)" }}>
               <AlertCircle size={12} style={{ color: "var(--cal-red)" }} />
               <span className="text-[11px]" style={{ color: "var(--cal-red)" }}>{fetchState.error}</span>
             </div>
           )}
 
           {fetchState.status === "done" && (
-            <div className="flex items-center gap-1.5 px-2.5 py-2 mb-2" style={{ background: "var(--cal-green-tint)", borderRadius: "var(--r-sm)" }}>
+            <div className="flex items-center gap-1.5 px-2.5 py-2 mb-1" style={{ background: "var(--cal-green-tint)", borderRadius: "var(--r-sm)" }}>
               <Check size={12} style={{ color: "var(--cal-green)" }} />
               <span className="text-[11px]" style={{ color: "var(--cal-green)" }}>
-                Imported {fetchState.totalPositions} positions for {fetchMonth.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}
+                Imported {fetchState.totalPositions} for {fetchMonth.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" })}
               </span>
               <button onClick={handleReset} className="tag ml-auto" style={{ color: "var(--text-faint)" }}>RESET</button>
             </div>
@@ -1620,11 +1620,11 @@ function AutoFetchButton({
 
       {/* Progress bar when loading */}
       {isBusy && (
-        <div className="absolute top-full right-0 mt-1 w-64" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--r-card)", padding: 12, zIndex: 9999 }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Loader2 size={14} className="animate-spin" style={{ color: "var(--accent)" }} />
-            <span className="text-xs font-bold" style={{ color: "var(--text)" }}>
-              {fetchState.status === "resolving" ? "Resolving address…" : `Fetched ${fetchState.fetchedCount} positions`}
+        <div className="absolute top-full right-0 mt-1 w-[calc(100vw-24px)] sm:w-64 max-w-64" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--r-card)", padding: "10px 12px", zIndex: 20 }}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <Loader2 size={13} className="animate-spin" style={{ color: "var(--accent)" }} />
+            <span className="text-[11px] sm:text-xs font-bold" style={{ color: "var(--text)" }}>
+              {fetchState.status === "resolving" ? "Resolving address…" : `Fetched ${fetchState.fetchedCount}`}
             </span>
           </div>
           <div style={{ height: 3, background: "var(--bg-elevated)", borderRadius: 2, overflow: "hidden" }}>
@@ -1753,7 +1753,7 @@ export function JournalPage() {
     <div className="min-h-screen pt-14 px-3 sm:px-6 pb-12">
       <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:gap-4">
         {/* Header */}
-        <div className="flex flex-row items-center justify-between gap-2 fade-up relative" style={{ zIndex: 9999 }}>
+        <div className="flex flex-row items-center justify-between gap-2 fade-up relative" style={{ zIndex: 10 }}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="flex items-center justify-center shrink-0" style={{ width: 32, height: 32, background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--r-md)" }}>
               <BookOpen size={14} style={{ color: "var(--accent)" }} />

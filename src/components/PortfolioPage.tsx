@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TrackerPage } from "@/components/TrackerPage";
 import { usePortfolio } from "@/components/PortfolioProvider";
+import { TradeLoader } from "@/components/TradeLoader";
 import type { TrackerData, PortfolioOverviewData, ChartPoint } from "@/components/TrackerPage";
 
 export function PortfolioPage() {
@@ -35,7 +36,7 @@ export function PortfolioPage() {
   if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-14">
-        <div className="mono text-sm" style={{ color: "var(--text-faint)" }}>Loading…</div>
+        <TradeLoader label="LOADING PORTFOLIO" />
       </div>
     );
   }
