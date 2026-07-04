@@ -52,10 +52,9 @@ const NAV_ITEMS: NavItem[] = [
     items: [
       {
         label: "Journal",
-        href: "#",
+        href: "/journal",
         description: "Log and annotate your trades",
         icon: <BookOpen size={14} />,
-        comingSoon: true,
       },
       {
         label: "Demo Trading",
@@ -232,7 +231,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap },
   { label: "Trade History", href: "/trade-history", icon: History },
-  { label: "Journal", href: "#", icon: BookOpen, comingSoon: true },
+  { label: "Journal", href: "/journal", icon: BookOpen },
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },

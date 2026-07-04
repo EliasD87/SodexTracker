@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useTransition, type ReactNode } from "react";
 import { cachedFetchJson } from "@/lib/fetchCache";
 
 const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
@@ -57,6 +57,7 @@ export function useLandingData(): LandingData {
 }
 
 export function LandingDataProvider({ children }: { children: ReactNode }) {
+  const [, startTransition] = useTransition();
   const [vol24hRaw, setVol24hRaw] = useState<any>(null);
   const [oiRaw, setOiRaw] = useState<any>(null);
   const [usersRaw, setUsersRaw] = useState<any>(null);
@@ -94,12 +95,14 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
         fetchJson(`${GW_BASE}/perps/markets/mark-prices`),
       ]);
       if (cancelled) return;
-      setVol24hRaw(vol24h);
-      setOiRaw(oi);
-      setUsersRaw(users);
-      setTvlRaw(tvl);
-      setMarkPricesRaw(markPrices);
-      setLoadingCards(false);
+      startTransition(() => {
+        setVol24hRaw(vol24h);
+        setOiRaw(oi);
+        setUsersRaw(users);
+        setTvlRaw(tvl);
+        setMarkPricesRaw(markPrices);
+        setLoadingCards(false);
+      });
     }
 
     fetchCards();
@@ -124,10 +127,12 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
         fetchJson(`${DATA_BASE}/dashboard/volume?start_date=2020-01-01&end_date=${today}&market_type=futures`),
       ]);
       if (cancelled) return;
-      setVolumeAllRaw(allRes);
-      setVolumeSpotRaw(spotRes);
-      setVolumeFutRaw(futRes);
-      setLoadingVolume(false);
+      startTransition(() => {
+        setVolumeAllRaw(allRes);
+        setVolumeSpotRaw(spotRes);
+        setVolumeFutRaw(futRes);
+        setLoadingVolume(false);
+      });
     }
 
     fetchVolume();
@@ -149,9 +154,11 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
         fetchJson(`${DATA_BASE}/leaderboard?window_type=24H&page=1&page_size=10&sort_order=desc&sort_by=volume`),
       ]);
       if (cancelled) return;
-      setPnlLeadersRaw(pnl);
-      setVolLeadersRaw(vol);
-      setLoadingLeaders(false);
+      startTransition(() => {
+        setPnlLeadersRaw(pnl);
+        setVolLeadersRaw(vol);
+        setLoadingLeaders(false);
+      });
     }
 
     fetchLeaders();

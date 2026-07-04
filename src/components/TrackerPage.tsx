@@ -506,7 +506,11 @@ function mergeTrades(
 
 
 function sideLabel(side: number): string {
-  return side === 1 ? "LONG" : "SHORT";
+  return side === 2 ? "LONG" : side === 3 ? "SHORT" : side === 1 ? "BOTH" : "SHORT";
+}
+
+function isPositionLong(side: number, size: string): boolean {
+  return side === 2 || (side === 1 && parseFloat(size) > 0);
 }
 
 function marginModeLabel(mode: number): string {
@@ -2147,8 +2151,8 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
                 </div>
 
                 {/* Side */}
-                <span className="mono text-xs font-bold" style={{ color: p.position_side === 1 ? "var(--green)" : "var(--red)" }}>
-                  {sideLabel(p.position_side)}
+                <span className="mono text-xs font-bold" style={{ color: isPositionLong(p.position_side, p.size) ? "var(--green)" : "var(--red)" }}>
+                  {sideLabel(p.position_side === 1 ? (parseFloat(p.size) > 0 ? 2 : 3) : p.position_side)}
                 </span>
 
                 {/* Margin mode */}
@@ -2183,7 +2187,7 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
                 <button
                   onClick={() => setSharePos({
                     symbol: name,
-                    side: p.position_side === 1 ? "LONG" : "SHORT",
+                    side: isPositionLong(p.position_side, p.size) ? "LONG" : "SHORT",
                     leverage: p.leverage,
                     entryPrice: entry,
                     exitPrice: exit > 0 ? exit : null,
@@ -2234,8 +2238,8 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="mono text-[10px] font-bold" style={{ color: p.position_side === 1 ? "var(--green)" : "var(--red)" }}>
-                    {sideLabel(p.position_side)}
+                  <span className="mono text-[10px] font-bold" style={{ color: isPositionLong(p.position_side, p.size) ? "var(--green)" : "var(--red)" }}>
+                    {sideLabel(p.position_side === 1 ? (parseFloat(p.size) > 0 ? 2 : 3) : p.position_side)}
                   </span>
                   <span style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--text-faint)" }} />
                   <span className="mono text-[10px]" style={{ color: "var(--text-muted)" }}>
