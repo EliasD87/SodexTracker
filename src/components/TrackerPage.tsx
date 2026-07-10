@@ -6,6 +6,9 @@ import type { User } from "@supabase/supabase-js";
 import { CornerMarks } from "@/components/CornerMarks";
 import { CountUp } from "@/components/CountUp";
 import { TokenIcon } from "@/components/TokenIcon";
+import { LookThroughCard } from "@/components/LookThroughCard";
+import { MacroRiskBanner } from "@/components/MacroRiskBanner";
+import { sodexCoinToIndexTicker } from "@/lib/indexMeta";
 import { tickerLabel } from "@/lib/tokenIcons";
 import { cachedApiFetch, clearFetchCachePrefix } from "@/lib/fetchCache";
 import { FundFlowCard } from "@/components/FundFlowCard";
@@ -2295,6 +2298,10 @@ function PositionHistoryTable({ positions, perpsMap }: { positions: PositionHist
    Open Positions — active perps positions from GW
    ════════════════════════════════════════════════════════════════ */
 
+/* NOTE: the "MKT OPEN/CLOSED" badge that lived here was removed on purpose —
+ * market status flips intraday, and SoSoValue data refreshes on a ~12h
+ * cadence, so the badge would be wrong roughly half the time. */
+
 function OpenPositionsCard({ positions }: { positions: OpenPosition[] }) {
   const [markPrices, setMarkPrices] = useState<Map<string, number>>(new Map());
   const [loadingPrices, setLoadingPrices] = useState(true);
@@ -3495,6 +3502,9 @@ export function TrackerPage({
 
         {/* Open Positions */}
         <SectionLabel hint="PERPS">OPEN POSITIONS</SectionLabel>
+        <MacroRiskBanner
+          positionCount={data!.openPositions.filter((p) => p.active && parseFloat(p.size) !== 0).length}
+        />
         <div className="mb-3">
           <OpenPositionsCard positions={data!.openPositions} />
         </div>
@@ -3507,6 +3517,16 @@ export function TrackerPage({
             spotCoins={data!.spotCoins}
           />
         </div>
+
+        {/* Index Look-Through — only when the wallet holds a tokenised index */}
+        {data!.spotBalances.some((b) => sodexCoinToIndexTicker(b.coin)) && (
+          <>
+            <SectionLabel hint="SOSOVALUE">INDEX LOOK-THROUGH</SectionLabel>
+            <div className="mb-3">
+              <LookThroughCard balances={data!.spotBalances} />
+            </div>
+          </>
+        )}
 
         {/* Activity — trades / positions (tabbed) */}
         <SectionLabel>ACTIVITY</SectionLabel>

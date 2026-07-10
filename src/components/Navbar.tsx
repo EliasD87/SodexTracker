@@ -3,7 +3,7 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Bookmark } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Bookmark, Radar } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -16,9 +16,10 @@ type NavItem = NavLink | NavDropdown;
 const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Markets", href: "/" },
   { kind: "link", label: "Tracker", href: "/tracker" },
+  { kind: "link", label: "Intelligence", href: "/intelligence", icon: <Radar size={13} style={{ color: "#7C6BF0" }} /> },
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
-  { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} /> },
+  { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} /> },
   {
     kind: "dropdown",
     label: "More",
@@ -47,7 +48,6 @@ const NAV_ITEMS: NavItem[] = [
   {
     kind: "dropdown",
     label: "Beta",
-    badge: "BETA",
     icon: <FlaskConical size={13} />,
     items: [
       {
@@ -228,6 +228,7 @@ type SheetPage = { label: string; href: string; icon: React.ElementType; comingS
 const SHEET_PAGES: SheetPage[] = [
   { label: "Markets", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
+  { label: "Intelligence", href: "/intelligence", icon: Radar },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap },
@@ -441,7 +442,7 @@ export function Navbar() {
           </div>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          <div className="hidden md:flex items-center gap-1 flex-1 justify-center px-4">
             {NAV_ITEMS.map((item) => {
               if (item.kind === "link") {
                 const active = isActive(item.href);
@@ -471,7 +472,7 @@ export function Navbar() {
           </div>
 
           {/* Right controls (desktop only) */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             {/* Watchlist icon with stamp animation + glow */}
             <Link
               href="/watchlist"
