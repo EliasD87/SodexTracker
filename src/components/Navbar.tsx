@@ -3,13 +3,14 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, FlaskConical, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Bookmark, Radar } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Bookmark, Radar, Wrench } from "lucide-react";
 import Link from "next/link";
+import { LogoMark } from "@/components/LogoMark";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode };
-type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean };
+type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean; beta?: boolean };
 type NavDropdown = { kind: "dropdown"; label: string; badge?: string; icon: React.ReactNode; items: DropdownItem[] };
 type NavItem = NavLink | NavDropdown;
 
@@ -47,32 +48,34 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     kind: "dropdown",
-    label: "Beta",
-    icon: <FlaskConical size={13} />,
+    label: "Tools",
+    icon: <Wrench size={13} />,
     items: [
       {
         label: "Journal",
         href: "/journal",
         description: "Log and annotate your trades",
         icon: <BookOpen size={14} />,
+        beta: true,
       },
       {
         label: "Demo Trading",
         href: "/trade/BTC-USD",
         description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
+        beta: true,
       },
       {
         label: "Copy Trading",
-        href: "#",
-        description: "Mirror trades from top traders",
+        href: "/copy-trading",
+        description: "Mirror any trader, sized to your capital",
         icon: <Copy size={14} />,
-        comingSoon: true,
+        beta: true,
       },
       {
         label: "Trading Bots",
-        href: "#",
-        description: "Automate your strategies",
+        href: "/trading-bots",
+        description: "Downloadable Python strategy bots",
         icon: <Bot size={14} />,
         comingSoon: true,
       },
@@ -202,9 +205,17 @@ function NavDropdownMenu({
                   onClick={() => setOpen(false)}
                 >
                   <span className="shrink-0" style={{ color: "var(--accent)" }}>{child.icon}</span>
-                  <span className="text-[11.5px] font-medium" style={{ color: "var(--text)" }}>
+                  <span className="text-[11.5px] font-medium flex-1" style={{ color: "var(--text)" }}>
                     {child.label}
                   </span>
+                  {child.beta && (
+                    <span
+                      className="text-[8px] font-bold px-1 leading-none shrink-0 rounded-sm"
+                      style={{ color: "var(--green)", background: "var(--green-tint)", letterSpacing: "0.04em", padding: "2px 3px" }}
+                    >
+                      BETA
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -237,8 +248,8 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle, beta: true },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
-  { label: "Copy Trading", href: "#", icon: Copy, comingSoon: true },
-  { label: "Trading Bots", href: "#", icon: Bot, comingSoon: true },
+  { label: "Copy Trading", href: "/copy-trading", icon: Copy, beta: true },
+  { label: "Trading Bots", href: "/trading-bots", icon: Bot, comingSoon: true },
 ];
 
 export function Navbar() {
@@ -325,6 +336,7 @@ export function Navbar() {
         <div className="max-w-[1200px] mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
           {/* Wordmark */}
           <Link href="/" prefetch={true} className="flex items-center gap-2 shrink-0">
+            <LogoMark size={20} />
             <span className="font-semibold tracking-tight text-[15px]" style={{ color: "var(--text)" }}>
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>

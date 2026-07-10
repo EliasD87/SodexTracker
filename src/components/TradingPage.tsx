@@ -7,7 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Search, X, RotateCcw, AlertCircle, CheckCircle2, TrendingUp, BookOpen, Layers } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { getTokenIcon } from "@/lib/tokenIcons";
@@ -866,6 +866,8 @@ function Bottom({demo,tickers,onClose,onCancel,onEditTPSL,onLimitClose}:{demo:De
 
 export function TradingPage({initialSymbol}:{initialSymbol:string}) {
   const router=useRouter();
+  const searchParams=useSearchParams();
+  const copyFired=useRef(false);
 
   const [symbols,setSymbols]=useState<Sym[]>([]);
   const [tickers,setTickers]=useState<Map<string,Tick>>(new Map());
@@ -962,35 +964,33 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
     return()=>{try{ws.close();}catch{}wsRef.current=null;};
   },[sym,iv]);
 
-  /* auto-fill limits + TP/SL monitoring */
+  /* auto-fill limits + liquidation / TP / SL monitoring */
   useEffect(()=>{
     if(!mark)return;
-    // Check TP/SL on ALL open positions (not just current symbol)
-    const tpHit=demo.pos.filter(p=>{
-      const t=tickers.get(p.sym), mp=t?+t.markPrice:p.entry;
-      if(!mp)return false;
-      return (p.side==="LONG"&&p.tp&&mp>=p.tp)||
-             (p.side==="SHORT"&&p.tp&&mp<=p.tp)||
-             (p.side==="LONG"&&p.sl&&mp<=p.sl)||
-             (p.side==="SHORT"&&p.sl&&mp>=p.sl);
-    });
-    if(tpHit.length){
+    // Evaluate every open position (all symbols). Priority: LIQ > TP > SL.
+    type Trig={id:string;px:number;reason:"LIQ"|"TP"|"SL"};
+    const triggers=demo.pos.map((p):Trig|null=>{
+      const t=tickers.get(p.sym), mp=t?+t.markPrice:0;
+      if(!mp)return null;
+      const liqP=liq(p.side,p.entry,p.lev);
+      if((p.side==="LONG"&&mp<=liqP)||(p.side==="SHORT"&&mp>=liqP)) return {id:p.id,px:liqP,reason:"LIQ"};
+      if((p.side==="LONG"&&p.tp&&mp>=p.tp)||(p.side==="SHORT"&&p.tp&&mp<=p.tp)) return {id:p.id,px:p.tp!,reason:"TP"};
+      if((p.side==="LONG"&&p.sl&&mp<=p.sl)||(p.side==="SHORT"&&p.sl&&mp>=p.sl)) return {id:p.id,px:p.sl!,reason:"SL"};
+      return null;
+    }).filter((x):x is Trig=>x!==null);
+    if(triggers.length){
       setDemo(prev=>{
-        let bal=prev.bal; const pos=[...prev.pos], fills=[...prev.fills];
-        for(const p of tpHit){
-          const xi=pos.findIndex(x=>x.id===p.id); if(xi<0)continue;
-          const ex=pos[xi];
-          const t=tickers.get(ex.sym), mp=t?+t.markPrice:ex.entry;
-          const closePx=(ex.side==="LONG"&&ex.tp&&mp>=ex.tp)?ex.tp:
-                        (ex.side==="SHORT"&&ex.tp&&mp<=ex.tp)?ex.tp:
-                        (ex.side==="LONG"&&ex.sl&&mp<=ex.sl)?ex.sl:ex.sl!;
-          const takFee=+(info?.takerFee??"0.0004");
-          const pnl=ex.side==="LONG"?(closePx-ex.entry)*ex.size:(ex.entry-closePx)*ex.size;
-          const fee=ex.size*closePx*takFee;
-          fills.unshift({id:uid(),sym:ex.sym,side:ex.side==="LONG"?"Sell":"Buy",price:closePx,qty:ex.size,notional:ex.size*closePx,fee,pnl:pnl-fee,ts:Date.now()});
-          bal+=ex.margin+pnl-fee; pos.splice(xi,1);
-          const reason=(ex.side==="LONG"&&ex.tp&&mp>=ex.tp)||(ex.side==="SHORT"&&ex.tp&&mp<=ex.tp)?"TP":"SL";
-          pushToast(`${ex.sym} ${ex.side} closed by ${reason} — PnL ${pnl>=0?"+":""}${pnl.toFixed(2)}`,pnl>=0?"success":"error");
+        let bal=prev.bal; let pos=[...prev.pos]; const fills=[...prev.fills];
+        const takFee=+(info?.takerFee??"0.0004");
+        for(const {id,px,reason} of triggers){
+          const ex=pos.find(x=>x.id===id); if(!ex)continue;
+          const pnl=ex.side==="LONG"?(px-ex.entry)*ex.size:(ex.entry-px)*ex.size;
+          const fee=reason==="LIQ"?0:ex.size*px*takFee; // liquidation has no maker/taker rebate
+          fills.unshift({id:uid(),sym:ex.sym,side:ex.side==="LONG"?"Sell":"Buy",price:px,qty:ex.size,notional:ex.size*px,fee,pnl:pnl-fee,ts:Date.now()});
+          bal+=Math.max(0,ex.margin+pnl-fee); // a liquidated position can never refund below zero
+          pos=pos.filter(x=>x.id!==ex.id);
+          if(reason==="LIQ") pushToast(`${ex.sym} ${ex.side} LIQUIDATED @ $${$(px)} — margin ${ex.margin.toFixed(2)} lost`,"error");
+          else pushToast(`${ex.sym} ${ex.side} closed by ${reason} — PnL ${(pnl-fee)>=0?"+":""}${(pnl-fee).toFixed(2)}`,(pnl-fee)>=0?"success":"error");
         }
         const ns:Demo={bal:Math.max(0,bal),pos,ord:prev.ord,fills:fills.slice(0,200)};sD(ns);return ns;
       });
@@ -1012,9 +1012,13 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
           const pnl=ex.side==="LONG"?(o.limitPx-ex.entry)*ex.size:(ex.entry-o.limitPx)*ex.size;
           f.pnl=pnl-fee; bal+=ex.margin+pnl-fee; pos.splice(xi,1);
           pushToast(`${o.sym} limit ${o.side} filled — Position closed, PnL ${pnl>=0?"+":""}${pnl.toFixed(2)}`,pnl>=0?"success":"error");
-        } else {
+        } else if(o.margin>0){
+          // opening limit order (margin was reserved). A close-only order (margin 0)
+          // whose position is already gone is dropped — never phantom-reopens.
           pos.push({id:uid(),sym:o.sym,side:o.side==="Buy"?"LONG":"SHORT",size:o.qty,entry:o.limitPx,lev:o.lev,margin:o.margin,tp:o.tp,sl:o.sl});
           pushToast(`${o.sym} limit ${o.side} filled — ${o.side==="Buy"?"LONG":"SHORT"} opened`, "success");
+        } else {
+          continue; // stale close order, nothing to do
         }
         fills.unshift(f);
       }
@@ -1034,35 +1038,72 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
 
   function pick(s:string){setSym(s);setShowPicker(false);router.replace(`/trade/${encodeURIComponent(s)}`);}
 
-  function handleOrder(side:"Buy"|"Sell",type:"Market"|"Limit",amount:number,limitPx?:number,tp?:number,sl?:number):string|null{
+  function handleOrder(side:"Buy"|"Sell",type:"Market"|"Limit",amount:number,limitPx?:number,tp?:number,sl?:number,levOverride?:number):string|null{
     if(!mark)return "Price unavailable";
+    const L=Math.max(1,Math.min(levOverride??lev,info?.maxLeverage??(levOverride??lev)));
     const execPx=type==="Market"?mark:(limitPx??mark);
     const takFee=+(info?.takerFee??"0.0004");
-    const notional=amount*lev, qtyV=notional/execPx, fee=type==="Market"?notional*takFee:0;
-    if(demo.bal<amount+fee)return "Insufficient balance";
+    const notional=amount*L, qtyV=notional/execPx;
+    if(qtyV<=0)return "Invalid size";
+    const intended:"LONG"|"SHORT"=side==="Buy"?"LONG":"SHORT";
+    const existing=demo.pos.find(p=>p.sym===sym);
+    // Only opening or increasing exposure needs fresh margin; reducing/closing frees it.
+    const opensExposure=!existing||existing.side===intended;
+    const openFee=type==="Market"?notional*takFee:0;
+    if(opensExposure&&demo.bal<amount+openFee)return "Insufficient balance";
+
+    if(type==="Limit"){
+      setDemo(prev=>{
+        const ns:Demo={...prev,bal:Math.max(0,prev.bal-amount),ord:[...prev.ord,{id:uid(),sym,side,limitPx:execPx,qty:qtyV,notional,margin:amount,lev:L,ts:Date.now(),tp,sl}]};sD(ns);return ns;
+      });
+      pushToast(`${sym} limit ${side} @ $${$(execPx)} placed`,"info");
+      return null;
+    }
+
+    // ── Market: one-way netting engine (increase / reduce / flip) ──
+    const dir=(s:"LONG"|"SHORT")=>s==="LONG"?1:-1;
     setDemo(prev=>{
-      let bal=prev.bal; const pos=[...prev.pos],ord=[...prev.ord],fills=[...prev.fills];
-      if(type==="Market"){
-        const xi=pos.findIndex(p=>p.sym===sym&&((p.side==="LONG"&&side==="Sell")||(p.side==="SHORT"&&side==="Buy")));
-        if(xi>=0){
-          const ex=pos[xi]; const pnl=ex.side==="LONG"?(execPx-ex.entry)*ex.size:(ex.entry-execPx)*ex.size;
-          const cf=ex.size*execPx*takFee;
-          fills.unshift({id:uid(),sym,side,price:execPx,qty:ex.size,notional:ex.size*execPx,fee:cf,pnl:pnl-cf,ts:Date.now()});
-          bal+=ex.margin+pnl-cf; pos.splice(xi,1);
-          pushToast(`${sym} ${ex.side} closed — PnL ${pnl>=0?"+":""}${pnl.toFixed(2)}`,pnl>=0?"success":"error");
-        } else {
-          bal-=amount+fee;
-          fills.unshift({id:uid(),sym,side,price:execPx,qty:qtyV,notional,fee,ts:Date.now()});
-          pos.push({id:uid(),sym,side:side==="Buy"?"LONG":"SHORT",size:qtyV,entry:execPx,lev,margin:amount,tp,sl});
-          const sideLabel=side==="Buy"?"LONG":"SHORT";
-          pushToast(`${sym} ${sideLabel} opened @ $${$(execPx)}${tp?" TP $"+$(tp):""}${sl?" SL $"+$(sl):""}`,"success");
-        }
+      let bal=prev.bal; let pos=[...prev.pos]; const fills=[...prev.fills];
+      const ex=pos.find(p=>p.sym===sym);
+      if(!ex){
+        const fee=notional*takFee; bal-=amount+fee;
+        pos=[...pos,{id:uid(),sym,side:intended,size:qtyV,entry:execPx,lev:L,margin:amount,tp,sl}];
+        fills.unshift({id:uid(),sym,side,price:execPx,qty:qtyV,notional,fee,ts:Date.now()});
+        pushToast(`${sym} ${intended} opened @ $${$(execPx)}${tp?" TP $"+$(tp):""}${sl?" SL $"+$(sl):""}`,"success");
+      } else if(ex.side===intended){
+        // increase → weighted-average entry, pooled margin
+        const fee=notional*takFee; bal-=amount+fee;
+        const newSize=ex.size+qtyV;
+        const merged:DemoPos={...ex,size:newSize,entry:(ex.entry*ex.size+execPx*qtyV)/newSize,margin:ex.margin+amount,tp:tp??ex.tp,sl:sl??ex.sl};
+        pos=pos.map(p=>p.id===ex.id?merged:p);
+        fills.unshift({id:uid(),sym,side,price:execPx,qty:qtyV,notional,fee,ts:Date.now()});
+        pushToast(`${sym} ${intended} increased → size ${newSize.toFixed(info?.quantityPrecision??4)} @ avg $${$(merged.entry)}`,"success");
       } else {
-        bal-=amount;
-        ord.push({id:uid(),sym,side,limitPx:execPx,qty:qtyV,notional,margin:amount,lev,ts:Date.now(),tp,sl});
-        pushToast(`${sym} limit ${side} @ $${$(execPx)} placed`,"info");
+        // opposite → reduce, close, or flip
+        const closeQty=Math.min(qtyV,ex.size);
+        const pnl=(execPx-ex.entry)*closeQty*dir(ex.side);
+        const cf=closeQty*execPx*takFee;
+        const marginFreed=ex.margin*(closeQty/ex.size);
+        bal+=marginFreed+pnl-cf;
+        fills.unshift({id:uid(),sym,side,price:execPx,qty:closeQty,notional:closeQty*execPx,fee:cf,pnl:pnl-cf,ts:Date.now()});
+        const net=pnl-cf;
+        if(closeQty>=ex.size-1e-12){
+          pos=pos.filter(p=>p.id!==ex.id);
+          pushToast(`${sym} ${ex.side} closed — PnL ${net>=0?"+":""}${net.toFixed(2)}`,net>=0?"success":"error");
+          const rem=qtyV-closeQty;
+          if(rem>1e-9){
+            const remMargin=amount*(rem/qtyV), remFee=rem*execPx*takFee; bal-=remMargin+remFee;
+            pos=[...pos,{id:uid(),sym,side:intended,size:rem,entry:execPx,lev:L,margin:remMargin,tp,sl}];
+            fills.unshift({id:uid(),sym,side,price:execPx,qty:rem,notional:rem*execPx,fee:remFee,ts:Date.now()});
+            pushToast(`${sym} flipped to ${intended} @ $${$(execPx)}`,"success");
+          }
+        } else {
+          const reduced:DemoPos={...ex,size:ex.size-closeQty,margin:ex.margin-marginFreed};
+          pos=pos.map(p=>p.id===ex.id?reduced:p);
+          pushToast(`${sym} ${ex.side} reduced — PnL ${net>=0?"+":""}${net.toFixed(2)}`,net>=0?"success":"error");
+        }
       }
-      const ns:Demo={bal:Math.max(0,bal),pos,ord,fills:fills.slice(0,200)};sD(ns);return ns;
+      const ns:Demo={bal:Math.max(0,bal),pos,ord:prev.ord,fills:fills.slice(0,200)};sD(ns);return ns;
     });
     return null;
   }
@@ -1109,6 +1150,28 @@ export function TradingPage({initialSymbol}:{initialSymbol:string}) {
     if(!confirm("Reset demo account to $10,000 USDC?"))return;
     const ns:Demo={bal:BAL0,pos:[],ord:[],fills:[]}; setDemo(ns); sD(ns);
   }
+
+  /* Copy-trade bridge: /trade/[symbol]?copy=1&side=long&margin=45&lev=25&tp=..&sl=..
+     auto-opens the mirrored position in the paper account, once, when the
+     market is ready — then strips the query so a refresh won't re-fire. */
+  useEffect(()=>{
+    if(copyFired.current)return;
+    if(searchParams.get("copy")!=="1")return;
+    if(!mark||!info)return;
+    const margin=parseFloat(searchParams.get("margin")||"0");
+    if(!(margin>0)){copyFired.current=true;router.replace(`/trade/${encodeURIComponent(sym)}`);return;}
+    const side:"Buy"|"Sell"=searchParams.get("side")==="short"?"Sell":"Buy";
+    const levX=parseInt(searchParams.get("lev")||"")||lev;
+    const tpP=searchParams.get("tp"); const slP=searchParams.get("sl");
+    const tp=tpP?parseFloat(tpP):undefined; const sl=slP?parseFloat(slP):undefined;
+    copyFired.current=true;
+    setLev(Math.max(1,Math.min(levX,info.maxLeverage??levX)));
+    const err=handleOrder(side,"Market",margin,undefined,tp,sl,levX);
+    if(err) pushToast(`Copy sim failed — ${err}`,"error");
+    else pushToast(`Copied trade simulated · ${side==="Buy"?"LONG":"SHORT"} ${sym}`,"success");
+    router.replace(`/trade/${encodeURIComponent(sym)}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[mark,info,searchParams]);
 
   /* ── Shared sub-panels ── */
   const ChartPanel = (

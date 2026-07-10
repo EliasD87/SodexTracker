@@ -324,6 +324,38 @@ input { border-radius: var(--r-md) !important; }
 .ticker-track { animation: ticker 28s linear infinite; }
 .ticker-track:hover { animation-play-state: paused; }
 
+/* ── Animated logo candlestick (LogoMark) ── */
+.sdx-candle-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sdx-candle-body 4.6s ease-in-out infinite;
+}
+.sdx-candle-wick {
+  transform-box: fill-box;
+  animation: sdx-candle-wick 4.6s ease-in-out infinite;
+}
+.sdx-wick-top { transform-origin: bottom; }
+.sdx-wick-bot { transform-origin: top; }
+
+@keyframes sdx-candle-body {
+  0%, 10%   { fill: var(--green); transform: translateY(-9%) scaleY(1.1); }
+  22%, 32%  { fill: var(--red);   transform: translateY(9%)  scaleY(0.82); }
+  44%, 52%  { fill: var(--green); transform: translateY(-4%) scaleY(1.0); }
+  62%, 70%  { fill: var(--red);   transform: translateY(4%)  scaleY(0.9); }
+  82%, 100% { fill: var(--text);  transform: translateY(0)   scaleY(1); }
+}
+@keyframes sdx-candle-wick {
+  0%, 10%   { stroke: var(--green); transform: scaleY(1.3); }
+  22%, 32%  { stroke: var(--red);   transform: scaleY(0.7); }
+  44%, 52%  { stroke: var(--green); transform: scaleY(1.1); }
+  62%, 70%  { stroke: var(--red);   transform: scaleY(0.9); }
+  82%, 100% { stroke: var(--text);  transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sdx-candle-body { animation: none; fill: var(--text); }
+  .sdx-candle-wick { animation: none; stroke: var(--text); }
+}
+
 /* ── Pulse dot ── */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -538,3 +570,4 @@ input { border-radius: var(--r-md) !important; }
   .fade-up { opacity: 1; transform: none; }
   .fold-down { opacity: 0; }
 }
+
