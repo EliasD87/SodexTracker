@@ -312,7 +312,7 @@ export function CopyTradingPage() {
   const vet = useMemo(() => {
     if (!history) return null;
     const closed = history.filter((h) => parseFloat(h.cum_closed_size) > 0);
-    if (!closed.length) return { closed: 0 } as const;
+    if (!closed.length) return { closed: 0, winRate: 0, profitFactor: 0, medianLev: 0, avgHoldMs: 0, lastActive: 0, topSymbols: [] as [string, number][], realized: 0 };
     const wins = closed.filter((h) => parseFloat(h.realized_pnl) > 0);
     const grossWin = wins.reduce((s, h) => s + parseFloat(h.realized_pnl), 0);
     const grossLoss = closed.filter((h) => parseFloat(h.realized_pnl) < 0).reduce((s, h) => s + Math.abs(parseFloat(h.realized_pnl)), 0);
@@ -333,7 +333,7 @@ export function CopyTradingPage() {
   }, [history, idToName]);
 
   const checklist = useMemo(() => {
-    if (!vet || !("winRate" in vet)) return null;
+    if (!vet || vet.closed === 0) return null;
     return [
       { label: "≥ 30 closed trades on record", ok: vet.closed >= 30 },
       { label: "Traded within the last 24h", ok: Date.now() - vet.lastActive < 86_400_000 },
@@ -530,7 +530,7 @@ export function CopyTradingPage() {
               </div>
               {history === null ? (
                 <div className="h-16 rounded-lg animate-pulse" style={{ background: "var(--bg-elevated)" }} />
-              ) : !vet || !("winRate" in vet) ? (
+              ) : !vet || vet.closed === 0 ? (
                 <p className="text-[12px] py-3" style={{ color: "var(--text-faint)" }}>No closed positions on record — nothing to vet yet. Copying an untested account is gambling on faith.</p>
               ) : (
                 <>
