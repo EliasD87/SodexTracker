@@ -3,11 +3,11 @@
 // Pulls every SoSoValue endpoint the app reads and OVERWRITES rows in
 // public.sosovalue_cache (key → data). The app reads this table.
 //
-// WHY SELF-CHAINING: the full refresh is ~67 API calls spaced 3.2s apart
-// (SoSoValue caps at 20 req/min) ≈ 3.5 minutes — but the free-tier edge
+// WHY SELF-CHAINING: the full refresh is ~135 API calls spaced 3.2s apart
+// (SoSoValue caps at 20 req/min) ≈ 7 minutes — but the free-tier edge
 // wall-clock limit (~150s) kills anything longer. So each invocation works
 // for ~100s, writes a progress summary, then re-invokes itself. Segments
-// skip rows already refreshed (< 6h old), so the chain converges in 2-3
+// skip rows already refreshed (< 6h old), so the chain converges in ~5
 // invocations and a mid-kill loses nothing.
 //
 // Secrets: SOSOVALUE_API_KEY (required), CRON_SECRET (recommended).
@@ -22,7 +22,7 @@ const BASE = "https://api.sosovalue.xyz/openapi/v1";
 const RATE_MS = 3200; // ~18 req/min, under SoSoValue's 20/min cap
 const WORK_BUDGET_MS = 100_000; // stop starting new calls after this (150s kill)
 const FRESH_MS = 6 * 60 * 60 * 1000; // rows younger than this are skipped
-const MAX_CHAIN = 6;
+const MAX_CHAIN = 10;
 
 // keep in sync with src/lib/sosovalue.ts / src/lib/indexMeta.ts
 const SODEX_INDEX_TICKERS = ["ssiMAG7", "ssiDeFi", "ssiMeme"];
@@ -114,12 +114,14 @@ async function run(depth: number) {
     if (!idBySymbol.has(s)) idBySymbol.set(s, c.currency_id);
   }
 
-  // 2. indices: list, snapshots, constituents of the SoDEX-tokenised three
+  // 2. indices: list, snapshots, constituents — for ALL indices, so the
+  // X-ray modal works from Supabase for every index, not just the SoDEX-
+  // tokenised three (non-prewarmed constituents would leak live fetches)
   const indices = ((await pull("/indices")) as string[] | null) ?? [];
   for (const t of indices) await pull(`/indices/${t}/market-snapshot`);
 
   const constituentIds = new Set<string>();
-  for (const t of SODEX_INDEX_TICKERS) {
+  for (const t of indices.length ? indices : SODEX_INDEX_TICKERS) {
     const cons = (await pull(`/indices/${t}/constituents`)) as
       | { currency_id: string }[]
       | null;

@@ -5,7 +5,7 @@ import { Search, Crosshair, Globe, Activity, Mountain, Scale, Lightbulb } from "
 import { cachedApiFetch } from "@/lib/fetchCache";
 import { TokenIcon } from "@/components/TokenIcon";
 import { tickerLabel } from "@/lib/tokenIcons";
-import { sodexBaseToStockTicker } from "@/lib/indexMeta";
+import { sodexBaseToStockTicker, PREWARMED_PAIR_BASES } from "@/lib/indexMeta";
 
 /**
  * Pair Intelligence — a per-pair cross-read of SoDEX's own venue data
@@ -132,13 +132,6 @@ function StatBlock({ label, value, sub, color }: { label: string; value: string;
   );
 }
 
-/* Bases with no global crypto market: commodities, TradFi indices, and
- * pre-IPO/company tokens. Stocks are excluded via sodexBaseToStockTicker. */
-const NON_CRYPTO_BASES = new Set([
-  "CL", "COPPER", "SILVER", "NATGAS", "US500", "USTECH100",
-  "SAMSUNG", "SKHX", "DRAM", "EWY", "ZHIPU", "MINIMAX", "BREV",
-]);
-
 interface BoardRow {
   base: string;
   downAth: number;
@@ -206,8 +199,10 @@ export function PairIntelligence() {
     if (!pairs.length || !ticks.size || board !== null) return;
     let alive = true;
     const vol = (b: string) => parseFloat(ticks.get(`${b}-USD`)?.quoteVolume ?? "0") || 0;
+    // Board requests ONLY pre-warmed bases — guaranteed Supabase hits, never a
+    // live SoSoValue call (volume-rotating pairs otherwise leak direct fetches).
     const candidates = [...new Set(pairs.map((p) => p.baseCoin))]
-      .filter((b) => !sodexBaseToStockTicker(b) && !NON_CRYPTO_BASES.has(b.toUpperCase()))
+      .filter((b) => PREWARMED_PAIR_BASES.has(b.toUpperCase()))
       .sort((a, b) => vol(b) - vol(a))
       .slice(0, 14);
     Promise.all(

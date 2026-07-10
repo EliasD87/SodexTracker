@@ -99,3 +99,14 @@ export function sodexBaseToStockTicker(base: string): string | null {
   const b = (base || "").toUpperCase().trim();
   return SODEX_STOCK_TICKERS.has(b) ? b : null;
 }
+
+/**
+ * Bases pre-warmed into Supabase by the 12h `sosovalue-refresh` edge function.
+ * MUST STAY IN SYNC with POPULAR_BASES in
+ * supabase/functions/sosovalue-refresh/index.ts. The Pair Intelligence board
+ * requests ONLY these, so it never falls through to a live SoSoValue fetch.
+ */
+export const PREWARMED_PAIR_BASES = new Set([
+  "BTC", "ETH", "SOL", "SUI", "BNB", "XRP", "DOGE", "ADA",
+  "HYPE", "LINK", "UNI", "LTC", "TON", "TRX",
+]);
