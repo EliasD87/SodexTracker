@@ -71,7 +71,7 @@ function sb(): SupabaseClient | null {
   return _sb;
 }
 
-async function readSupabase<T>(key: string): Promise<T | null> {
+async function readSupabase<T>(key: string, allowStale = false): Promise<T | null> {
   const client = sb();
   if (!client) return null;
   try {
@@ -81,7 +81,11 @@ async function readSupabase<T>(key: string): Promise<T | null> {
       .eq("key", key)
       .maybeSingle();
     if (error || !data) return null;
-    if (Date.now() - new Date(data.fetched_at).getTime() > SUPABASE_MAX_AGE_MS) return null;
+    // Normally reject rows older than the refresh cadence + slack, so a delayed
+    // cron triggers a fresh fetch. But when `allowStale`, return whatever we have
+    // — used as a last resort when the upstream fetch is unavailable (e.g. no API
+    // key in the serverless env), where stale data beats a hard failure.
+    if (!allowStale && Date.now() - new Date(data.fetched_at).getTime() > SUPABASE_MAX_AGE_MS) return null;
     return data.data as T;
   } catch {
     return null;
@@ -125,7 +129,14 @@ export async function getCached<T>(
       await writeDisk(key, { fetchedAt: now, ttl: ttlSeconds, data });
       return data;
     } catch (err) {
-      if (disk) return disk.data; // serve stale rather than fail
+      if (disk) return disk.data; // serve stale disk rather than fail (dev)
+      // Last resort (e.g. serverless with no API key): serve a stale Supabase
+      // row if one exists rather than surfacing a 500 to the page.
+      const stale = await readSupabase<T>(key, true);
+      if (stale !== null) {
+        mem.set(key, { expires: now + ttlSeconds * 1000, data: stale });
+        return stale;
+      }
       throw err;
     } finally {
       inflight.delete(key);

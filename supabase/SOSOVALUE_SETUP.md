@@ -45,16 +45,30 @@ select data from public.sosovalue_cache where key = 'meta:last_run';
 ```
 ✓ Success: `{"calls": ~66, "rows_written": ~66, "errors": [], ...}`
 
-### 7. Schedule it every 12 hours
+### 7. Schedule it — run it OFTEN, not every 12h
 Integrations → **Cron** → enable if prompted → **Create job**:
-- Name: `sosovalue-refresh-12h`
-- Schedule: `0 */12 * * *`
+- Name: `sosovalue-refresh`
+- Schedule: `*/15 * * * *`  ← **every 15 minutes** (see below)
 - Type: **Supabase Edge Function** → pick `sosovalue-refresh` (it exists now, after step 2)
 - Method: POST
 - HTTP Headers: `x-cron-secret` = your CRON_SECRET
 - Save.
 
-Done. The app reads the table automatically (memory → disk → Supabase → direct fetch fallback) — no app config changes needed.
+**Why every 15 min and not every 12h?** The full refresh is ~141 API calls
+(~7.5 min), but the free-tier edge limit kills a run at ~150s (~30 calls). One
+run therefore only does a *segment* and defers the rest. A frequent cron drives
+those segments to completion: each run skips rows that are still fresh (< 11h
+old) and fetches only what's stale, so it converges in ~5 runs and then idles —
+an all-fresh run makes **0** SoSoValue calls (it just checks the table). This is
+robust because it relies only on the cron→function path.
+
+> A 12-hour schedule (`0 */12 * * *`) leaves the segmented refresh permanently
+> incomplete unless the fragile self-chain happens to work — which on the free
+> tier it usually doesn't. That's the bug that left Pair-Intelligence / ETF /
+> macro data stale while only the indices refreshed. Use the frequent cron.
+
+Done. The app reads the table automatically (memory → disk → Supabase → direct
+fetch fallback) — no app config changes needed.
 
 **Later checks:** re-run the step-6 query anytime; `fetched_at` on rows shows the last refresh.
 **Unschedule:** Integrations → Cron → delete the job (or `select cron.unschedule('sosovalue-refresh-12h');`).

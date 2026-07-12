@@ -1,14 +1,25 @@
-// SoSoValue 12h refresh — Supabase Edge Function (self-chaining).
+// SoSoValue refresh — Supabase Edge Function (segmented).
 //
 // Pulls every SoSoValue endpoint the app reads and OVERWRITES rows in
 // public.sosovalue_cache (key → data). The app reads this table.
 //
-// WHY SELF-CHAINING: the full refresh is ~135 API calls spaced 3.2s apart
-// (SoSoValue caps at 20 req/min) ≈ 7 minutes — but the free-tier edge
+// WHY SEGMENTED: the full refresh is ~141 API calls spaced 3.2s apart
+// (SoSoValue caps at 20 req/min) ≈ 7.5 minutes — but the free-tier edge
 // wall-clock limit (~150s) kills anything longer. So each invocation works
-// for ~100s, writes a progress summary, then re-invokes itself. Segments
-// skip rows already refreshed (< 6h old), so the chain converges in ~5
-// invocations and a mid-kill loses nothing.
+// for ~100s (~30 calls), skips rows already refreshed (< FRESH_MS old),
+// writes a progress summary, then DEFERS the rest to a later segment. A
+// mid-kill loses nothing because the next segment resumes from the table.
+//
+// TWO WAYS TO DRIVE THE SEGMENTS TO COMPLETION:
+//  (A) FREQUENT CRON (robust, recommended on free tier): schedule the cron
+//      every ~10-15 min. Each run does one segment and skips fresh rows, so
+//      the table converges in ~5 runs then idles cheaply (0 calls once all
+//      rows are fresh). Uses ONLY the cron→function path, which always works.
+//  (B) SELF-CHAIN (best-effort): at the end of a segment the function
+//      re-invokes itself to continue immediately (see step 7). This is
+//      fragile on the free tier — a function spawning another invocation from
+//      a background task can be throttled/killed — so treat it as a bonus on
+//      top of (A), never the sole mechanism.
 //
 // Secrets: SOSOVALUE_API_KEY (required), CRON_SECRET (recommended).
 // (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected automatically.)
@@ -21,7 +32,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const BASE = "https://api.sosovalue.xyz/openapi/v1";
 const RATE_MS = 3200; // ~18 req/min, under SoSoValue's 20/min cap
 const WORK_BUDGET_MS = 100_000; // stop starting new calls after this (150s kill)
-const FRESH_MS = 6 * 60 * 60 * 1000; // rows younger than this are skipped
+// Rows younger than this are skipped (not re-fetched). At 11h, with a frequent
+// cron (~every 15 min) each key refreshes ~twice a day — matching the "2 calls
+// per 12h" budget — while short segments still converge. Must stay < the app's
+// SUPABASE_MAX_AGE_MS (36h) so refreshed rows are always accepted as fresh.
+const FRESH_MS = 11 * 60 * 60 * 1000;
 const MAX_CHAIN = 10;
 
 // keep in sync with src/lib/sosovalue.ts / src/lib/indexMeta.ts
@@ -41,7 +56,7 @@ const POPULAR_BASES = [
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function run(depth: number) {
+async function run(depth: number, selfUrl: string) {
   const apiKey = Deno.env.get("SOSOVALUE_API_KEY")!;
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -141,8 +156,16 @@ async function run(depth: number) {
   }
   for (const id of wantedIds) await pull(`/currencies/${id}/market-snapshot`);
 
-  // day-snapped 35d window — identical formula to src/lib/sosovalue.ts so the
-  // cache keys line up with what the app requests
+  // 4. ETF flows + macro calendar — cheap and high-value, so refresh BEFORE the
+  // large kline batch. That way a short segment still covers everything the
+  // Pair-Intelligence / ETF-flows / macro endpoints need; only klines defer.
+  for (const s of ["BTC", "ETH", "SOL"]) {
+    await pull(`/etfs/summary-history?symbol=${s}&country_code=US&limit=15`);
+  }
+  await pull("/macro/events");
+
+  // 5. klines (Pair-Intelligence charts only) — day-snapped 35d window, formula
+  // identical to src/lib/sosovalue.ts so cache keys line up with app requests
   const DAY = 86_400_000;
   const end = Math.floor(Date.now() / DAY) * DAY;
   const start = end - 35 * DAY;
@@ -150,13 +173,7 @@ async function run(depth: number) {
     await pull(`/currencies/${id}/klines?interval=1d&start_time=${start}&end_time=${end}&limit=40`);
   }
 
-  // 4. ETF flows + macro calendar
-  for (const s of ["BTC", "ETH", "SOL"]) {
-    await pull(`/etfs/summary-history?symbol=${s}&country_code=US&limit=15`);
-  }
-  await pull("/macro/events");
-
-  // 5. progress summary — written every segment
+  // 6. progress summary — written every segment
   //    (inspect: select data from sosovalue_cache where key='meta:last_run')
   const done = deferred === 0;
   const summary = {
@@ -178,18 +195,24 @@ async function run(depth: number) {
   if (sumErr) console.error("could not write meta:last_run:", sumErr.message);
   console.log("sosovalue-refresh segment done", JSON.stringify(summary));
 
-  // 6. self-chain: re-invoke to finish the deferred work
+  // 7. self-chain: re-invoke to finish the deferred work. Use the URL this
+  // request actually arrived on (derived from req.url) rather than a hardcoded
+  // slug — the function may be deployed under any name, and a wrong slug 404s,
+  // silently killing the chain (which is exactly the bug that left pair-intel
+  // data stale while indices refreshed).
   if (!done && depth < MAX_CHAIN) {
     try {
-      const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/sosovalue-refresh`;
-      const res = await fetch(url, {
+      const res = await fetch(selfUrl, {
         method: "POST",
         headers: {
+          // Authorization covers the case where "Enforce JWT verification" was
+          // left ON — the service-role key is a valid JWT. Harmless when it's OFF.
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           "x-cron-secret": Deno.env.get("CRON_SECRET") ?? "",
           "x-chain-depth": String(depth + 1),
         },
       });
-      console.log(`chained segment ${depth + 1} → ${res.status}`);
+      console.log(`chained segment ${depth + 1} → ${res.status} @ ${selfUrl}`);
     } catch (e) {
       console.error("self-chain failed:", e instanceof Error ? e.message : String(e));
     }
@@ -206,8 +229,16 @@ Deno.serve(async (req: Request) => {
   }
 
   const depth = Math.max(0, parseInt(req.headers.get("x-chain-depth") ?? "0", 10) || 0);
-  console.log(`sosovalue-refresh: segment ${depth} starting`);
-  const task = run(depth).catch((e) =>
+  // Build the self-invoke URL from the PUBLIC SUPABASE_URL plus this function's
+  // actual deployed name (the last path segment of the incoming request) — never
+  // a hardcoded slug. req.url's host can be internal, so we only trust its path.
+  const selfUrl = (() => {
+    const name =
+      new URL(req.url).pathname.split("/").filter(Boolean).pop() ?? "sosovalue-refresh";
+    return `${Deno.env.get("SUPABASE_URL")}/functions/v1/${name}`;
+  })();
+  console.log(`sosovalue-refresh: segment ${depth} starting @ ${selfUrl}`);
+  const task = run(depth, selfUrl).catch((e) =>
     console.error("sosovalue-refresh FAILED:", e instanceof Error ? e.message : String(e)),
   );
 
