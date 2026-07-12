@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PortfolioProvider } from "@/components/PortfolioProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const plexSans = IBM_Plex_Sans({
   variable: "--font-space-grotesk",
@@ -41,6 +42,7 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider><PortfolioProvider>{children}</PortfolioProvider></ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
