@@ -56,21 +56,18 @@ const NAV_ITEMS: NavItem[] = [
         href: "/journal",
         description: "Log and annotate your trades",
         icon: <BookOpen size={14} />,
-        beta: true,
       },
       {
         label: "Demo Trading",
         href: "/trade/BTC-USD",
         description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
-        beta: true,
       },
       {
         label: "Copy Trading",
         href: "/copy-trading",
         description: "Mirror any trader, sized to your capital",
         icon: <Copy size={14} />,
-        beta: true,
       },
       {
         label: "Trading Bots",
@@ -244,11 +241,11 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap },
   { label: "Trade History", href: "/trade-history", icon: History },
-  { label: "Journal", href: "/journal", icon: BookOpen, beta: true },
-  { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle, beta: true },
+  { label: "Journal", href: "/journal", icon: BookOpen },
+  { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
-  { label: "Copy Trading", href: "/copy-trading", icon: Copy, beta: true },
+  { label: "Copy Trading", href: "/copy-trading", icon: Copy },
   { label: "Trading Bots", href: "/trading-bots", icon: Bot, comingSoon: true },
 ];
 

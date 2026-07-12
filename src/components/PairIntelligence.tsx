@@ -222,6 +222,10 @@ export function PairIntelligence() {
   const options = useMemo(() => {
     const q = query.toLowerCase();
     return pairs
+      // Only pairs we actually have SoSoValue data for (pre-warmed in Supabase).
+      // Anything else would open into an error/unmapped state — a live fetch that
+      // has no API key on the server. Keeps the picker consistent with the board.
+      .filter((p) => PREWARMED_PAIR_BASES.has(p.baseCoin.toUpperCase()))
       .filter((p) => p.baseCoin.toLowerCase().includes(q))
       .sort((a, b) => (parseFloat(ticks.get(`${b.baseCoin}-USD`)?.quoteVolume ?? "0") || 0) - (parseFloat(ticks.get(`${a.baseCoin}-USD`)?.quoteVolume ?? "0") || 0));
   }, [pairs, ticks, query]);
