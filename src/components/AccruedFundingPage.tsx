@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, X, RefreshCw, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { CornerMarks } from "@/components/CornerMarks";
+import { usePortfolio } from "@/components/PortfolioProvider";
 
 const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
 
@@ -169,14 +170,9 @@ function PaySign({ v }: { v: number }) {
 
 /* ─── SearchHero ────────────────────────────────────────────────────────────── */
 
-const PORTFOLIO_STORAGE_KEY = "sodex-portfolio-address";
-
 function useSavedWallet(): string | null {
-  const [saved, setSaved] = useState<string | null>(null);
-  useEffect(() => {
-    try { setSaved(localStorage.getItem(PORTFOLIO_STORAGE_KEY)); } catch { /* ignore */ }
-  }, []);
-  return saved;
+  const { savedAddress } = usePortfolio();
+  return savedAddress;
 }
 
 function SearchHero({

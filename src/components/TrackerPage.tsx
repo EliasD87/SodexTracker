@@ -2857,7 +2857,7 @@ function PortfolioHeader({
         <span className="tag" style={{ color: "var(--accent)" }}>BOUND WALLET</span>
         <span className="tag" style={{ color: "var(--text-faint)" }}>·</span>
         <span className="mono text-xs" style={{ color: "var(--text-muted)" }}>
-          Saved locally — auto-loads on every visit
+          Saved on cloud — auto-loads on every visit
         </span>
         <button
           onClick={onUnbind}
