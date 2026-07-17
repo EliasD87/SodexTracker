@@ -11,6 +11,7 @@ const ACTIVE_STORAGE_KEY = "sodex-portfolio-active";
 export interface SavedPortfolioAddress {
   id: string;
   address: string;
+  label: string | null;
 }
 
 interface PortfolioContextValue {
@@ -26,6 +27,7 @@ interface PortfolioContextValue {
   addAddress: (addr: string) => void;
   removeAddress: (id: string) => void;
   switchAddress: (id: string) => void;
+  renameAddress: (id: string, label: string) => void;
   unbindAddress: () => void;
   setCache: (data: unknown, overview: unknown, chart: unknown[]) => void;
   clearCache: () => void;
@@ -45,7 +47,7 @@ function readLocalList(): SavedPortfolioAddress[] {
   // Migrate legacy single-address storage into the list format.
   const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
   if (legacy) {
-    const migrated: SavedPortfolioAddress[] = [{ id: `${Date.now()}`, address: legacy }];
+    const migrated: SavedPortfolioAddress[] = [{ id: `${Date.now()}`, address: legacy, label: null }];
     localStorage.setItem(LIST_STORAGE_KEY, JSON.stringify(migrated));
     localStorage.removeItem(LEGACY_STORAGE_KEY);
     return migrated;
@@ -94,7 +96,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     if (!supabase) return;
     const { data, error } = await supabase
       .from("portfolio_addresses")
-      .select("id,address")
+      .select("id,address,label")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
     const list = !error && data ? (data as SavedPortfolioAddress[]) : [];
@@ -147,7 +149,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         void supabase
           .from("portfolio_addresses")
           .insert({ user_id: user.id, address: trimmed })
-          .select("id,address")
+          .select("id,address,label")
           .single()
           .then(({ data, error }) => {
             if (error || !data) return;
@@ -157,7 +159,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         return current;
       }
 
-      const entry: SavedPortfolioAddress = { id: `${Date.now()}`, address: trimmed };
+      const entry: SavedPortfolioAddress = { id: `${Date.now()}`, address: trimmed, label: null };
       const next = [...current, entry];
       writeLocalList(next);
       switchAddress(entry.id);
@@ -182,6 +184,19 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         setHasCache(false);
         return nextActiveId;
       });
+      return next;
+    });
+  }, []);
+
+  const renameAddress = useCallback((id: string, label: string) => {
+    const trimmed = label.trim();
+    const user = userRef.current;
+    if (supabase && user) {
+      void supabase.from("portfolio_addresses").update({ label: trimmed || null }).eq("id", id);
+    }
+    setAddresses((current) => {
+      const next = current.map((entry) => (entry.id === id ? { ...entry, label: trimmed || null } : entry));
+      if (!supabase || !user) writeLocalList(next);
       return next;
     });
   }, []);
@@ -217,6 +232,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         addAddress,
         removeAddress,
         switchAddress,
+        renameAddress,
         unbindAddress,
         setCache,
         clearCache,

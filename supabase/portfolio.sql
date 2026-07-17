@@ -2,9 +2,12 @@ create table if not exists public.portfolio_addresses (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   address text not null,
+  label text,
   created_at timestamptz not null default now(),
   unique (user_id, address)
 );
+
+alter table public.portfolio_addresses add column if not exists label text;
 
 alter table public.portfolio_addresses enable row level security;
 

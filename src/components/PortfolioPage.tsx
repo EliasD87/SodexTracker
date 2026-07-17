@@ -1,27 +1,149 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, X, Wallet } from "lucide-react";
+import { Plus, X, Wallet, Pencil, Check } from "lucide-react";
 import { TrackerPage } from "@/components/TrackerPage";
 import { usePortfolio } from "@/components/PortfolioProvider";
 import { TradeLoader } from "@/components/TradeLoader";
+import { cachedApiFetch } from "@/lib/fetchCache";
 import type { TrackerData, PortfolioOverviewData, ChartPoint } from "@/components/TrackerPage";
+
+const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
+const DATA_BASE = "https://mainnet-data.sodex.dev/api/v1";
 
 function shortAddr(addr: string): string {
   if (addr.length <= 14) return addr;
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
+function fmtUsd(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(2)}K`;
+  return `${sign}$${abs.toFixed(2)}`;
+}
+
+interface AddressSummary {
+  value: number;
+  pnl: number;
+  volume: number;
+}
+
+async function fetchAddressSummary(addr: string): Promise<AddressSummary> {
+  const state = await cachedApiFetch<{ aid: number }>(`${GW_BASE}/perps/accounts/${addr}/state`);
+  const overview = await cachedApiFetch<PortfolioOverviewData>(
+    `${DATA_BASE}/wallet/portfolio/overview?account_id=${state.aid}&window=1Y`
+  );
+  return {
+    value: parseFloat(overview.account_value_usd) || 0,
+    pnl: parseFloat(overview.total_pnl_usd) || 0,
+    volume: parseFloat(overview.volume_usd) || 0,
+  };
+}
+
+function PortfolioSummary() {
+  const { addresses } = usePortfolio();
+  const [loading, setLoading] = useState(false);
+  const [totals, setTotals] = useState<{ value: number; pnl: number; volume: number; loadedCount: number } | null>(null);
+  const addressKey = addresses.map((a) => a.id).join(",");
+
+  useEffect(() => {
+    if (addresses.length < 2) {
+      setTotals(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    Promise.allSettled(addresses.map((a) => fetchAddressSummary(a.address))).then((results) => {
+      if (cancelled) return;
+      const acc = { value: 0, pnl: 0, volume: 0, loadedCount: 0 };
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          acc.value += r.value.value;
+          acc.pnl += r.value.pnl;
+          acc.volume += r.value.volume;
+          acc.loadedCount += 1;
+        }
+      }
+      setTotals(acc);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [addressKey]);
+
+  if (addresses.length < 2) return null;
+
+  const tiles = [
+    { label: "TOTAL VALUE", value: totals ? fmtUsd(totals.value) : null },
+    {
+      label: "TOTAL PNL (1Y)",
+      value: totals ? `${totals.pnl >= 0 ? "+" : ""}${fmtUsd(totals.pnl)}` : null,
+      tone: totals && totals.pnl >= 0 ? "var(--green)" : "var(--red)",
+    },
+    { label: "TOTAL VOLUME (1Y)", value: totals ? fmtUsd(totals.volume) : null },
+  ];
+
+  return (
+    <div className="max-w-[1100px] mx-auto px-5 pb-6 fade-up">
+      <div className="grid grid-cols-3 gap-3">
+        {tiles.map((tile) => (
+          <div
+            key={tile.label}
+            className="p-4"
+            style={{ border: "1px solid var(--border)", background: "var(--bg-surface)" }}
+          >
+            <div className="tag mb-2" style={{ color: "var(--text-faint)" }}>{tile.label}</div>
+            {loading || !tile.value ? (
+              <div className="h-5 w-20 animate-pulse" style={{ background: "var(--bg-elevated)" }} />
+            ) : (
+              <div
+                className="mono text-lg font-bold"
+                style={{ color: tile.tone ?? "var(--text)" }}
+              >
+                {tile.value}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {totals && totals.loadedCount < addresses.length && (
+        <div className="tag mt-2" style={{ color: "var(--text-faint)" }}>
+          {totals.loadedCount}/{addresses.length} portfolios loaded
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddressSwitcher() {
-  const { addresses, activeId, switchAddress, addAddress, removeAddress } = usePortfolio();
+  const { addresses, activeId, switchAddress, addAddress, removeAddress, renameAddress } = usePortfolio();
   const [adding, setAdding] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (adding) inputRef.current?.focus();
   }, [adding]);
+
+  useEffect(() => {
+    if (editingId) editRef.current?.focus();
+  }, [editingId]);
+
+  const startEdit = (id: string, currentLabel: string | null) => {
+    setEditingId(id);
+    setEditValue(currentLabel ?? "");
+  };
+
+  const commitEdit = () => {
+    if (editingId) renameAddress(editingId, editValue);
+    setEditingId(null);
+    setEditValue("");
+  };
 
   if (addresses.length === 0 && !adding) return null;
 
@@ -42,9 +164,9 @@ function AddressSwitcher() {
   };
 
   return (
-    <div className="max-w-[1100px] mx-auto px-5 pt-[88px] fade-up" style={{ background: "var(--bg)" }}>
+    <div className="max-w-[1100px] mx-auto px-5 pt-[88px] pb-4 fade-up" style={{ background: "var(--bg)" }}>
       {addresses.length > 1 && (
-        <div className="flex items-center gap-2 mb-2.5">
+        <div className="flex items-center gap-2 mb-3">
           <span className="w-3 h-px" style={{ background: "var(--text-faint)" }} />
           <span className="tag" style={{ color: "var(--text-faint)" }}>
             {addresses.length} SAVED PORTFOLIOS
@@ -64,16 +186,49 @@ function AddressSwitcher() {
                 background: active ? "var(--accent-dim)" : "var(--bg-surface)",
               }}
             >
-              <button
-                className="flex items-center gap-1.5 mono text-[11px] font-bold tracking-tight"
-                onClick={() => switchAddress(entry.id)}
-                style={{ color: active ? "var(--accent)" : "var(--text-muted)" }}
-                title={entry.address}
-              >
-                <Wallet size={11} style={{ opacity: active ? 1 : 0.6 }} />
-                {shortAddr(entry.address)}
-              </button>
-              {addresses.length > 1 && (
+              {editingId === entry.id ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    ref={editRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitEdit();
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    onBlur={commitEdit}
+                    placeholder="Label…"
+                    spellCheck={false}
+                    autoComplete="off"
+                    className="mono text-[11px] font-bold bg-transparent outline-none"
+                    style={{ color: "var(--text)", width: 90 }}
+                  />
+                  <button onClick={commitEdit} style={{ color: "var(--accent)" }}>
+                    <Check size={11} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="flex items-center gap-1.5 mono text-[11px] font-bold tracking-tight"
+                  onClick={() => switchAddress(entry.id)}
+                  style={{ color: active ? "var(--accent)" : "var(--text-muted)" }}
+                  title={entry.address}
+                >
+                  <Wallet size={11} style={{ opacity: active ? 1 : 0.6 }} />
+                  {entry.label || shortAddr(entry.address)}
+                </button>
+              )}
+              {editingId !== entry.id && (
+                <button
+                  onClick={() => startEdit(entry.id, entry.label)}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  style={{ color: "var(--text-faint)" }}
+                  title="Rename"
+                >
+                  <Pencil size={10} />
+                </button>
+              )}
+              {addresses.length > 1 && editingId !== entry.id && (
                 <button
                   onClick={() => removeAddress(entry.id)}
                   className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
@@ -212,10 +367,12 @@ export function PortfolioPage() {
   return (
     <>
       <AddressSwitcher />
+      <PortfolioSummary />
       <TrackerPage
         key={savedAddress ?? "none"}
         initialAddress={savedAddress ?? undefined}
         portfolioMode
+        compact={addresses.length > 0}
         onUnbind={handleUnbind}
         onAddressSearched={(addr) => bindAddress(addr)}
         cachedData={hasCache ? (cachedData as TrackerData) : null}

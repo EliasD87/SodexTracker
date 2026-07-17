@@ -3085,6 +3085,7 @@ export function TrackerPage({
   cachedOverview,
   cachedChart,
   onCacheUpdate,
+  compact,
 }: {
   initialAddress?: string;
   onAddressSearched?: (addr: string) => void;
@@ -3094,7 +3095,10 @@ export function TrackerPage({
   cachedOverview?: PortfolioOverviewData | null;
   cachedChart?: ChartPoint[] | null;
   onCacheUpdate?: (data: TrackerData, overview: PortfolioOverviewData, chart: ChartPoint[]) => void;
+  /** Skip top navbar clearance — use when another element (e.g. an address switcher) already sits above this page. */
+  compact?: boolean;
 }) {
+  const topPad = compact ? "pt-4" : "pt-[72px]";
   const searchParams = useSearchParams();
   const initialAddress = initialAddressProp ?? searchParams.get("address") ?? undefined;
   const [searchInput, setSearchInput] = useState("");
@@ -3304,7 +3308,7 @@ export function TrackerPage({
   /* ── Search state ── */
   if (!data && !loading) {
     return (
-      <div className="min-h-screen pt-[72px] pb-20" style={{ background: "var(--bg)" }}>
+      <div className={`min-h-screen ${topPad} pb-20`} style={{ background: "var(--bg)" }}>
         <div className="max-w-[1100px] mx-auto">
           {portfolioMode ? (
             <PortfolioBindHero
@@ -3338,7 +3342,7 @@ export function TrackerPage({
   /* ── Loading state ── */
   if (loading && !data) {
     return (
-      <div className="min-h-screen pt-[72px] pb-20 flex items-center justify-center" style={{ background: "var(--bg)" }}>
+      <div className={`min-h-screen ${topPad} pb-20 flex items-center justify-center`} style={{ background: "var(--bg)" }}>
         <TradeLoader label="LOADING PROFILE" />
       </div>
     );
@@ -3373,7 +3377,7 @@ export function TrackerPage({
   ];
 
   return (
-    <div className="min-h-screen pt-[72px] pb-20" style={{ background: "var(--bg)" }}>
+    <div className={`min-h-screen ${topPad} pb-20`} style={{ background: "var(--bg)" }}>
       <div className="max-w-[1100px] mx-auto px-5">
         {/* Header */}
         {portfolioMode ? (
