@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SoDEX Tracker
 
-## Getting Started
+**Your all-in-one SoDEX trading toolkit.** Track your positions and the markets in real time, understand what you actually hold, study the best traders, and practice — all in one place.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Live tracking
+- **Positions & account** — real-time view of your open positions, PnL, margin, and funding.
+- **Markets** — live perps and spot markets with price, 24h change, volume, funding, and open interest.
+- **Leaderboard** — see the top traders on SoDEX ranked by performance.
+- **Trade history** — a full record of your past trades.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Search & organize
+- **Watchlists** — group and follow the pairs and wallets you care about.
+- **Reverse search** — look up any wallet and explore its activity.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Intelligence
+- **Index X-ray** — break any tokenized index down into its live constituents, their weights, and how much each one contributes.
+- **Portfolio Look-Through** — paste any wallet and see its *true* underlying token exposure, visualized as a clean flow breakdown.
+- **Pair Intelligence** — a per-pair cross-read of SoDEX venue data against global market context: cycle position vs ATH, valuation, momentum, funding, and volume share.
+- **ETF flows & macro** — daily crypto ETF net flows and an upcoming macro-events calendar.
 
-## Learn More
+### Tools
+- **Copy Trading** — pick a leader and get a vetted, risk-sized mirror plan: per-position take-profit / stop-loss, risk-to-stop, a track record from their recent trades, and one-click hand-off to the demo terminal.
+- **Demo Trading** — a full paper-trading perps terminal (weighted-average entry, reduce/flip, liquidation, funding) to rehearse a strategy risk-free.
+- **Journal** — log and annotate your trades.
+- **Trading Bots** — downloadable strategy bots *(coming soon)*.
 
-To learn more about Next.js, take a look at the following resources:
+### Experience
+- Clean, monochrome design that reads well in light and dark.
+- Fully responsive — built to work on desktop and mobile.
+- Distinct minimal iconography across every sector and market.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built with Next.js and React. Data comes from SoDEX and SoSoValue.

@@ -57,6 +57,8 @@ next-env.d.ts
 # OS
 Thumbs.db
 
-# Claude/agent files
+# Local-only agent/docs files
 AGENTS.md
 CLAUDE.md
+BUILDATHON.md
+svg-icons.md
