@@ -74,7 +74,7 @@ const NAV_ITEMS: NavItem[] = [
         href: "/trading-bots",
         description: "Downloadable Python strategy bots",
         icon: <Bot size={14} />,
-        comingSoon: true,
+        beta: true,
       },
     ],
   },
@@ -246,7 +246,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
   { label: "Copy Trading", href: "/copy-trading", icon: Copy },
-  { label: "Trading Bots", href: "/trading-bots", icon: Bot, comingSoon: true },
+  { label: "Trading Bots", href: "/trading-bots", icon: Bot, beta: true },
 ];
 
 export function Navbar() {
