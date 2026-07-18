@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
+    "@vercel/analytics": "^2.0.1",
     "gifenc": "^1.0.3",
     "gifuct-js": "^2.1.2",
     "html-to-image": "^1.11.13",
