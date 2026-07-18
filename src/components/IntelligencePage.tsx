@@ -110,11 +110,16 @@ function IndexCard({ item, onOpen }: { item: OverviewItem; onOpen: () => void })
       onMouseEnter={(e) => {
         e.currentTarget.style.background = "var(--bg-elevated)";
         e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.borderColor = "var(--accent)";
+        e.currentTarget.style.boxShadow = "0 6px 20px rgba(124,107,240,0.10)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = "var(--bg-surface)";
         e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.borderColor = "var(--border)";
+        e.currentTarget.style.boxShadow = "none";
       }}
+      aria-label={`Open ${prettyName(item.ticker)} X-ray`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -161,6 +166,21 @@ function IndexCard({ item, onOpen }: { item: OverviewItem; onOpen: () => void })
           Snapshot unavailable
         </div>
       )}
+
+      {/* click affordance — always visible, brightens on hover */}
+      <div
+        className="flex items-center justify-between mt-3 pt-2.5 transition-colors"
+        style={{ borderTop: "1px solid var(--border-subtle)" }}
+      >
+        <span className="flex items-center gap-1.5 text-[10px] font-semibold transition-colors text-[color:var(--text-faint)] group-hover:text-[color:var(--accent)]">
+          <ScanSearch size={12} />
+          View X-ray · composition &amp; drivers
+        </span>
+        <ArrowRight
+          size={13}
+          className="transition-all text-[color:var(--text-faint)] group-hover:text-[color:var(--accent)] group-hover:translate-x-0.5"
+        />
+      </div>
     </button>
   );
 }
@@ -460,6 +480,15 @@ export function IntelligencePage() {
         <FlowDivergenceSection />
 
         <PairIntelligence />
+
+        {/* grid header hint */}
+        <div className="flex items-center gap-2 mb-3">
+          <ScanSearch size={14} style={{ color: "var(--text-muted)" }} />
+          <span className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>Sector indices</span>
+          <span className="text-[11px]" style={{ color: "var(--text-faint)" }}>
+            — click any card to open its X-ray: constituents, weights &amp; 24h drivers
+          </span>
+        </div>
 
         {/* grid */}
         {error ? (
