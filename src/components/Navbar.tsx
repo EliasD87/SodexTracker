@@ -3,7 +3,7 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Bookmark, Radar, Wrench } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Radar, Wrench } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
 import { usePathname } from "next/navigation";
@@ -74,7 +74,6 @@ const NAV_ITEMS: NavItem[] = [
         href: "/trading-bots",
         description: "Downloadable Python strategy bots",
         icon: <Bot size={14} />,
-        beta: true,
       },
     ],
   },
@@ -144,7 +143,7 @@ function NavDropdownMenu({
             boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
             borderRadius: 10,
             zIndex: 60,
-            minWidth: 160,
+            minWidth: 132,
           }}
           onMouseEnter={show}
           onMouseLeave={hide}
@@ -205,14 +204,6 @@ function NavDropdownMenu({
                   <span className="text-[11.5px] font-medium flex-1" style={{ color: "var(--text)" }}>
                     {child.label}
                   </span>
-                  {child.beta && (
-                    <span
-                      className="text-[8px] font-bold px-1 leading-none shrink-0 rounded-sm"
-                      style={{ color: "var(--green)", background: "var(--green-tint)", letterSpacing: "0.04em", padding: "2px 3px" }}
-                    >
-                      BETA
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -220,6 +211,34 @@ function NavDropdownMenu({
         </div>
       )}
     </div>
+  );
+}
+
+/* ── Watchlist bookmark with a green segment endlessly tracing the outline ── */
+function AnimatedBookmark({ size = 16 }: { size?: number }) {
+  const d = "M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z";
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {/* base outline inherits the button's color */}
+      <path d={d} stroke="currentColor" strokeWidth={2} opacity={0.55} />
+      {/* soft glow underlay so the runner reads at small sizes */}
+      <path
+        d={d}
+        pathLength={100}
+        stroke="var(--green)"
+        strokeWidth={5}
+        opacity={0.35}
+        style={{ strokeDasharray: "30 70", animation: "wlTrace 2.2s linear infinite", filter: "blur(2px)" }}
+      />
+      {/* travelling green segment: 30% of the path, looping continuously */}
+      <path
+        d={d}
+        pathLength={100}
+        stroke="var(--green)"
+        strokeWidth={2.6}
+        style={{ strokeDasharray: "30 70", animation: "wlTrace 2.2s linear infinite", filter: "drop-shadow(0 0 2.5px var(--green))" }}
+      />
+    </svg>
   );
 }
 
@@ -232,21 +251,21 @@ const BOTTOM_NAV = [
 ];
 
 /* ── All pages shown in the More sheet ── */
-type SheetPage = { label: string; href: string; icon: React.ElementType; comingSoon?: boolean; beta?: boolean };
+type SheetPage = { label: string; href: string; icon: React.ElementType; iconColor?: string; comingSoon?: boolean; beta?: boolean };
 const SHEET_PAGES: SheetPage[] = [
   { label: "Markets", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
-  { label: "Intelligence", href: "/intelligence", icon: Radar },
+  { label: "Intelligence", href: "/intelligence", icon: Radar, iconColor: "#7C6BF0" },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
-  { label: "SoPoints", href: "/sopoints", icon: Zap },
+  { label: "SoPoints", href: "/sopoints", icon: Zap, iconColor: "var(--green)" },
   { label: "Trade History", href: "/trade-history", icon: History },
   { label: "Journal", href: "/journal", icon: BookOpen },
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
   { label: "Copy Trading", href: "/copy-trading", icon: Copy },
-  { label: "Trading Bots", href: "/trading-bots", icon: Bot, beta: true },
+  { label: "Trading Bots", href: "/trading-bots", icon: Bot },
 ];
 
 export function Navbar() {
@@ -351,11 +370,7 @@ export function Navbar() {
               }}
               aria-label="Watchlist"
             >
-              <span style={{ animation: "wlStamp 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ animation: "wlGlow 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Bookmark size={18} />
-                </span>
-              </span>
+              <AnimatedBookmark size={18} />
             </Link>
             <button
               onClick={() => setAccountOpen((v) => !v)}
@@ -495,11 +510,7 @@ export function Navbar() {
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)"; (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
               onMouseLeave={(e) => { if (!isActive("/watchlist")) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; } }}
             >
-              <span style={{ animation: "wlStamp 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ animation: "wlGlow 4s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Bookmark size={16} />
-                </span>
-              </span>
+              <AnimatedBookmark size={16} />
             </Link>
             <div
               className="relative"
@@ -526,7 +537,7 @@ export function Navbar() {
               {accountOpen && (
                 <div
                   className="absolute top-full mt-1.5"
-                  style={{ right: 0, zIndex: 70, minWidth: 180,
+                  style={{ left: "50%", transform: "translateX(-50%)", zIndex: 70, minWidth: 180,
                     background: "var(--panel-bg)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
                     border: "1px solid var(--border)", boxShadow: "0 8px 32px rgba(0,0,0,0.28)", borderRadius: 10,
                   }}
@@ -573,10 +584,18 @@ export function Navbar() {
             <Link
               href="/tracker"
               prefetch={true}
-              className="flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
+              className="relative overflow-hidden flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
               style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
             >
-              Open Tracker
+              <span className="relative z-[1]">Open Tracker</span>
+              {/* the roaming inspector */}
+              <span
+                aria-hidden
+                className="absolute left-0 top-1/2 pointer-events-none"
+                style={{ animation: "spySweep 7s ease-in-out infinite", opacity: 0, zIndex: 2 }}
+              >
+                <Search size={13} strokeWidth={2.6} style={{ color: "var(--accent-fg)", filter: "drop-shadow(0 0 3px rgba(0,0,0,0.25))" }} />
+              </span>
             </Link>
           </div>
         </div>
@@ -717,16 +736,8 @@ export function Navbar() {
                   transition: "transform 0.1s, background 0.15s",
                 }}
               >
-                <Icon size={22} strokeWidth={active ? 2 : 1.5} />
+                <Icon size={22} strokeWidth={active ? 2 : 1.5} style={page.iconColor ? { color: page.iconColor } : undefined} />
                 <span className="text-[11px] font-medium text-center leading-tight">{page.label}</span>
-                {page.beta && (
-                  <span
-                    className="absolute top-2 right-2 text-[8px] font-bold px-1 py-0.5 rounded leading-none"
-                    style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent)", letterSpacing: "0.04em" }}
-                  >
-                    BETA
-                  </span>
-                )}
               </Link>
             );
           })}

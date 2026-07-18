@@ -337,19 +337,25 @@ input { border-radius: var(--r-md) !important; }
 .sdx-wick-top { transform-origin: bottom; }
 .sdx-wick-bot { transform-origin: top; }
 
+/* NOTE: 0% and 100% are identical (resolved white candle) so the loop wraps
+   seamlessly — the green leg is eased into from the white hold, not jumped. */
 @keyframes sdx-candle-body {
-  0%, 10%   { fill: var(--green); transform: translateY(-9%) scaleY(1.1); }
-  22%, 32%  { fill: var(--red);   transform: translateY(9%)  scaleY(0.82); }
-  44%, 52%  { fill: var(--green); transform: translateY(-4%) scaleY(1.0); }
-  62%, 70%  { fill: var(--red);   transform: translateY(4%)  scaleY(0.9); }
-  82%, 100% { fill: var(--text);  transform: translateY(0)   scaleY(1); }
+  0%        { fill: var(--text);  transform: translateY(0)    scaleY(1);    filter: none; }
+  8%, 15%   { fill: var(--green); transform: translateY(-16%) scaleY(1.28); filter: drop-shadow(0 0 5px var(--green)); }
+  20%       { transform: translateY(-11%) scaleY(1.18); }
+  28%, 36%  { fill: var(--red);   transform: translateY(15%)  scaleY(0.68); filter: drop-shadow(0 0 5px var(--red)); }
+  41%       { transform: translateY(9%) scaleY(0.8); }
+  48%, 55%  { fill: var(--green); transform: translateY(-8%)  scaleY(1.12); filter: drop-shadow(0 0 4px var(--green)); }
+  64%, 71%  { fill: var(--red);   transform: translateY(8%)   scaleY(0.82); filter: drop-shadow(0 0 4px var(--red)); }
+  84%, 100% { fill: var(--text);  transform: translateY(0)    scaleY(1);    filter: none; }
 }
 @keyframes sdx-candle-wick {
-  0%, 10%   { stroke: var(--green); transform: scaleY(1.3); }
-  22%, 32%  { stroke: var(--red);   transform: scaleY(0.7); }
-  44%, 52%  { stroke: var(--green); transform: scaleY(1.1); }
-  62%, 70%  { stroke: var(--red);   transform: scaleY(0.9); }
-  82%, 100% { stroke: var(--text);  transform: scaleY(1); }
+  0%        { stroke: var(--text);  transform: scaleY(1);   filter: none; }
+  8%, 15%   { stroke: var(--green); transform: scaleY(1.6); filter: drop-shadow(0 0 3px var(--green)); }
+  28%, 36%  { stroke: var(--red);   transform: scaleY(0.5); filter: drop-shadow(0 0 3px var(--red)); }
+  48%, 55%  { stroke: var(--green); transform: scaleY(1.25); filter: drop-shadow(0 0 2px var(--green)); }
+  64%, 71%  { stroke: var(--red);   transform: scaleY(0.75); filter: drop-shadow(0 0 2px var(--red)); }
+  84%, 100% { stroke: var(--text);  transform: scaleY(1);   filter: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sdx-candle-body { animation: none; fill: var(--text); }
@@ -571,3 +577,24 @@ input { border-radius: var(--r-md) !important; }
   .fold-down { opacity: 0; }
 }
 
+
+/* Watchlist bookmark: a small green segment travelling the outline, forever. */
+@keyframes wlTrace {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+
+/* Open Tracker: a magnifying glass sneaks across the button, pauses to inspect
+   a clue (little zoom + wiggle), then slips away. Mostly idle between passes. */
+@keyframes spySweep {
+  0%   { transform: translate(-30px, -50%) rotate(-18deg) scale(1); opacity: 0; }
+  4%   { opacity: 0.95; }
+  11%  { transform: translate(16px, -58%) rotate(8deg) scale(1); }
+  17%  { transform: translate(36px, -46%) rotate(-8deg) scale(1.3); }
+  21%  { transform: translate(38px, -48%) rotate(7deg) scale(1.3); }
+  25%  { transform: translate(36px, -46%) rotate(-5deg) scale(1.3); }
+  33%  { transform: translate(74px, -56%) rotate(10deg) scale(1); }
+  40%  { transform: translate(118px, -50%) rotate(22deg) scale(1); opacity: 0.95; }
+  46%  { transform: translate(150px, -50%) rotate(28deg) scale(1); opacity: 0; }
+  100% { transform: translate(150px, -50%) rotate(28deg) scale(1); opacity: 0; }
+}
