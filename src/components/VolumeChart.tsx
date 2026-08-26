@@ -604,9 +604,12 @@ export function VolumeChart() {
                   return (
                     <g key={s.key}>
                       <path className="chart-area" d={buildSmoothPath(s.key, true)} fill="none" stroke="none" />
+                      {/* pathLength normalises the .chart-line draw-on dash to
+                          this path's own length, whatever the range plots. */}
                       <path
                         className="chart-line"
                         d={buildSmoothPath(s.key, false)}
+                        pathLength={1}
                         fill="none"
                         stroke={s.color}
                         strokeWidth={s.key === "total" ? 2.4 : 1.8}

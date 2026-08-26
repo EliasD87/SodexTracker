@@ -6,6 +6,7 @@
  *   - Spot:     "BTC/USDC"          (displayName)         → base before "/"
  *   - Spot:     "vBTC_vUSDC"/"vBTC" (name / baseCoin)     → before "_", strip "v"
  *   - Balances: "vLINK", "vDEFI.ssi", "WSOSO", "vUSDC" (B[].a) → strip "v" / ".ssi"
+ *   - Staking:  "sSOSO"              (ValueChain ERC-20)   → aliased to "soso"
  *
  * `getTokenIcon(raw)` accepts any of these and returns the icon URL, or null.
  */
@@ -98,6 +99,7 @@ const ALIASES: Record<string, string> = {
   shib: "1000shib", // spot lists SHIB, perps lists 1000SHIB
   cooper: "copper",
   wsoso: "soso", // wrapped SOSO
+  ssoso: "soso", // staked SOSO (ValueChain ERC-20, not a spot coin)
   vusdc: "usdc",
   vusdt: "usdt",
   // Index displayName form drops the dot (MAG7ssi / DEFIssi / MEMEssi)

@@ -538,11 +538,14 @@ input { border-radius: var(--r-md) !important; }
 }
 .champ-glow { animation: champ-glow 3.6s ease-in-out infinite; }
 
-/* ── Volume chart: line draw-on + area fade ── */
+/* ── Volume chart: line draw-on + area fade ──
+   Paths carry pathLength="1", so one dash always spans the whole line no
+   matter how many days are plotted. A fixed dash length would repeat once the
+   path outgrew it and leave the tail of long ranges (90D / ALL) unpainted. */
 @keyframes chart-line { to { stroke-dashoffset: 0; } }
 .chart-line {
-  stroke-dasharray: 2600;
-  stroke-dashoffset: 2600;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   animation: chart-line 1.4s cubic-bezier(0.3, 0.7, 0.3, 1) forwards;
 }
 @keyframes chart-area { from { opacity: 0; } to { opacity: 1; } }

@@ -11,6 +11,7 @@ import { MacroRiskBanner } from "@/components/MacroRiskBanner";
 import { sodexCoinToIndexTicker } from "@/lib/indexMeta";
 import { tickerLabel } from "@/lib/tokenIcons";
 import { cachedApiFetch, clearFetchCachePrefix } from "@/lib/fetchCache";
+import { fetchStakedSoso, SSOSO_COIN, SSOSO_PRICE_COIN } from "@/lib/valuechain";
 import { FundFlowCard } from "@/components/FundFlowCard";
 import { PositionShareCard } from "@/components/PositionShareCard";
 import type { ShareablePosition } from "@/components/PositionShareCard";
@@ -2571,15 +2572,32 @@ function isStablecoin(coin: string): boolean {
   return u.includes("USDC") || u.includes("USDT") || u.includes("BUSD") || u === "VUSD" || u.endsWith("USD");
 }
 
+interface HoldingRow {
+  coin: string;
+  /** Display ticker — sSOSO keeps its mixed case, everything else is uppercased. */
+  label: string;
+  amount: number;
+  locked: number;
+  price: number;
+  usdValue: number;
+  /** True for the synthetic staked-SOSO row, which isn't a spot balance. */
+  staked?: boolean;
+}
+
 function SpotHoldingsCard({
   balances,
   spotCoins,
+  walletAddress,
 }: {
   balances: SpotBalanceItem[];
   spotCoins: Map<string, number>;
+  walletAddress: string;
 }) {
   const [prices, setPrices] = useState<Map<string, number>>(new Map());
   const [pricesLoading, setPricesLoading] = useState(true);
+  // Keyed by address so a wallet switch reads 0 immediately, without a
+  // synchronous reset inside the effect below.
+  const [staked, setStaked] = useState<{ addr: string; amount: number }>({ addr: "", amount: 0 });
   const [page, setPage] = useState(0);
   const pageSize = 5;
 
@@ -2593,6 +2611,18 @@ function SpotHoldingsCard({
     return () => { cancelled = true; };
   }, []);
 
+  // Staked SOSO isn't a spot coin, so /spot/.../balances never reports it —
+  // read the sSOSO ERC-20 on ValueChain directly. Resolves to 0 on any failure.
+  useEffect(() => {
+    let cancelled = false;
+    fetchStakedSoso(walletAddress).then((amount) => {
+      if (!cancelled) setStaked({ addr: walletAddress, amount });
+    });
+    return () => { cancelled = true; };
+  }, [walletAddress]);
+
+  const stakedSoso = staked.addr === walletAddress ? staked.amount : 0;
+
   // DecimalString is already a decimal number (e.g. "1.5" = 1.5 tokens)
   // Do NOT divide by precision — that was wrong.
   function parseAmount(raw: string): number {
@@ -2604,13 +2634,29 @@ function SpotHoldingsCard({
     return prices.get(coin) ?? 0;
   }
 
-  const rows = balances.map((b) => {
+  const rows: HoldingRow[] = balances.map((b) => {
     const amount = parseAmount(b.total);
     const locked = parseAmount(b.locked);
     const price = getUnitPrice(b.coin);
     const usdValue = amount * price;
-    return { coin: b.coin, amount, locked, price, usdValue };
-  }).sort((a, b) => b.usdValue - a.usdValue);
+    return { coin: b.coin, label: tickerLabel(b.coin), amount, locked, price, usdValue };
+  });
+
+  // sSOSO tracks WSOSO 1:1, so it prices off the WSOSO_vUSDC book already in `prices`.
+  if (stakedSoso > 0) {
+    const price = prices.get(SSOSO_PRICE_COIN) ?? 0;
+    rows.push({
+      coin: SSOSO_COIN,
+      label: SSOSO_COIN,
+      amount: stakedSoso,
+      locked: 0,
+      price,
+      usdValue: stakedSoso * price,
+      staked: true,
+    });
+  }
+
+  rows.sort((a, b) => b.usdValue - a.usdValue);
 
   const totalPages = Math.ceil(rows.length / pageSize);
   const pageRows = rows.slice(page * pageSize, (page + 1) * pageSize);
@@ -2673,7 +2719,10 @@ function SpotHoldingsCard({
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <TokenIcon symbol={r.coin} size={20} />
-                    <span className="mono text-xs font-bold truncate" style={{ color: "var(--text)" }}>{tickerLabel(r.coin)}</span>
+                    <span className="mono text-xs font-bold truncate" style={{ color: "var(--text)" }}>{r.label}</span>
+                    {r.staked && (
+                      <span className="tag text-[9px] shrink-0" style={{ color: "var(--text-faint)" }}>STAKED</span>
+                    )}
                   </div>
                   <span className="mono text-xs text-right tabular-nums" style={{ color: "var(--text)" }}>
                     {r.amount.toLocaleString("en-US", { maximumFractionDigits: 6 })}
@@ -2703,7 +2752,12 @@ function SpotHoldingsCard({
                 <TokenIcon symbol={r.coin} size={20} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="mono text-xs font-bold" style={{ color: "var(--text)" }}>{tickerLabel(r.coin)}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="mono text-xs font-bold" style={{ color: "var(--text)" }}>{r.label}</span>
+                      {r.staked && (
+                        <span className="tag text-[9px] shrink-0" style={{ color: "var(--text-faint)" }}>STAKED</span>
+                      )}
+                    </span>
                     <span className="mono text-xs font-bold tabular-nums" style={{ color: "var(--text)" }}>
                       {r.usdValue > 0 ? fmt(r.usdValue) : "—"}
                     </span>
@@ -3519,6 +3573,7 @@ export function TrackerPage({
           <SpotHoldingsCard
             balances={data!.spotBalances}
             spotCoins={data!.spotCoins}
+            walletAddress={data!.wallet_address}
           />
         </div>
 
