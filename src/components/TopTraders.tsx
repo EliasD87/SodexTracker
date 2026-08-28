@@ -92,9 +92,25 @@ function SkeletonRows() {
 
 const ROW_COLS = "auto 34px 1fr 110px 110px";
 
+/**
+ * Names the ranking. Side by side the two tables differ only in which metric
+ * column leads, which is easy to miss without a caption.
+ */
+function TableCaption({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 px-4 sm:px-5 pb-2">
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "var(--accent)" }} />
+      <span className="tag" style={{ color: "var(--text-muted)" }}>
+        {children}
+      </span>
+    </div>
+  );
+}
+
 function PnlTable({ data, loading, onView }: { data: LeaderEntry[]; loading: boolean; onView: (e: LeaderEntry) => void }) {
   return (
     <div>
+      <TableCaption>RANKED BY PNL</TableCaption>
       <div
         className="traders-grid grid gap-4 px-4 sm:px-5 py-3 text-[10px] mono tracking-widest"
         style={{
@@ -166,6 +182,7 @@ function EyeButton({ onClick }: { onClick: () => void }) {
 function VolTable({ data, loading, onView }: { data: LeaderEntry[]; loading: boolean; onView: (e: LeaderEntry) => void }) {
   return (
     <div>
+      <TableCaption>RANKED BY VOLUME</TableCaption>
       <div
         className="traders-grid grid gap-4 px-4 sm:px-5 py-3 text-[10px] mono tracking-widest"
         style={{
