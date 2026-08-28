@@ -562,6 +562,21 @@ input { border-radius: var(--r-md) !important; }
 }
 .chart-fade { transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 
+/* ── Volume chart series ──
+   The three series were fixed hex, tuned for the dark theme — which left the
+   TOTAL line pure white, i.e. invisible, on the light one. Each theme now gets
+   its own ramp, darkest for TOTAL down to lightest for SPOT. */
+:root {
+  --vol-total: #1A1A19;
+  --vol-perps: #6B6B69;
+  --vol-spot:  #A2A29E;
+}
+.dark {
+  --vol-total: #FFFFFF;
+  --vol-perps: #888888;
+  --vol-spot:  #555555;
+}
+
 /* ── Announcement bulletin ──
    --ann is the category hue the whole card keys off. Two sets: the light-theme
    values are darkened to clear 4.5:1 on white, the dark ones brightened to sit

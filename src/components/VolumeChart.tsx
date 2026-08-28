@@ -35,10 +35,11 @@ const RANGES: { key: RangeKey; days: number }[] = [
   { key: "ALL", days: 0 },
 ];
 
+/* Colours live in CSS (globals.css) so each theme gets its own ramp. */
 const SERIES: { key: SeriesKey; label: string; color: string }[] = [
-  { key: "total", label: "TOTAL", color: "#FFFFFF" },
-  { key: "perps", label: "PERPS", color: "#888888" },
-  { key: "spot", label: "SPOT", color: "#444444" },
+  { key: "total", label: "TOTAL", color: "var(--vol-total)" },
+  { key: "perps", label: "PERPS", color: "var(--vol-perps)" },
+  { key: "spot", label: "SPOT", color: "var(--vol-spot)" },
 ];
 
 const W = 1000;
@@ -499,7 +500,7 @@ export function VolumeChart() {
               >
                 <span
                   className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-[2px]"
-                  style={{ background: s.color, boxShadow: on ? `0 0 8px ${s.color}66` : "none" }}
+                  style={{ background: s.color }}
                 />
                 <span className="hidden sm:inline tag text-xs" style={{ color: "var(--text-muted)" }}>{s.label}</span>
                 <span className="mono text-[10px] sm:text-xs font-bold tabular-nums" style={{ color: "var(--text)" }}>
@@ -676,7 +677,6 @@ export function VolumeChart() {
                               top: -flameSz * 0.5,
                               right: -flameSz * 0.42,
                               color: "#FF8A3D",
-                              filter: "drop-shadow(0 0 4px rgba(255,138,61,0.65))",
                             }}
                           />
                         </div>
