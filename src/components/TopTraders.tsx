@@ -250,40 +250,38 @@ export function TopTraders() {
       <div className="max-w-[1200px] mx-auto px-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <div>
-            <div className="tag mb-2 flex items-center gap-2" style={{ color: "var(--accent)" }}>
-              <span className="w-5 h-px" style={{ background: "var(--accent)" }} />
-              LEADERBOARD · PNL & VOLUME
-            </div>
-            <h2 className="text-xl sm:text-[28px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Top Traders <span style={{ color: "var(--text-faint)" }}>— 24H</span>
-            </h2>
-            {snapTs && (
-              <div className="tag mt-2" style={{ color: "var(--text-faint)" }}>
-                SNAPSHOT · {fmtSnap(snapTs)}
-              </div>
-            )}
-          </div>
+          <h2 className="text-xl sm:text-[28px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
+            Top Traders
+          </h2>
 
-          {/* Mobile tab toggle */}
-          <div
-            className="flex lg:hidden items-center p-0.5 rounded-sm"
-            style={{ border: "1px solid var(--border)", background: "var(--bg)" }}
-          >
-            {(["pnl", "volume"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className="px-4 py-1.5 text-xs mono font-medium rounded-sm transition-all"
-                style={
-                  tab === t
-                    ? { background: "var(--accent)", color: "var(--accent-fg)" }
-                    : { color: "var(--text-muted)" }
-                }
-              >
-                {t === "pnl" ? "By PnL" : "By Volume"}
-              </button>
-            ))}
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Window + snapshot age sit beside the title rather than under it */}
+            {snapTs && (
+              <span className="tag" style={{ color: "var(--text-faint)" }}>
+                24H · SNAPSHOT {fmtSnap(snapTs)}
+              </span>
+            )}
+
+            {/* Mobile tab toggle */}
+            <div
+              className="flex lg:hidden items-center p-0.5 rounded-sm"
+              style={{ border: "1px solid var(--border)", background: "var(--bg)" }}
+            >
+              {(["pnl", "volume"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className="px-4 py-1.5 text-xs mono font-medium rounded-sm transition-all"
+                  style={
+                    tab === t
+                      ? { background: "var(--accent)", color: "var(--accent-fg)" }
+                      : { color: "var(--text-muted)" }
+                  }
+                >
+                  {t === "pnl" ? "By PnL" : "By Volume"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

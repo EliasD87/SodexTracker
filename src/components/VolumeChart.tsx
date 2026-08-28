@@ -406,10 +406,6 @@ export function VolumeChart() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-3 mb-3 sm:mb-6">
           <div>
-            <div className="hidden sm:flex tag mb-2 items-center gap-2" style={{ color: "var(--accent)" }}>
-              <span className="w-5 h-px" style={{ background: "var(--accent)" }} />
-              TRADING VOLUME · SPOT + PERPS
-            </div>
             <h2
               className="text-base sm:text-[28px] font-bold tracking-tight leading-none"
               style={{ color: "var(--text)", letterSpacing: "-0.02em" }}

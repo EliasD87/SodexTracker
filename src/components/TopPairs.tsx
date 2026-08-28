@@ -98,18 +98,12 @@ export function TopPairs() {
     <section className="py-10 sm:py-16 border-b" style={{ borderColor: "var(--border-subtle)" }}>
       <div className="max-w-[1200px] mx-auto px-5">
         <div className="flex items-end justify-between mb-5 sm:mb-8">
-          <div>
-            <div className="tag mb-2 flex items-center gap-2" style={{ color: "var(--accent)" }}>
-              <span className="w-5 h-px" style={{ background: "var(--accent)" }} />
-              LIVE DATA · RANKED BY VOLUME
-            </div>
-            <h2 className="text-xl sm:text-[28px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Top Pairs <span style={{ color: "var(--text-faint)" }}>— 24H</span>
-            </h2>
-          </div>
+          <h2 className="text-xl sm:text-[28px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
+            Top Pairs
+          </h2>
           <div className="flex items-center gap-1.5 tag" style={{ color: "var(--text-faint)" }}>
             <span className="live-dot w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }} />
-            UPDATED LIVE
+            24H · UPDATED LIVE
           </div>
         </div>
 

@@ -45,15 +45,9 @@ export function IndexStrip() {
     <section className="py-10 sm:py-16 border-b" style={{ borderColor: "var(--border-subtle)" }}>
       <div className="max-w-[1200px] mx-auto px-5">
         <div className="flex items-end justify-between mb-5 sm:mb-8">
-          <div>
-            <div className="tag mb-2 flex items-center gap-2" style={{ color: "#7C6BF0" }}>
-              <span className="w-5 h-px" style={{ background: "#7C6BF0" }} />
-              SOSOVALUE · SECTOR INDICES
-            </div>
-            <h2 className="text-xl sm:text-[28px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Index Intelligence <span style={{ color: "var(--text-faint)" }}>— what’s inside</span>
-            </h2>
-          </div>
+          <h2 className="text-xl sm:text-[28px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
+            Index Intelligence
+          </h2>
           <Link
             href="/intelligence"
             prefetch
