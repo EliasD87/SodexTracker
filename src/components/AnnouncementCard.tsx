@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowUpRight, Megaphone, TriangleAlert } from "lucide-react";
 import { cachedApiFetch } from "@/lib/fetchCache";
+import { AnnouncementModal } from "@/components/AnnouncementModal";
 import type { LatestAnnouncement } from "@/app/api/sodex/announcements/latest/route";
 
 /**
@@ -70,6 +72,7 @@ export function AnnouncementCard() {
   // Clock read once, when the data lands — reading it during render is impure
   // and would also risk an SSR/client hydration mismatch on the age labels.
   const [now, setNow] = useState(0);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     cachedApiFetch<LatestAnnouncement>("/api/sodex/announcements/latest", 1, 5 * 60 * 1000)
@@ -96,18 +99,12 @@ export function AnnouncementCard() {
       <div className="max-w-[1200px] mx-auto px-5">
         {/* Section header — mirrors the other landing bands */}
         <div className="flex items-end justify-between mb-5 sm:mb-8">
-          <div>
-            <div className="tag mb-2 flex items-center gap-2" style={{ color: HUE }}>
-              <span className="w-5 h-px" style={{ background: HUE }} />
-              SODEX · ANNOUNCEMENTS
-            </div>
-            <h2
-              className="text-xl sm:text-[28px] font-bold tracking-tight leading-none"
-              style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
-            >
-              Latest from SoDEX <span style={{ color: "var(--text-faint)" }}>— straight from the desk</span>
-            </h2>
-          </div>
+          <h2
+            className="text-xl sm:text-[28px] font-bold tracking-tight leading-none"
+            style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
+          >
+            Latest from SoDEX
+          </h2>
           <a
             href={ANNOUNCEMENTS_URL}
             target="_blank"
@@ -143,6 +140,13 @@ export function AnnouncementCard() {
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
               e.currentTarget.style.borderColor = "var(--border)";
+            }}
+            onClick={(e) => {
+              // Plain click reads it here; modified clicks keep the browser's
+              // own behaviour so the article can still be opened on sodex.com.
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              setOpen(true);
             }}
           >
             <span className="scanline" />
@@ -237,6 +241,11 @@ export function AnnouncementCard() {
           </a>
         )}
       </div>
+
+      {open && item && createPortal(
+        <AnnouncementModal item={item} onClose={() => setOpen(false)} />,
+        document.body,
+      )}
     </section>
   );
 }

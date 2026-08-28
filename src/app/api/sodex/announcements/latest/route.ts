@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseAnnouncementBody, type Block } from "@/lib/announcementBody";
 
 /**
  * GET /api/sodex/announcements/latest
@@ -6,9 +7,10 @@ import { NextResponse } from "next/server";
  * The newest SoDEX announcement, flattened for the landing card.
  *
  * Server-side so the page gets one small payload instead of three upstream
- * round trips, and so the announcement HTML never reaches the browser: we pull
- * the plain-text body for the excerpt and take only the hero image URL out of
- * the HTML one, which keeps remote markup off the page entirely.
+ * round trips, and so the announcement HTML never reaches the browser: the
+ * excerpt comes from the plain-text body, and the HTML one is parsed into an
+ * allow-listed block model the modal renders as React elements. Remote markup
+ * never becomes live markup.
  */
 
 const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
@@ -46,6 +48,8 @@ export interface LatestAnnouncement {
   publishedAt: number;
   excerpt: string;
   image: string | null;
+  /** Full body, parsed into safe blocks for the modal. Empty if unparseable. */
+  blocks: Block[];
   url: string;
 }
 
@@ -102,6 +106,7 @@ export async function GET() {
       publishedAt: article.createdAt * 1000,
       excerpt: excerptOf(plain.body ?? ""),
       image: rich?.body ? heroImage(rich.body) : null,
+      blocks: rich?.body ? parseAnnouncementBody(rich.body) : [],
       url: `https://sodex.com/announcement?id=${article.id}`,
     };
 
