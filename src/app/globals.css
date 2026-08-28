@@ -562,6 +562,37 @@ input { border-radius: var(--r-md) !important; }
 }
 .chart-fade { transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 
+/* ── Announcement bulletin ──
+   --ann is the category hue the whole card keys off. Two sets: the light-theme
+   values are darkened to clear 4.5:1 on white, the dark ones brightened to sit
+   on #151515. An "alert" is SoDEX's own emphasis and overrides the label. */
+[data-ann]                        { --ann: #2563EB; }  /* Updates / unlabelled */
+[data-ann="Listings"]             { --ann: #15803D; }
+[data-ann="Delistings"]           { --ann: #DC2626; }
+[data-ann="Campaigns"]            { --ann: #B45309; }
+[data-ann][data-ann-alert="true"] { --ann: #B45309; }
+
+.dark [data-ann]                        { --ann: #4C8DF6; }
+.dark [data-ann="Listings"]             { --ann: #35C77F; }
+.dark [data-ann="Delistings"]           { --ann: #F0616D; }
+.dark [data-ann="Campaigns"]            { --ann: #E0A008; }
+.dark [data-ann][data-ann-alert="true"] { --ann: #E0A008; }
+
+/* Artwork: banner strip on mobile, full-height column beside the copy on desktop. */
+.announcement-art {
+  width: 100%;
+  height: 132px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+@media (min-width: 640px) {
+  .announcement-art {
+    width: 210px;
+    height: auto;
+    border-bottom: none;
+    border-right: 1px solid var(--border-subtle);
+  }
+}
+
 /* ── Heatmap cell entrance ── */
 @keyframes heat-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
 .heat-cell { animation: heat-in 0.3s ease both; }

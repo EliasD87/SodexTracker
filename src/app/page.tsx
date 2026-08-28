@@ -10,6 +10,7 @@ const VolumeChart = dynamic(() => import("@/components/VolumeChart").then((m) =>
 const TopPairs = dynamic(() => import("@/components/TopPairs").then((m) => m.TopPairs), { ssr: false });
 const TopTraders = dynamic(() => import("@/components/TopTraders").then((m) => m.TopTraders), { ssr: false });
 const IndexStrip = dynamic(() => import("@/components/IndexStrip").then((m) => m.IndexStrip), { ssr: false });
+const AnnouncementCard = dynamic(() => import("@/components/AnnouncementCard").then((m) => m.AnnouncementCard), { ssr: false });
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       <LandingDataProvider>
         <Hero />
         <StatsTicker />
+        <AnnouncementCard />
         <VolumeChart />
         <IndexStrip />
         <TopPairs />
