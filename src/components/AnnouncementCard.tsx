@@ -150,8 +150,6 @@ export function AnnouncementCard() {
             }}
           >
             <span className="scanline" />
-            {/* Left edge carries the category hue — readable before any text is */}
-            <span className="absolute inset-y-0 left-0 w-[3px] z-10" style={{ background: HUE }} />
 
             <div className="flex flex-col sm:flex-row">
               {/* Artwork — the hero image when there is one, else a seeded mark */}
@@ -165,7 +163,7 @@ export function AnnouncementCard() {
                     src={item.image!}
                     alt=""
                     onError={() => setImgFailed(true)}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-[1.03]"
                   />
                 ) : (
                   // Absolute so the mark fills the panel without ever driving
