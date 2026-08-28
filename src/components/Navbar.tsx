@@ -3,7 +3,7 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Copy, Bot, Zap, Radar, Wrench } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Radar } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
 import { usePathname } from "next/navigation";
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
   { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} /> },
+  { kind: "link", label: "Reverse Search", href: "/reverse-search" },
   {
     kind: "dropdown",
     label: "More",
@@ -39,19 +40,6 @@ const NAV_ITEMS: NavItem[] = [
         icon: <Coins size={14} />,
       },
       {
-        label: "Reverse Search",
-        href: "/reverse-search",
-        description: "Find wallets by address characters",
-        icon: <SearchX size={14} />,
-      },
-    ],
-  },
-  {
-    kind: "dropdown",
-    label: "Tools",
-    icon: <Wrench size={13} />,
-    items: [
-      {
         label: "Journal",
         href: "/journal",
         description: "Log and annotate your trades",
@@ -62,18 +50,6 @@ const NAV_ITEMS: NavItem[] = [
         href: "/trade/BTC-USD",
         description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
-      },
-      {
-        label: "Copy Trading",
-        href: "/copy-trading",
-        description: "Mirror any trader, sized to your capital",
-        icon: <Copy size={14} />,
-      },
-      {
-        label: "Trading Bots",
-        href: "/trading-bots",
-        description: "Downloadable Python strategy bots",
-        icon: <Bot size={14} />,
       },
     ],
   },
@@ -264,8 +240,6 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
-  { label: "Copy Trading", href: "/copy-trading", icon: Copy },
-  { label: "Trading Bots", href: "/trading-bots", icon: Bot },
 ];
 
 export function Navbar() {

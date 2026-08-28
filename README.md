@@ -23,10 +23,8 @@
 - **ETF flows & macro** — daily crypto ETF net flows and an upcoming macro-events calendar.
 
 ### Tools
-- **Copy Trading** — pick a leader and get a vetted, risk-sized mirror plan: per-position take-profit / stop-loss, risk-to-stop, a track record from their recent trades, and one-click hand-off to the demo terminal.
 - **Demo Trading** — a full paper-trading perps terminal (weighted-average entry, reduce/flip, liquidation, funding) to rehearse a strategy risk-free.
 - **Journal** — log and annotate your trades.
-- **Trading Bots** — downloadable strategy bots *(coming soon)*.
 
 ### Experience
 - Clean, monochrome design that reads well in light and dark.
