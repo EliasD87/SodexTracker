@@ -8,6 +8,7 @@ import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { ValueMintTicker } from "@/components/ValueMintTicker";
 
 type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode };
 type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean; beta?: boolean };
@@ -555,22 +556,26 @@ export function Navbar() {
             >
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <Link
-              href="/tracker"
-              prefetch={true}
-              className="relative overflow-hidden flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
-              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-            >
-              <span className="relative z-[1]">Open Tracker</span>
-              {/* the roaming inspector */}
-              <span
-                aria-hidden
-                className="absolute left-0 top-1/2 pointer-events-none"
-                style={{ animation: "spySweep 7s ease-in-out infinite", opacity: 0, zIndex: 2 }}
+            {/* Anchors the ValueMint promo that drops out from underneath */}
+            <div className="relative">
+              <Link
+                href="/tracker"
+                prefetch={true}
+                className="relative overflow-hidden flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
+                style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
               >
-                <Search size={13} strokeWidth={2.6} style={{ color: "var(--accent-fg)", filter: "drop-shadow(0 0 3px rgba(0,0,0,0.25))" }} />
-              </span>
-            </Link>
+                <span className="relative z-[1]">Open Tracker</span>
+                {/* the roaming inspector */}
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-1/2 pointer-events-none"
+                  style={{ animation: "spySweep 7s ease-in-out infinite", opacity: 0, zIndex: 2 }}
+                >
+                  <Search size={13} strokeWidth={2.6} style={{ color: "var(--accent-fg)", filter: "drop-shadow(0 0 3px rgba(0,0,0,0.25))" }} />
+                </span>
+              </Link>
+              <ValueMintTicker />
+            </div>
           </div>
         </div>
       </nav>

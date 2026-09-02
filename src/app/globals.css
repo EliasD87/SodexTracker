@@ -562,6 +562,35 @@ input { border-radius: var(--r-md) !important; }
 }
 .chart-fade { transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
 
+/* ── ValueMint navbar promo ──
+   The drop itself is inline (it has to read the open/closed state); these are
+   the two flourishes: a light sweep on each entrance, and a soft fade when the
+   card rotates to the next mint. */
+@keyframes vm-sheen {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+.vm-sheen {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(100deg, transparent, var(--accent-dim), transparent);
+  animation: vm-sheen 1.15s cubic-bezier(0.4, 0, 0.2, 1) 0.18s both;
+}
+
+@keyframes vm-swap {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.vm-swap { animation: vm-swap 0.42s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-sheen { display: none; }
+  .vm-swap { animation: none; }
+}
+
 /* ── Volume chart series ──
    The three series were fixed hex, tuned for the dark theme — which left the
    TOTAL line pure white, i.e. invisible, on the light one. Each theme now gets
