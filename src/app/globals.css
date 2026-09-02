@@ -566,6 +566,24 @@ input { border-radius: var(--r-md) !important; }
    The drop itself is inline (it has to read the open/closed state); these are
    the two flourishes: a light sweep on each entrance, and a soft fade when the
    card rotates to the next mint. */
+/* The drop itself: it hinges open from the button's corner, overshoots a
+   touch, then settles — rather than a flat slide. Retract is quicker and
+   accelerates away, so leaving reads as decisive. */
+@keyframes vm-drop-in {
+  0%   { opacity: 0; transform: translateY(-14px) scaleX(0.965) scaleY(0.84); }
+  45%  { opacity: 1; }
+  58%  { transform: translateY(3.5px) scaleX(1.004) scaleY(1.03); }
+  78%  { transform: translateY(-1.5px) scaleX(0.999) scaleY(0.994); }
+  100% { opacity: 1; transform: translateY(0) scaleX(1) scaleY(1); }
+}
+@keyframes vm-drop-out {
+  0%   { opacity: 1; transform: translateY(0) scaleX(1) scaleY(1); }
+  26%  { opacity: 1; transform: translateY(2.5px) scaleY(1.015); }
+  100% { opacity: 0; transform: translateY(-13px) scaleX(0.97) scaleY(0.86); }
+}
+.vm-in  { animation: vm-drop-in 620ms cubic-bezier(0.22, 1, 0.32, 1) both; }
+.vm-out { animation: vm-drop-out 400ms cubic-bezier(0.55, 0, 0.85, 0.35) both; }
+
 @keyframes vm-sheen {
   from { transform: translateX(-120%); }
   to   { transform: translateX(220%); }
@@ -589,6 +607,7 @@ input { border-radius: var(--r-md) !important; }
 @media (prefers-reduced-motion: reduce) {
   .vm-sheen { display: none; }
   .vm-swap { animation: none; }
+  .vm-in, .vm-out { animation: none; }
 }
 
 /* ── Volume chart series ──

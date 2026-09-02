@@ -16,9 +16,9 @@ import type { ValueMintOverview, MintCollection } from "@/app/api/valuemint/coll
  * sliding and simply stays put, cross-fading its content instead.
  */
 
-/** Retracted for this long, then shown for this long. */
-const HIDDEN_MS = 4200;
-const SHOWN_MS = 5600;
+/** Away for this long, then on show for this long. */
+const HIDDEN_MS = 5000;
+const SHOWN_MS = 6000;
 
 const fmtSoso = (n: number) =>
   n >= 1
@@ -41,6 +41,9 @@ export function ValueMintTicker() {
   const [items, setItems] = useState<MintCollection[]>([]);
   const [idx, setIdx] = useState(0);
   const [open, setOpen] = useState(false);
+  // Nothing animates until the first entrance, so the card doesn't play its
+  // exit on page load.
+  const [hasShown, setHasShown] = useState(false);
   const [paused, setPaused] = useState(false);
   const reduced = usePrefersReducedMotion();
 
@@ -74,6 +77,7 @@ export function ValueMintTicker() {
       } else {
         setIdx((i) => (i + 1) % count);
         setOpen(true);
+        setHasShown(true);
       }
     }, open ? SHOWN_MS : HIDDEN_MS);
     return () => clearTimeout(t);
@@ -98,7 +102,9 @@ export function ValueMintTicker() {
         onMouseLeave={() => setPaused(false)}
         onFocus={() => setPaused(true)}
         onBlur={() => setPaused(false)}
-        className="group relative flex flex-col overflow-hidden rounded-xl"
+        className={`group relative flex flex-col overflow-hidden rounded-xl ${
+          hasShown && !reduced ? (visible ? "vm-in" : "vm-out") : ""
+        }`}
         style={{
           width: 244,
           background: "var(--panel-bg)",
@@ -106,12 +112,11 @@ export function ValueMintTicker() {
           WebkitBackdropFilter: "blur(16px)",
           border: "1px solid var(--border)",
           boxShadow: visible ? "0 14px 34px rgba(0,0,0,0.30)" : "0 0 0 rgba(0,0,0,0)",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0) scale(1)" : "translateY(-10px) scale(0.97)",
+          transition: "box-shadow 420ms ease",
+          // The keyframes own transform/opacity once running; before the first
+          // entrance the card simply sits hidden.
+          ...(hasShown && !reduced ? null : { opacity: visible ? 1 : 0 }),
           transformOrigin: "top right",
-          transition: visible
-            ? "transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease, box-shadow 520ms ease"
-            : "transform 360ms cubic-bezier(0.4, 0, 1, 1), opacity 260ms ease, box-shadow 360ms ease",
         }}
       >
         {/* light sweeps across once on each entrance */}
