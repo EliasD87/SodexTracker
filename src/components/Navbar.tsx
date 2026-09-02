@@ -10,7 +10,11 @@ import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ValueMintTicker } from "@/components/ValueMintTicker";
 
-type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode };
+type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode;
+  /** Rendered after the label — lets a word be replaced by a glyph. */
+  iconAfter?: React.ReactNode;
+  /** Spoken name, when the visible label is abbreviated. */
+  ariaLabel?: string };
 type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean; beta?: boolean };
 type NavDropdown = { kind: "dropdown"; label: string; badge?: string; icon: React.ReactNode; items: DropdownItem[] };
 type NavItem = NavLink | NavDropdown;
@@ -22,7 +26,9 @@ const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
   { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} /> },
-  { kind: "link", label: "Reverse Search", href: "/reverse-search" },
+  // "Search" becomes the glyph so the item stays on one line.
+  { kind: "link", label: "Reverse", href: "/reverse-search", ariaLabel: "Reverse Search",
+    iconAfter: <SearchX size={13} /> },
   {
     kind: "dropdown",
     label: "More",
@@ -450,13 +456,16 @@ export function Navbar() {
                     key={item.label}
                     href={item.href}
                     prefetch={true}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors whitespace-nowrap"
                     style={{ color: active ? "var(--text)" : "var(--text-muted)" }}
+                    aria-label={item.ariaLabel}
+                    title={item.ariaLabel}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
                     onMouseLeave={(e) => (e.currentTarget.style.color = active ? "var(--text)" : "var(--text-muted)")}
                   >
                     {item.icon}
                     {item.label}
+                    {item.iconAfter}
                   </Link>
                 );
               }
