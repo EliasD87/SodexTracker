@@ -14,6 +14,47 @@ import type { ValueMintOverview, MintCollection } from "@/app/api/valuemint/coll
  */
 
 const REFRESH_MS = 60 * 1000;
+const SITE = "https://www.valuemint.store";
+
+/**
+ * ValueMint's own brand lockup, redrawn inline. The mark is a single path
+ * filled with currentColor, so it takes the theme instead of needing a light
+ * and a dark asset — and costs no request.
+ */
+function ValueMintBadge() {
+  return (
+    <a
+      href={`${SITE}/`}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="ValueMint"
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg shrink-0 transition-colors"
+      style={{
+        border: "1px solid var(--border)",
+        background: "var(--bg-surface)",
+        color: "var(--text-muted)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = "var(--text)";
+        e.currentTarget.style.borderColor = "var(--accent-glow)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = "var(--text-muted)";
+        e.currentTarget.style.borderColor = "var(--border)";
+      }}
+    >
+      <svg viewBox="0 0 32 32" width={15} height={15} aria-hidden="true">
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          fill="currentColor"
+          d="M16 0a16 16 0 1 1 0 32 16 16 0 0 1 0-32ZM9 9.5 14.1 22h3.8L23 9.5h-3.5L16 18.1 12.5 9.5H9Z"
+        />
+      </svg>
+      <span className="text-[12.5px] font-semibold tracking-tight">ValueMint</span>
+    </a>
+  );
+}
 
 const fmtSoso = (n: number) =>
   n >= 1 ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : n.toPrecision(2).replace(/0+$/, "").replace(/\.$/, "");
@@ -140,23 +181,27 @@ export function ValueMintStrip() {
   return (
     <section className="py-10 sm:py-16 border-b" style={{ borderColor: "var(--border-subtle)" }}>
       <div className="max-w-[1200px] mx-auto px-5">
-        <div className="flex items-end justify-between mb-5 sm:mb-8">
-          <h2
-            className="text-xl sm:text-[28px] font-bold tracking-tight leading-none"
-            style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
-          >
-            Minting on ValueChain
-          </h2>
+        <div className="flex items-end justify-between gap-3 mb-5 sm:mb-8">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <h2
+              className="text-xl sm:text-[28px] font-bold tracking-tight leading-none"
+              style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
+            >
+              Minting on ValueChain
+            </h2>
+            <ValueMintBadge />
+          </div>
+          {/* The badge already goes to the site, so this points somewhere useful */}
           <a
-            href={data?.siteUrl ?? "https://www.valuemint.store"}
+            href={`${data?.siteUrl ?? SITE}/mint`}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1.5 text-xs mono transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-xs mono transition-colors shrink-0"
             style={{ color: "var(--text-faint)" }}
             onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--accent)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text-faint)")}
           >
-            VALUEMINT <ArrowUpRight size={13} />
+            ALL MINTS <ArrowUpRight size={13} />
           </a>
         </div>
 
