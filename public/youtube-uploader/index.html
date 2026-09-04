@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoSoValue SoDEX YouTube Uploader</title>
+<meta name="description" content="An internal tool that publishes SoSoValue's daily macro videos from Lark to YouTube.">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #6b6b6b;
+    --rule: #e3e3e3;
+    --panel: #f7f7f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0c0c;
+      --fg: #ededed;
+      --muted: #9a9a9a;
+      --rule: #262626;
+      --panel: #151515;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.7 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 72px 24px 96px; }
+  h1 {
+    font-size: 32px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+  }
+  .lead { font-size: 18px; color: var(--muted); margin: 0 0 40px; }
+  h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin: 40px 0 14px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+  }
+  p { margin: 0 0 14px; }
+  ol, ul { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 9px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 18px 20px;
+    margin: 0 0 14px;
+  }
+  .panel p:last-child { margin-bottom: 0; }
+  code {
+    font: 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  a { color: inherit; text-underline-offset: 3px; }
+  footer {
+    margin-top: 52px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 14px;
+  }
+  footer a { margin-right: 18px; }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>SoSoValue SoDEX YouTube Uploader</h1>
+  <p class="lead">An internal tool that publishes SoSoValue's daily macro-analysis videos from our Lark workspace to our own YouTube channel.</p>
+
+  <h2>What it does</h2>
+  <p>A member of our team posts a video in a private Lark group along with a title, description and tags. The tool retrieves the video, shows a summary for the person to check, and &mdash; only after they explicitly confirm &mdash; uploads it to the YouTube channel we own.</p>
+  <ol>
+    <li>A video is posted in a private Lark group</li>
+    <li>An authorised team member replies with the title and description</li>
+    <li>The tool shows a preview and waits for confirmation</li>
+    <li>On approval, the video is uploaded to our channel</li>
+  </ol>
+
+  <h2>Who can use it</h2>
+  <p>Nobody outside SoSoValue. It is not a product, not a service, and has no sign-up. Access is restricted to a specific Lark group and a named list of team members; requests from anyone else are refused.</p>
+
+  <h2>Google account access</h2>
+  <div class="panel">
+    <p>The tool requests one Google OAuth scope: <code>youtube.upload</code>.</p>
+    <p>That permits creating new videos and nothing else. It cannot read, edit or delete existing videos, read analytics or comments, or access subscriber data &mdash; and it never attempts to. We deliberately avoid the broader <code>youtube</code> scope because the tool does not need it.</p>
+  </div>
+  <p>Videos are downloaded temporarily, uploaded, then deleted. No Google user data is shared with third parties, sold, or used for advertising or model training. Full detail is in the <a href="/youtube-uploader/privacy.html">privacy policy</a>.</p>
+
+  <h2>Operator</h2>
+  <p>Operated by Elias on behalf of SoSoValue. SoDEX is a SoSoValue product; this tool runs on infrastructure the team controls.</p>
+  <p>Contact: <a href="mailto:eliasdegemu61@gmail.com">eliasdegemu61@gmail.com</a></p>
+
+  <footer>
+    <a href="/youtube-uploader/privacy.html">Privacy policy</a>
+    <a href="https://sodextracker.com">SodexTracker</a>
+  </footer>
+
+</main>
+</body>
+</html>
