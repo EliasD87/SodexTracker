@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — SoSoValue / SoDEX YouTube Uploader</title>
+<meta name="description" content="How the SoSoValue / SoDEX YouTube Uploader handles data from Google and YouTube APIs.">
+<!-- Reachable by URL, but never indexed or listed. This policy covers an
+     internal tool, not the SodexTracker product. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="googlebot" content="noindex, nofollow">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #6b6b6b;
+    --rule: #e3e3e3;
+    --code-bg: #f4f4f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c0c0c;
+      --fg: #ededed;
+      --muted: #9a9a9a;
+      --rule: #262626;
+      --code-bg: #1a1a1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.7 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 64px 24px 96px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .updated { color: var(--muted); font-size: 14px; margin: 0 0 40px; }
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 40px 0 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+  }
+  p, li { color: var(--fg); }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  code {
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font: 13px ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  a { color: inherit; text-underline-offset: 3px; }
+  .lead { font-size: 17px; color: var(--muted); margin-bottom: 24px; }
+  .scope {
+    border-left: 2px solid var(--rule);
+    padding: 10px 0 10px 16px;
+    margin: 0 0 28px;
+    font-size: 14.5px;
+    color: var(--muted);
+  }
+  .scope strong { color: var(--fg); }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">SoSoValue / SoDEX YouTube Uploader &middot; Last updated 4 September 2026</p>
+
+  <p class="lead">This policy covers the SoSoValue / SoDEX YouTube Uploader, a private internal tool that uploads videos from a Lark workspace to a YouTube channel its operators own. It is not a public service and is not offered to third parties.</p>
+
+  <p class="scope"><strong>This is not the SodexTracker privacy policy.</strong> SodexTracker is a separate product and is not covered by this document. This page is hosted here only because the same team operates both.</p>
+
+  <h2>Who operates this tool</h2>
+  <p>The tool is operated by Elias on behalf of SoSoValue. It runs on infrastructure controlled by the operator. There is no hosted service, no user accounts, and no sign-up.</p>
+  <p>Questions about this policy: <a href="mailto:eliasdegemu61@gmail.com">eliasdegemu61@gmail.com</a></p>
+
+  <h2>What the tool does</h2>
+  <p>An authorised person posts a video in a private Lark group and supplies a title and description. The tool downloads that video, waits for the person to explicitly confirm, and uploads it to a YouTube channel the operator controls. Nothing is uploaded without that confirmation.</p>
+
+  <h2>Google account data we access</h2>
+  <p>The tool requests a single Google OAuth scope:</p>
+  <ul>
+    <li><code>https://www.googleapis.com/auth/youtube.upload</code> &mdash; permission to upload videos to the authorising account's YouTube channel.</li>
+  </ul>
+  <p>This scope allows the tool to create new videos. It does not allow the tool to read, edit or delete existing videos, read analytics, read comments, or access subscriber information, and the tool does not attempt to do any of those things.</p>
+  <p>During the one-time authorisation step, the tool may additionally request <code>youtube.readonly</code> for the sole purpose of displaying which channel was authorised, so the operator can confirm the correct channel was selected. No channel data is stored.</p>
+
+  <h2>What we store, and for how long</h2>
+  <ul>
+    <li><strong>A Google OAuth refresh token.</strong> Stored on the operator's own machine or server so the tool can upload without repeated sign-in. Never transmitted anywhere except to Google.</li>
+    <li><strong>The video file.</strong> Downloaded temporarily, uploaded to YouTube, then deleted. Videos that are cancelled or abandoned are deleted automatically.</li>
+    <li><strong>Video metadata.</strong> The title, description and tags supplied by the authorised person, kept in a local database as a record of what was published.</li>
+    <li><strong>Lark identifiers.</strong> The group and user identifiers of authorised people, used only to verify that a request came from someone permitted to publish.</li>
+    <li><strong>Operational logs.</strong> Timestamps and status of uploads. Credentials and tokens are automatically redacted from all log output.</li>
+  </ul>
+
+  <h2>What we do not do</h2>
+  <ul>
+    <li>We do not sell, rent or trade any data.</li>
+    <li>We do not share Google user data with third parties.</li>
+    <li>We do not use Google user data for advertising, profiling, or training machine learning or AI models.</li>
+    <li>We do not allow humans to read Google user data, except as strictly necessary to fix a fault, with the user's consent, or where required by law.</li>
+    <li>We do not collect data from anyone other than the authorising account holder.</li>
+  </ul>
+
+  <h2>Limited Use disclosure</h2>
+  <p>The SoSoValue / SoDEX YouTube Uploader's use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+  <h2>YouTube API Services</h2>
+  <p>This tool uses YouTube API Services. By authorising it you are also agreeing to the <a href="https://www.youtube.com/t/terms" rel="noopener">YouTube Terms of Service</a>, and Google's <a href="https://policies.google.com/privacy" rel="noopener">Privacy Policy</a> applies to Google's own handling of your data.</p>
+
+  <h2>Revoking access</h2>
+  <p>You can revoke this tool's access to your Google account at any time at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>. Doing so immediately and permanently prevents further uploads.</p>
+  <p>To have stored data deleted, email the address above. Deleting the stored token file removes all Google credentials; local video files and metadata can be deleted on request.</p>
+
+  <h2>Security</h2>
+  <p>Credentials are stored in files readable only by the account running the tool, and are excluded from version control. The tool holds the narrowest permission that lets it do its job, so a compromised credential cannot alter or remove existing content on the channel.</p>
+
+  <h2>Children</h2>
+  <p>This tool is an internal operational utility and is not directed at or usable by children.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the revision date above will be updated.</p>
+
+  <footer>
+    SoSoValue / SoDEX YouTube Uploader &middot; <a href="https://sodextracker.com">sodextracker.com</a>
+  </footer>
+
+</main>
+</body>
+</html>
