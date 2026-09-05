@@ -99,24 +99,31 @@ input[type="number"] {
    ════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Light — clean neutral off-white */
-  --panel-bg: rgba(250, 250, 249, 0.9);
+  /* ── Light theme — Dub ──
+     Near-white canvas held together by hairline borders rather than elevation.
+     Cards are white-on-white; the 1px --border is what defines them. */
+  --panel-bg: rgba(255, 255, 255, 0.92);
   --panel-border: rgba(0, 0, 0, 0.08);
-  --bg: #F5F5F4;
-  --bg-surface: #FFFFFF;
-  --bg-elevated: #EDEDEC;
-  --border: #E2E2DF;
-  --border-subtle: #EAEAE8;
-  --text: #1A1A19;
-  --text-muted: #6B6B69;
-  --text-faint: #A3A3A0;
-  /* monochrome UI accent */
-  --accent: #1A1A19;
+  --bg: #FFFFFF;            /* Canvas White */
+  --bg-surface: #FFFFFF;    /* Card — separated by border, not tone */
+  --bg-elevated: #F5F5F5;   /* Paper Mist — alt surface, hover fill */
+  --border: #E5E5E5;        /* Ash — the structural line */
+  --border-subtle: #F0F0F0;
+  --text: #171717;          /* Charcoal */
+  --text-muted: #737373;    /* Fog */
+  --text-faint: #A3A3A3;    /* Silver */
+  /* Neutral filled action — Dub commits its one dark fill to the primary CTA */
+  --accent: #0A0A0A;        /* Midnight Ink */
   --accent-bright: #000000;
-  --accent-dim: rgba(0, 0, 0, 0.07);
+  --accent-dim: rgba(0, 0, 0, 0.06);
   --accent-glow: rgba(0, 0, 0, 0.14);
-  --accent-fg: #ffffff;
-  /* semantic up / down */
+  --accent-fg: #FFFFFF;
+  /* Brand voltage — links, active states, icon accents. Never a surface fill. */
+  --brand: #2563EB;         /* Electric Blue */
+  --brand-strong: #1E40AF;  /* Deep Sapphire */
+  --brand-tint: rgba(37, 99, 235, 0.10);
+  /* semantic up / down — a trading product needs these; neither system defines
+     a red, so this stays the app's own functional pair */
   --red: #DC2626;
   --green: #16A34A;
   --spotlight: rgba(0, 0, 0, 0.04);
@@ -131,49 +138,59 @@ input[type="number"] {
   --cal-red-tint: rgba(220, 38, 38, 0.06);
   --cal-red-edge: rgba(220, 38, 38, 0.28);
 
-  /* radii */
-  --r-card: 14px;
-  --r-md: 11px;
-  --r-sm: 8px;
+  /* ── Shared geometry ──
+     Radii cannot differ per theme — a component would change shape when the
+     theme is toggled. Dovetail's 8px/4px vocabulary wins as the shared one:
+     the product is an instrument, and Dovetail forbids the pill radii Dub
+     mandates. 8px is common ground (Dub uses it for buttons). */
+  --r-card: 8px;
+  --r-md: 8px;
+  --r-sm: 4px;
 
   /* grain strength */
-  --grain-opacity: 0.045;
+  --grain-opacity: 0.03;
 }
 
 .dark {
-  /* Neutral charcoal — no colour cast, matte & low-contrast */
-  --panel-bg: rgba(20, 20, 20, 0.86);
-  --panel-border: rgba(255, 255, 255, 0.07);
-  --bg: #0E0E0E;
-  --bg-surface: #151515;
-  --bg-elevated: #1C1C1C;
-  --border: #2A2A2A;
-  --border-subtle: #1F1F1F;
-  --text: #EAEAEA;
-  --text-muted: #8C8C8C;
-  --text-faint: #555555;
-  /* monochrome UI accent */
-  --accent: #EDEDED;
+  /* ── Dark theme — Dovetail ──
+     Blueprint control room: near-black canvas, surfaces stacking through tone
+     rather than elevation, one cornflower blue as the only chromatic accent. */
+  --panel-bg: rgba(10, 10, 10, 0.92);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --bg: #0A0A0A;            /* Page Ink — canvas */
+  --bg-surface: #141414;    /* Deep Coal — card */
+  --bg-elevated: #1E1E1E;   /* Card Carbon — nested / hover */
+  --border: #313131;        /* Steel Border */
+  --border-subtle: #1E1E1E;
+  --text: #FFFFFF;          /* Snow */
+  --text-muted: #A7A7A7;    /* Ash */
+  --text-faint: #7C7C7C;    /* Fog */
+  /* White filled action — Dovetail is explicit that the blue never fills a button */
+  --accent: #FFFFFF;
   --accent-bright: #FFFFFF;
-  --accent-dim: rgba(255, 255, 255, 0.09);
+  --accent-dim: rgba(255, 255, 255, 0.08);
   --accent-glow: rgba(255, 255, 255, 0.16);
-  --accent-fg: #0E0E0E;
+  --accent-fg: #0A0A0A;
+  /* Brand voltage — icons, active states, data highlight strokes */
+  --brand: #6798FF;         /* Blue Cornflower */
+  --brand-strong: #8FB2FF;
+  --brand-tint: rgba(103, 152, 255, 0.12);
   /* semantic up / down */
   --red: #F0616D;
   --green: #35C77F;
-  --spotlight: rgba(255, 255, 255, 0.035);
+  --spotlight: rgba(255, 255, 255, 0.04);
   --green-tint: rgba(53, 199, 127, 0.08);
   --green-tint-med: rgba(53, 199, 127, 0.12);
   --green-tint-strong: rgba(53, 199, 127, 0.17);
   --green-edge: rgba(53, 199, 127, 0.28);
   --cal-green: #35C77F;
-  --cal-green-tint: rgba(53, 199, 127, 0.09);
-  --cal-green-edge: rgba(53, 199, 127, 0.28);
+  --cal-green-tint: rgba(53, 199, 127, 0.10);
+  --cal-green-edge: rgba(53, 199, 127, 0.30);
   --cal-red: #F0616D;
-  --cal-red-tint: rgba(240, 97, 109, 0.07);
-  --cal-red-edge: rgba(240, 97, 109, 0.28);
+  --cal-red-tint: rgba(240, 97, 109, 0.10);
+  --cal-red-edge: rgba(240, 97, 109, 0.30);
 
-  --grain-opacity: 0.04;
+  --grain-opacity: 0.02;
 }
 
 @theme inline {
@@ -210,7 +227,7 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-space-grotesk), 'Inter', ui-sans-serif, system-ui, sans-serif;
   line-height: 1.6;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
@@ -277,23 +294,30 @@ input { border-radius: var(--r-md) !important; }
 
 .dark input::selection,
 .dark textarea::selection {
-  background: rgba(237, 237, 237, 0.9);
-  color: #0E0E0E;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0A0A0A;
 }
 
 /* ── Typography ── */
+/* Numeric and technical readouts. Both systems call for a real monospace on
+   data labels — it is what gives the surface its instrument-panel character. */
 .mono {
-  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-space-mono), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 /* Brutalist mono micro-label → softened: smaller tracking, calmer */
+/* Section eyebrows, chips and micro-labels. Dovetail's eyebrow spec exactly:
+   monospace, uppercase, wide positive tracking. Held at 10px rather than the
+   sheet's 12px because both systems prize compact density and this class runs
+   through dense tables. */
 .tag {
-  font-family: var(--font-space-grotesk), 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-space-mono), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* stroke / outlined headline → solid, muted (no harsh outline) */
@@ -615,27 +639,27 @@ input { border-radius: var(--r-md) !important; }
    TOTAL line pure white, i.e. invisible, on the light one. Each theme now gets
    its own ramp, darkest for TOTAL down to lightest for SPOT. */
 :root {
-  --vol-total: #1A1A19;
-  --vol-perps: #6B6B69;
-  --vol-spot:  #A2A29E;
+  --vol-total: #171717;   /* Charcoal */
+  --vol-perps: #737373;   /* Fog */
+  --vol-spot:  #A3A3A3;   /* Silver */
 }
 .dark {
-  --vol-total: #FFFFFF;
-  --vol-perps: #888888;
-  --vol-spot:  #555555;
+  --vol-total: #FFFFFF;   /* Snow */
+  --vol-perps: #A7A7A7;   /* Ash */
+  --vol-spot:  #545454;
 }
 
 /* ── Announcement bulletin ──
    --ann is the category hue the whole card keys off. Two sets: the light-theme
    values are darkened to clear 4.5:1 on white, the dark ones brightened to sit
    on #151515. An "alert" is SoDEX's own emphasis and overrides the label. */
-[data-ann]                        { --ann: #2563EB; }  /* Updates / unlabelled */
+[data-ann]                        { --ann: var(--brand); }  /* Updates / unlabelled */
 [data-ann="Listings"]             { --ann: #15803D; }
 [data-ann="Delistings"]           { --ann: #DC2626; }
 [data-ann="Campaigns"]            { --ann: #B45309; }
 [data-ann][data-ann-alert="true"] { --ann: #B45309; }
 
-.dark [data-ann]                        { --ann: #4C8DF6; }
+.dark [data-ann]                        { --ann: var(--brand); }
 .dark [data-ann="Listings"]             { --ann: #35C77F; }
 .dark [data-ann="Delistings"]           { --ann: #F0616D; }
 .dark [data-ann="Campaigns"]            { --ann: #E0A008; }
