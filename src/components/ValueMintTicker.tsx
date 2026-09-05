@@ -16,9 +16,13 @@ import type { ValueMintOverview, MintCollection } from "@/app/api/valuemint/coll
  * sliding and simply stays put, cross-fading its content instead.
  */
 
-/** Away for this long, then on show for this long. */
-const HIDDEN_MS = 5000;
+/* One appearance per minute: six seconds on show, the rest of the minute away.
+   At an eleven-second cycle it read as nagging rather than ambient. */
 const SHOWN_MS = 6000;
+const HIDDEN_MS = 54000;
+/* The first entrance comes early, though — a flat 54s wait on load would mean
+   most visitors never see it at all. Steady state is still once a minute. */
+const FIRST_DELAY_MS = 6000;
 
 const fmtSoso = (n: number) =>
   n >= 1
@@ -79,9 +83,9 @@ export function ValueMintTicker() {
         setOpen(true);
         setHasShown(true);
       }
-    }, open ? SHOWN_MS : HIDDEN_MS);
+    }, open ? SHOWN_MS : hasShown ? HIDDEN_MS : FIRST_DELAY_MS);
     return () => clearTimeout(t);
-  }, [open, paused, count, reduced]);
+  }, [open, paused, count, reduced, hasShown]);
 
   if (!count) return null;
   const c = items[Math.min(idx, count - 1)];
