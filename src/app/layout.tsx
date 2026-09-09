@@ -1,26 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PortfolioProvider } from "@/components/PortfolioProvider";
 import { Analytics } from "@vercel/analytics/next";
 
-/* Inter is the workhorse both design systems specify. The CSS variable names
-   are historical — renaming them would churn 116 call sites for no visual
-   gain, so only what they load changes. */
-const sans = Inter({
+const plexSans = IBM_Plex_Sans({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-/* Dovetail asks for JetBrains Mono outright; Dub names it as an accepted
-   substitute for Geist Mono. One family satisfies both. */
-const mono = JetBrains_Mono({
+const plexMono = IBM_Plex_Mono({
   variable: "--font-space-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -36,7 +31,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable}`}
+      className={`${plexSans.variable} ${plexMono.variable}`}
     >
       <body className="min-h-screen">
         <Script
