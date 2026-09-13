@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const UPDATED = "13 September 2026";
-const CONTACT = "eliasdegemu61@gmail.com";
+const CONTACT = "sodextracker@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
