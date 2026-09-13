@@ -3,10 +3,8 @@ import Link from "next/link";
 /**
  * The quiet end of every page — the privacy policy and a single X link.
  *
- * Rendered from the root layout, so it sits outside <main> and misses the
- * mobile bottom-nav clearance that <main> gets; hence its own pb on small
- * screens. Deliberately not the old CTAFooter, which is imported nowhere and
- * still carries dead "#markets" anchors and a button that goes nowhere.
+ * Deliberately not the old CTAFooter, which is imported nowhere and still
+ * carries dead "#markets" anchors and a button that goes nowhere.
  */
 
 const X_URL = "https://x.com/eliasing__";
@@ -14,7 +12,7 @@ const X_URL = "https://x.com/eliasing__";
 export function SiteFooter() {
   return (
     <footer
-      className="pt-10 pb-28 md:pb-10 border-t"
+      className="py-10 border-t"
       style={{ borderColor: "var(--border-subtle)" }}
     >
       <div className="max-w-[1200px] mx-auto px-5 flex items-center justify-center gap-5">

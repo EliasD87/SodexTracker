@@ -11,9 +11,7 @@ input[type="number"] {
 }
 
 /* ── Mobile layout ── */
-@media (max-width: 767px) {
-  main { padding-bottom: 5rem; }
-}
+/* The mobile bottom bar is gone — no reserved strip needed below content. */
 
 /* ── Mobile layout overrides (below sm breakpoint) ── */
 @media (max-width: 639px) {
@@ -83,6 +81,13 @@ input[type="number"] {
   .sopoints-picker .react-colorful__hue { height: 26px; }
   .sopoints-picker .react-colorful__pointer { width: 24px; height: 24px; }
 }
+
+/* Mobile drawer — enters from the left edge. */
+@keyframes drawerIn {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+.drawer-in { animation: drawerIn 0.26s cubic-bezier(0.32, 0.72, 0, 1) both; }
 
 @keyframes sheetSlideUp {
   from { transform: translateY(100%); }

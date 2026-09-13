@@ -225,12 +225,6 @@ function AnimatedBookmark({ size = 16 }: { size?: number }) {
 }
 
 /* ── Mobile bottom nav items ── */
-const BOTTOM_NAV = [
-  { label: "Markets", href: "/", icon: BarChart3 },
-  { label: "Tracker", href: "/tracker", icon: Search },
-  { label: "Portfolio", href: "/portfolio", icon: Wallet },
-  { label: "Board", href: "/leaderboard", icon: Trophy },
-];
 
 /* ── All pages shown in the More sheet ── */
 type SheetPage = { label: string; href: string; icon: React.ElementType; iconColor?: string; comingSoon?: boolean; beta?: boolean };
@@ -330,13 +324,24 @@ export function Navbar() {
         }}
       >
         <div className="max-w-[1200px] mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
-          {/* Wordmark */}
+          {/* Menu + wordmark */}
+          <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setMoreOpen(true)}
+            className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-colors -ml-2"
+            style={{ color: moreOpen ? "var(--accent)" : "var(--text-muted)" }}
+            aria-label="Open menu"
+            aria-expanded={moreOpen}
+          >
+            <MoreHorizontal size={20} />
+          </button>
           <Link href="/" prefetch={true} className="flex items-center gap-2 shrink-0">
             <LogoMark size={20} />
             <span className="font-semibold tracking-tight text-[15px]" style={{ color: "var(--text)" }}>
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>
           </Link>
+          </div>
 
           {/* Mobile watchlist + account icons (top-right) */}
           <div className="md:hidden flex items-center gap-1 relative">
@@ -584,149 +589,116 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* ── Mobile bottom nav bar — hidden on trade pages (they have their own tab bar) ── */}
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
-        style={{
-          background: "var(--panel-bg)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderTop: "1px solid var(--border)",
-          height: 60,
-          paddingBottom: "env(safe-area-inset-bottom)",
-          display: undefined,
-        }}
-      >
-        {BOTTOM_NAV.map(({ label, href, icon: Icon }) => {
-          const active = isActive(href);
-          return (
-            <Link
-              key={label}
-              href={href}
-              prefetch={true}
-              className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors"
-              style={{ color: active ? "var(--accent)" : "var(--text-faint)" }}
-            >
-              <Icon size={20} strokeWidth={active ? 2.2 : 1.7} />
-              <span className="text-[10px] font-medium">{label}</span>
-            </Link>
-          );
-        })}
-
-        {/* More tab */}
-        <button
-          onClick={() => setMoreOpen(true)}
-          className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors"
-          style={{ color: moreOpen ? "var(--accent)" : "var(--text-faint)" }}
-          aria-label="More pages"
-        >
-          <MoreHorizontal size={20} strokeWidth={1.7} />
-          <span className="text-[10px] font-medium">More</span>
-        </button>
-      </nav>
-
-      {/* ── More sheet backdrop ── */}
+      {/* ── Mobile drawer, entering from the left ── */}
       {moreOpen && (
         <div
           className="md:hidden fixed inset-0 z-[60]"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
           onClick={() => setMoreOpen(false)}
         />
       )}
 
-      {/* ── More sheet (slides up) ── */}
       {moreOpen && (
-      <div
-        className="md:hidden fixed left-0 right-0 z-[70] rounded-t-2xl overflow-hidden"
-        style={{
-          bottom: 0,
-          background: "var(--bg-surface)",
-          borderTop: "1px solid var(--border)",
-          animation: "sheetSlideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
-          maxHeight: "80vh",
-          overflowY: "auto",
-        }}
-      >
-        {/* Sheet header */}
-        <div
-          className="sticky top-0 flex items-center justify-between px-5 py-4"
-          style={{ background: "var(--bg-surface)", borderBottom: "1px solid var(--border-subtle)" }}
+        <aside
+          className="drawer-in md:hidden fixed top-0 bottom-0 left-0 z-[70] flex flex-col"
+          style={{
+            width: "min(80vw, 310px)",
+            background: "var(--bg-surface)",
+            borderRight: "1px solid var(--border)",
+            boxShadow: "14px 0 40px rgba(0,0,0,0.28)",
+          }}
         >
-          <span className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-faint)" }}>
-            All Pages
-          </span>
-          <div className="flex items-center gap-2">
+          {/* Drawer header */}
+          <div
+            className="flex items-center justify-between px-4 h-14 shrink-0"
+            style={{ borderBottom: "1px solid var(--border-subtle)" }}
+          >
+            <div className="flex items-center gap-2">
+              <LogoMark size={18} />
+              <span className="font-semibold tracking-tight text-[14px]" style={{ color: "var(--text)" }}>
+                SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
+              </span>
+            </div>
+            <button
+              onClick={() => setMoreOpen(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg"
+              style={{ color: "var(--text-muted)" }}
+              aria-label="Close menu"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Pages */}
+          <nav className="flex-1 overflow-y-auto py-2">
+            {SHEET_PAGES.map((page) => {
+              const Icon = page.icon;
+              const active = isActive(page.href);
+              if (page.comingSoon) {
+                return (
+                  <div
+                    key={page.label}
+                    className="flex items-center gap-3 px-4 py-2.5"
+                    style={{ color: "var(--text-faint)", opacity: 0.6 }}
+                  >
+                    <Icon size={17} strokeWidth={1.6} />
+                    <span className="text-[13.5px] font-medium flex-1">{page.label}</span>
+                    <span className="tag" style={{ color: "var(--text-faint)" }}>SOON</span>
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  key={page.label}
+                  href={page.href}
+                  prefetch={true}
+                  onClick={() => setMoreOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors"
+                  style={{
+                    color: active ? "var(--accent)" : "var(--text-muted)",
+                    background: active ? "var(--accent-dim)" : "transparent",
+                    borderLeft: `2px solid ${active ? "var(--accent)" : "transparent"}`,
+                  }}
+                >
+                  <Icon
+                    size={17}
+                    strokeWidth={active ? 2.1 : 1.6}
+                    style={page.iconColor ? { color: page.iconColor } : undefined}
+                  />
+                  <span className="text-[13.5px] font-medium">{page.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Drawer footer */}
+          <div
+            className="flex items-center gap-2 px-4 py-3 shrink-0"
+            style={{ borderTop: "1px solid var(--border-subtle)", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+          >
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1"
               style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
               aria-label="Toggle theme"
             >
               {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              <span className="text-[12.5px] font-medium">{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
-            <button
+            <Link
+              href="/account"
+              prefetch={true}
               onClick={() => setMoreOpen(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg flex-1"
               style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
-              aria-label="Close"
             >
-              <X size={15} />
-            </button>
+              <UserRound size={15} />
+              <span className="text-[12.5px] font-medium">Account</span>
+            </Link>
           </div>
-        </div>
-
-        {/* Pages grid */}
-        <div className="grid grid-cols-3 gap-2.5 p-4 pb-6">
-          {SHEET_PAGES.map((page) => {
-            const Icon = page.icon;
-            const active = isActive(page.href);
-            if (page.comingSoon) {
-              return (
-                <div
-                  key={page.label}
-                  className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl relative"
-                  style={{
-                    background: "var(--bg-elevated)",
-                    border: "1px solid var(--border-subtle)",
-                    opacity: 0.55,
-                  }}
-                >
-                  <Icon size={22} strokeWidth={1.5} style={{ color: "var(--text-faint)" }} />
-                  <span className="text-[11px] font-medium text-center leading-tight" style={{ color: "var(--text-faint)" }}>
-                    {page.label}
-                  </span>
-                  <span
-                    className="absolute top-2 right-2 text-[8px] font-bold px-1 py-0.5 rounded leading-none"
-                    style={{ background: "var(--bg-elevated)", color: "var(--text-faint)", border: "1px solid var(--border)" }}
-                  >
-                    SOON
-                  </span>
-                </div>
-              );
-            }
-            return (
-              <Link
-                key={page.label}
-                href={page.href}
-                prefetch={true}
-                onClick={() => setMoreOpen(false)}
-                className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl transition-colors active:scale-95 relative"
-                style={{
-                  background: active ? "var(--accent-dim)" : "var(--bg-elevated)",
-                  border: `1px solid ${active ? "var(--accent)" : "var(--border-subtle)"}`,
-                  color: active ? "var(--accent)" : "var(--text-muted)",
-                  transform: "scale(1)",
-                  transition: "transform 0.1s, background 0.15s",
-                }}
-              >
-                <Icon size={22} strokeWidth={active ? 2 : 1.5} style={page.iconColor ? { color: page.iconColor } : undefined} />
-                <span className="text-[11px] font-medium text-center leading-tight">{page.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+        </aside>
       )}
+
     </>
   );
 }
