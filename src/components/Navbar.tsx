@@ -8,7 +8,6 @@ import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ValueMintTicker } from "@/components/ValueMintTicker";
 
 type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode;
   /** Rendered after the label — lets a word be replaced by a glyph. */
@@ -565,9 +564,7 @@ export function Navbar() {
             >
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            {/* Anchors the ValueMint promo that drops out from underneath */}
-            <div className="relative">
-              <Link
+            <Link
                 href="/tracker"
                 prefetch={true}
                 className="relative overflow-hidden flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
@@ -583,8 +580,6 @@ export function Navbar() {
                   <Search size={13} strokeWidth={2.6} style={{ color: "var(--accent-fg)", filter: "drop-shadow(0 0 3px rgba(0,0,0,0.25))" }} />
                 </span>
               </Link>
-              <ValueMintTicker />
-            </div>
           </div>
         </div>
       </nav>
