@@ -619,7 +619,7 @@ export function WatchlistPanel({ onTrack }: { onTrack: (address: string) => void
                 }}
                 rows={pasteInput.includes("\n") ? 4 : 2}
                 placeholder={"Paste a wallet address — or several, one per line\n0x…"}
-                className="w-full bg-transparent outline-none mono text-xs sm:text-sm p-3 pr-24 resize-y"
+                className="w-full bg-transparent outline-none mono text-[11px] sm:text-xs p-3 pr-24 resize-y"
                 style={{
                   border: "1px solid var(--border)",
                   borderRadius: "var(--r-sm)",

@@ -762,7 +762,7 @@ function SearchHero({ input, setInput, onSearch, pending, focused, setFocused, i
             <input ref={inputRef} type="text" value={input} onChange={e => setInput(e.target.value)}
               onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
               onKeyDown={e => e.key === "Enter" && onSearch()}
-              placeholder="Wallet address  e.g. 0x0879A87D…"
+              placeholder="Wallet address"
               className="w-full bg-transparent outline-none mono text-sm py-4 pl-11 pr-28"
               style={{ color: "var(--text)", caretColor: "var(--accent)" }}
               spellCheck={false} autoComplete="off" />

@@ -244,7 +244,7 @@ function SearchHero({
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               onKeyDown={(e) => e.key === "Enter" && onSearch()}
-              placeholder="Paste a wallet address  e.g. 0x0879A87D…"
+              placeholder="Paste a wallet address"
               className="w-full bg-transparent outline-none mono text-sm py-4 pl-11 pr-28"
               style={{ color: "var(--text)", caretColor: "var(--accent)" }}
               spellCheck={false}
