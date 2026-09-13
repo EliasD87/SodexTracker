@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PortfolioProvider } from "@/components/PortfolioProvider";
+import { SiteFooter } from "@/components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next";
 
 const plexSans = IBM_Plex_Sans({
@@ -41,7 +42,12 @@ export default function RootLayout({
             __html: `(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark')})()`,
           }}
         />
-        <ThemeProvider><PortfolioProvider>{children}</PortfolioProvider></ThemeProvider>
+        <ThemeProvider>
+          <PortfolioProvider>
+            {children}
+            <SiteFooter />
+          </PortfolioProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
