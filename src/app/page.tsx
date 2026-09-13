@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { StatsTicker } from "@/components/StatsTicker";
 import { LandingDataProvider } from "@/components/LandingDataProvider";
+import { SiteFooter } from "@/components/SiteFooter";
 
 const VolumeChart = dynamic(() => import("@/components/VolumeChart").then((m) => m.VolumeChart), { ssr: false });
 const TopPairs = dynamic(() => import("@/components/TopPairs").then((m) => m.TopPairs), { ssr: false });
@@ -27,6 +28,7 @@ export default function Home() {
         <TopPairs />
         <TopTraders />
       </LandingDataProvider>
+      <SiteFooter />
     </main>
   );
 }
