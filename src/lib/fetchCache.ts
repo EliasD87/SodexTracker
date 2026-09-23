@@ -75,29 +75,38 @@ export async function cachedApiFetch<T>(
   }
 
   const promise = (async () => {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const res = await fetch(url);
-        if (res.status === 429) {
+    try {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const res = await fetch(url);
+          if (res.status === 429) {
+            if (attempt < retries) {
+              await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+              continue;
+            }
+          }
+          const json = await res.json();
+          if (json.code !== 0) throw new Error(json.message || "API error");
+          const data = json.data as T;
+          cache.set(key, { data, expiresAt: Date.now() + ttl });
+          return data;
+        } catch (err) {
           if (attempt < retries) {
-            await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+            await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
             continue;
           }
+          throw err;
         }
-        const json = await res.json();
-        if (json.code !== 0) throw new Error(json.message || "API error");
-        const data = json.data as T;
-        cache.set(key, { data, expiresAt: Date.now() + ttl });
-        return data;
-      } catch (err) {
-        if (attempt < retries) {
-          await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
-          continue;
-        }
-        throw err;
       }
+      throw new Error("API error: max retries exceeded");
+    } finally {
+      // Without this the settled promise stays in `pending` for the lifetime of
+      // the page, and every later call short-circuits to it before reaching the
+      // network — so a polling caller would replay its first response forever,
+      // and one that failed once would keep rejecting. cachedFetchJson above
+      // has always dropped the key; this one was missing it.
+      pending.delete(key);
     }
-    throw new Error("API error: max retries exceeded");
   })();
 
   pending.set(key, promise);

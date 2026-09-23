@@ -6,11 +6,14 @@ import { cachedApiFetch } from "@/lib/fetchCache";
 import type { ValueMintOverview, MintCollection } from "@/app/api/valuemint/collections/route";
 
 /**
- * Open mints on ValueMint — the NFT marketplace running on ValueChain, the
- * same L1 SoDEX settles on, priced in the same SOSO this app already tracks.
+ * ValueMint collections — the NFT marketplace running on ValueChain, the same
+ * L1 SoDEX settles on, priced in the same SOSO this app already tracks.
  *
- * Supply and price come live off-chain-state, so the counters are real. Renders
- * nothing if the read fails; a dead band is worse than no band.
+ * Floor, listings and volume come off ValueMint's live order index and the
+ * mint counters off-chain-state, so every figure here is real. Two of the four
+ * collections are traded rather than minted, so the card leads with market
+ * state and shows the mint only where one exists. Renders nothing if the read
+ * fails; a dead band is worse than no band.
  */
 
 const REFRESH_MS = 60 * 1000;
@@ -57,17 +60,39 @@ function ValueMintBadge() {
 }
 
 const fmtSoso = (n: number) =>
-  n >= 1 ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : n.toPrecision(2).replace(/0+$/, "").replace(/\.$/, "");
+  n >= 1000
+    ? n.toLocaleString("en-US", { maximumFractionDigits: 0 })
+    : n >= 1
+      ? n.toLocaleString("en-US", { maximumFractionDigits: 2 })
+      : n.toPrecision(2).replace(/0+$/, "").replace(/\.$/, "");
 
 function fmtUsd(n: number): string {
-  if (n >= 1) return `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  if (n >= 1000) return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  // Keep the cents: a floor that reads "$3" beside "$59.72" looks unpriced.
+  if (n >= 1) return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (n >= 0.01) return `$${n.toFixed(2)}`;
   return `$${n.toPrecision(2)}`;
 }
 
-function MintCard({ c, sosoUsd }: { c: MintCollection; sosoUsd: number | null }) {
-  const pct = c.supply > 0 ? Math.min((c.minted / c.supply) * 100, 100) : 0;
-  const usd = sosoUsd != null ? c.priceSoso * sosoUsd : null;
+/** A labelled figure in the card's bottom row. */
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="tag leading-none" style={{ color: "var(--text-faint)" }}>
+        {label}
+      </span>
+      <span className="mono text-[11.5px] font-semibold tabular-nums truncate" style={{ color: "var(--text-muted)" }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function CollectionCard({ c, sosoUsd }: { c: MintCollection; sosoUsd: number | null }) {
+  const { mint } = c;
+  const minting = !!mint && !mint.soldOut;
+  const floorUsd = c.floorSoso != null && sosoUsd != null ? c.floorSoso * sosoUsd : null;
+  const pct = mint && mint.supply > 0 ? Math.min((mint.minted / mint.supply) * 100, 100) : 0;
 
   return (
     <a
@@ -75,11 +100,7 @@ function MintCard({ c, sosoUsd }: { c: MintCollection; sosoUsd: number | null })
       target="_blank"
       rel="noopener noreferrer"
       className="group relative flex flex-col overflow-hidden rounded-[14px] transition-all"
-      style={{
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border)",
-        opacity: c.soldOut ? 0.62 : 1,
-      }}
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-2px)";
         e.currentTarget.style.borderColor = "var(--accent-glow)";
@@ -98,9 +119,16 @@ function MintCard({ c, sosoUsd }: { c: MintCollection; sosoUsd: number | null })
           /* Not lazy: the band sits directly under the hero, so these four
              small WebPs are wanted on first paint, not on scroll. */
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          style={{ filter: c.soldOut ? "grayscale(1)" : undefined }}
         />
-        {c.soldOut && (
+        {minting && (
+          <span
+            className="tag absolute top-2 right-2 px-1.5 py-1 rounded-md leading-none"
+            style={{ background: "var(--accent)", color: "var(--bg)" }}
+          >
+            MINTING
+          </span>
+        )}
+        {mint?.soldOut && (
           <span
             className="tag absolute top-2 right-2 px-1.5 py-1 rounded-md leading-none"
             style={{ background: "var(--bg)", color: "var(--text-muted)" }}
@@ -110,45 +138,66 @@ function MintCard({ c, sosoUsd }: { c: MintCollection; sosoUsd: number | null })
         )}
       </div>
 
-      <div className="flex flex-col gap-2 p-3">
+      <div className="flex flex-col gap-2.5 p-3">
         <div className="flex items-baseline justify-between gap-2 min-w-0">
           <span className="text-[13px] font-semibold truncate" style={{ color: "var(--text)" }}>
             {c.name}
           </span>
-          <span className="tag shrink-0" style={{ color: "var(--text-faint)" }}>
+          {/* Hidden on the narrowest cards: with the chip there, "SoDEXTreasureBox"
+              and "ValueChain Genesis" both ellipsise, and without it both fit. */}
+          <span className="tag shrink-0 hidden sm:inline" style={{ color: "var(--text-faint)" }}>
             {c.symbol}
           </span>
         </div>
 
+        {/* Floor leads: it is the one figure every collection here has */}
         <div className="flex items-baseline gap-1.5">
-          <span className="mono text-[13px] font-bold tabular-nums" style={{ color: "var(--text)" }}>
-            {fmtSoso(c.priceSoso)}
+          <span className="mono text-[15px] font-bold tabular-nums" style={{ color: "var(--text)" }}>
+            {c.floorSoso != null ? fmtSoso(c.floorSoso) : "—"}
           </span>
-          <span className="tag" style={{ color: "var(--text-faint)" }}>SOSO</span>
-          {usd != null && (
+          <span className="tag" style={{ color: "var(--text-faint)" }}>
+            {/* listed === 0 means the index answered and nothing is for sale;
+                listed === null means it never answered, which is not the same
+                claim to make about the collection. */}
+            {c.floorSoso != null ? "SOSO FLOOR" : c.listed === 0 ? "NOT LISTED" : "FLOOR"}
+          </span>
+          {floorUsd != null && (
             <span className="mono text-[10px] ml-auto tabular-nums" style={{ color: "var(--text-faint)" }}>
-              ≈{fmtUsd(usd)}
+              ≈{fmtUsd(floorUsd)}
             </span>
           )}
         </div>
 
-        {/* Supply — the bit that actually moves */}
-        <div className="flex flex-col gap-1">
-          <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "var(--bg-elevated)" }}>
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${pct}%`, background: "var(--accent)", transition: "width 0.6s ease" }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="mono text-[10px] tabular-nums" style={{ color: "var(--text-faint)" }}>
-              {c.minted.toLocaleString("en-US")}/{c.supply.toLocaleString("en-US")}
-            </span>
-            <span className="mono text-[10px] tabular-nums" style={{ color: c.soldOut ? "var(--text-faint)" : "var(--text-muted)" }}>
-              {c.soldOut ? "—" : `${c.remaining.toLocaleString("en-US")} left`}
-            </span>
-          </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Stat label="LISTED" value={c.listed != null ? c.listed.toLocaleString("en-US") : "—"} />
+          <Stat
+            label="VOLUME"
+            value={c.volumeSoso != null ? `${fmtSoso(c.volumeSoso)} SOSO` : "—"}
+          />
         </div>
+
+        {/* Mint progress, only where a mint actually exists */}
+        {mint && (
+          <div className="flex flex-col gap-1 pt-0.5">
+            <div className="h-[3px] rounded-full overflow-hidden" style={{ background: "var(--bg-elevated)" }}>
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${pct}%`, background: "var(--accent)", transition: "width 0.6s ease" }}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="mono text-[10px] tabular-nums" style={{ color: "var(--text-faint)" }}>
+                {mint.minted.toLocaleString("en-US")}/{mint.supply.toLocaleString("en-US")} minted
+              </span>
+              <span
+                className="mono text-[10px] tabular-nums"
+                style={{ color: mint.soldOut ? "var(--text-faint)" : "var(--text-muted)" }}
+              >
+                {mint.soldOut ? "—" : `${fmtSoso(mint.priceSoso)} SOSO`}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </a>
   );
@@ -163,7 +212,11 @@ export function ValueMintStrip() {
     const load = () =>
       cachedApiFetch<ValueMintOverview>("/api/valuemint/collections", 1, REFRESH_MS)
         .then((d) => {
-          if (!cancelled) setData(d);
+          if (cancelled) return;
+          setData(d);
+          // One bad poll used to hide the band for the rest of the session,
+          // because nothing ever cleared this again.
+          setFailed(false);
         })
         .catch(() => {
           if (!cancelled) setFailed(true);
@@ -187,13 +240,13 @@ export function ValueMintStrip() {
               className="text-xl sm:text-[28px] font-bold tracking-tight leading-none"
               style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
             >
-              Minting on ValueChain
+              Collections on ValueChain
             </h2>
             <ValueMintBadge />
           </div>
           {/* The badge already goes to the site, so this points somewhere useful */}
           <a
-            href={`${data?.siteUrl ?? SITE}/mint`}
+            href={`${data?.siteUrl ?? SITE}/collections`}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 text-xs mono transition-colors shrink-0"
@@ -201,20 +254,22 @@ export function ValueMintStrip() {
             onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--accent)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--text-faint)")}
           >
-            ALL MINTS <ArrowUpRight size={13} />
+            ALL COLLECTIONS <ArrowUpRight size={13} />
           </a>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {!data
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-[14px] animate-pulse"
-                  style={{ background: "var(--bg-elevated)", aspectRatio: "1 / 1.5" }}
-                />
+            ? /* Mirrors the real card — a square cover over a fixed text block —
+                 so the band reserves the right height instead of jumping when
+                 the read lands. */
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-[14px] overflow-hidden animate-pulse">
+                  <div style={{ aspectRatio: "1 / 1", background: "var(--bg-elevated)" }} />
+                  <div className="h-[132px] sm:h-[154px]" style={{ background: "var(--bg-surface)" }} />
+                </div>
               ))
-            : data.collections.map((c) => <MintCard key={c.address} c={c} sosoUsd={data.sosoUsd} />)}
+            : data.collections.map((c) => <CollectionCard key={c.address} c={c} sosoUsd={data.sosoUsd} />)}
         </div>
       </div>
     </section>
