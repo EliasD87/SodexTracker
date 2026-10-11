@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/Navbar";
-import { LeaderboardPage } from "@/components/LeaderboardPage";
+import { LeaderboardView } from "@/components/leaderboard/LeaderboardView";
 
 export const metadata: Metadata = {
   title: "Leaderboard — SoDEX Tracker",
@@ -11,7 +11,7 @@ export default function Leaderboard() {
   return (
     <main>
       <Navbar />
-      <LeaderboardPage />
+      <LeaderboardView />
     </main>
   );
 }

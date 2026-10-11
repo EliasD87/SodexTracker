@@ -560,6 +560,18 @@ input { border-radius: var(--r-md) !important; }
 }
 .champ-glow { animation: champ-glow 3.6s ease-in-out infinite; }
 
+/* ── Leaderboard: the champion's frame, lit by a slow gold sweep ── */
+@property --lb-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes lb-spin { to { --lb-angle: 360deg; } }
+.lb-champ-ring {
+  background: conic-gradient(from var(--lb-angle), #E8B931, color-mix(in srgb, #E8B931 12%, var(--border)) 22%, color-mix(in srgb, #E8B931 12%, var(--border)) 62%, #F7DC7A 80%, #E8B931);
+  animation: lb-spin 7s linear infinite;
+  box-shadow: 0 24px 70px -30px color-mix(in srgb, #E8B931 55%, transparent);
+}
+.lb-rise { animation: podium-rise 0.6s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes lb-pop { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+.lb-dot { transform-box: fill-box; transform-origin: center; animation: lb-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+
 /* ── Volume chart: line draw-on + area fade ──
    Paths carry pathLength="1", so one dash always spans the whole line no
    matter how many days are plotted. A fixed dash length would repeat once the
@@ -699,7 +711,7 @@ input { border-radius: var(--r-md) !important; }
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .ticker-track, .live-dot, .fade-up, .scanline, .value-in,
-  .fold-down, .fold-up, .spark-bar, .lb-row, .lb-bar, .podium-card, .champ-glow,
+  .fold-down, .fold-up, .spark-bar, .lb-row, .lb-bar, .podium-card, .champ-glow, .lb-champ-ring, .lb-rise, .lb-dot,
   .chart-line, .chart-area, .chart-loading-bar, .chart-shimmer, .heat-cell {
     animation: none !important;
   }
