@@ -280,3 +280,62 @@ export function BiasTag({ bias }: { bias: number | null }) {
     </span>
   );
 }
+
+/**
+ * What puts an account in each trader group, as the collector decides it
+ * (collector/src/cohorts.mjs and config.mjs). Recomputed every 15 minutes
+ * from the last two UTC days of trading; the first rule that fits wins.
+ */
+export const TRADER_GROUP_RULES: { key: string; label: string; rule: string }[] = [
+  { key: "mm", label: "Market makers", rule: "500+ fills in 2 days, 60%+ as maker, across 3+ markets, with buys and sells nearly cancelling out" },
+  { key: "smart", label: "Smart money", rule: "Top 100 by 30-day PnL on the SoDEX leaderboard" },
+  { key: "whale", label: "Big traders", rule: "Average fill of $10K or more, over 3+ fills" },
+  { key: "retail", label: "Retail", rule: "Every other account" },
+  { key: "unattributed", label: "Unattributed", rule: "Volume recovered after a reconnect, which arrives without accounts" },
+];
+
+/** Size groups by account equity (mirrors SIZE_GROUPS in lib/positionStore). */
+export const SIZE_GROUP_RULES: { key: string; label: string; rule: string }[] = [
+  { key: "leviathan", label: "Leviathan", rule: "$1M+ equity" },
+  { key: "whale", label: "Whale", rule: "$250K–1M" },
+  { key: "shark", label: "Shark", rule: "$50K–250K" },
+  { key: "dolphin", label: "Dolphin", rule: "$10K–50K" },
+  { key: "fish", label: "Fish", rule: "$1K–10K" },
+  { key: "shrimp", label: "Shrimp", rule: "Under $1K" },
+];
+
+/**
+ * A table's key: each group as a plain black-and-white tag, with the rule
+ * that puts an account in it. Wide cards lay the groups out as one row of
+ * equal columns; narrow ones (and phones) as an aligned list. `keys` limits
+ * it to the groups the table shows.
+ */
+export function GroupKey({ rules, keys, title = "How groups are set" }: { rules: { key: string; label: string; rule: string }[]; keys?: string[]; title?: string }) {
+  // In the table's own order, so the key reads alongside it.
+  const shown = keys ? keys.flatMap((k) => rules.filter((r) => r.key === k)) : rules;
+  if (!shown.length) return null;
+  return (
+    <div className="@container mt-4 pt-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-faint)" }}>
+        {title}
+      </div>
+      <dl className="mt-2.5 grid grid-cols-1 gap-y-2 @3xl:gap-x-5 @3xl:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]" style={{ ["--n" as string]: shown.length }}>
+        {shown.map((r) => (
+          <div key={r.key} className="grid content-start grid-cols-[104px_1fr] items-baseline gap-x-3 @3xl:grid-cols-1 @3xl:gap-y-1.5">
+            <dt className="justify-self-start">
+              <span
+                className="inline-block px-[6px] py-[3px] text-[10.5px] font-semibold leading-none whitespace-nowrap"
+                style={{ background: "var(--text)", color: "var(--bg)", borderRadius: 4 }}
+              >
+                {r.label}
+              </span>
+            </dt>
+            <dd className="text-[11.5px] leading-snug" style={{ color: "var(--text-muted)" }}>
+              {r.rule}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}

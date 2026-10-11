@@ -322,7 +322,7 @@ export function MarketView({ slug }: { slug: string }) {
 
       {flow.data?.available && flow.data.totalVolume > 0 && (
         <>
-          <Section title={`Who is trading ${r.symbol}`} kicker="Last 24 hours from the live collector, or since it started. Groups only, never addresses.">
+          <Section title={`Who is trading ${r.symbol}`} kicker="Last 24 hours from the live collector, or since it started.">
             <GroupTable data={flow.data} />
           </Section>
           <Section title="Large trades" kicker={`Every ${r.symbol} trade of $50,000 or more.`}>
@@ -331,7 +331,7 @@ export function MarketView({ slug }: { slug: string }) {
         </>
       )}
 
-      <Section title="Positions and concentration" kicker="From our own collector: everyone holding this market, and how much of its trading comes from its busiest accounts. Nicknames only.">
+      <Section title="Positions and concentration" kicker="From our own collector: everyone holding this market, and how much of its trading comes from its busiest accounts.">
         <MarketPositioning symbol={r.symbol} />
       </Section>
     </div>

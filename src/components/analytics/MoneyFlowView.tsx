@@ -7,7 +7,7 @@ import { count, growth, usd } from "@/lib/analyticsFormat";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
 import { Card, ChartCard, NoData, Section, Tile, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
-import { PillTabs } from "@/components/analytics/kit";
+import { GroupKey, PillTabs, TRADER_GROUP_RULES } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
 /**
@@ -157,6 +157,9 @@ function GroupTable({ rows }: { rows: MoneyFlow["byGroup"] }) {
           ))}
         </tbody>
       </table>
+      <div className="px-3 sm:px-4 pb-4">
+        <GroupKey rules={TRADER_GROUP_RULES} keys={rows.map((r) => r.key)} />
+      </div>
     </Card>
   );
 }
@@ -214,7 +217,7 @@ export function MoneyFlowView() {
 
   if (!data.available) {
     return (
-      <Section title="Money in and out" kicker="Every deposit and withdrawal on SoDEX, by day, chain, asset, size and trader group. Addresses are never shown.">
+      <Section title="Money in and out" kicker="Every deposit and withdrawal on SoDEX, by day, chain, asset, size and trader group.">
         <NoData title="Deposits and withdrawals" reason={data.reason} />
       </Section>
     );
@@ -354,19 +357,10 @@ export function MoneyFlowView() {
         </div>
       </Section>
 
-      <Section title="Largest movements" kicker="The twenty biggest in the window, rounded to the hour and to two figures so none can be traced to an address.">
+      <Section title="Largest movements" kicker="The twenty biggest in the window, rounded to the hour and to two figures.">
         <Largest rows={data.largest} />
       </Section>
 
-      <details className="mt-10 sm:mt-12 text-[12.5px] leading-relaxed max-w-3xl" style={{ color: "var(--text-muted)" }}>
-        <summary className="cursor-pointer font-semibold" style={{ color: "var(--text)" }}>How this is measured</summary>
-        <ul className="mt-3 flex flex-col gap-2 pl-4" style={{ listStyle: "disc" }}>
-          <li>Every account&apos;s deposit and withdrawal history is read from SoDEX, the same record behind its transfer history page. Each movement is counted once.</li>
-          <li>Accounts that traded today are re-read every two hours, accounts still holding money daily, everyone else weekly.</li>
-          <li>Stablecoins count at $1. Other assets are valued at SoDEX&apos;s own daily close for that asset on the day they moved.</li>
-          <li>Days are UTC. Only completed movements count; pending and failed ones don&apos;t.</li>
-        </ul>
-      </details>
     </div>
   );
 }

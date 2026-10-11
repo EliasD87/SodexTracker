@@ -165,7 +165,7 @@ export function TradersView() {
         </Section>
       )}
 
-      <Section title="Who trades, and who stays" kicker="From our own collector: every trade with its accounts, grouped by behaviour. Traders appear under nicknames, never addresses.">
+      <Section title="Who trades, and who stays" kicker="From our own collector: every trade with its accounts, grouped by behaviour.">
         <TraderInsights />
       </Section>
     </div>

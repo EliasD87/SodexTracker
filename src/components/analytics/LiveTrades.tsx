@@ -3,11 +3,12 @@
 import type { Cohort, LiveFlow } from "@/lib/liveStore";
 import { pct, usd } from "@/lib/analyticsFormat";
 import { Card, useRowLimit } from "@/components/analytics/ui";
+import { GroupKey, TRADER_GROUP_RULES } from "@/components/analytics/kit";
 
 /**
  * Trade-level tables from the live collector, used on each market's page:
- * who is trading it, by group, and its largest trades. Groups only; the API
- * never sends account IDs.
+ * who is trading it, by group, and its largest trades. The API sends groups,
+ * never account IDs.
  */
 
 const LABEL: Record<Cohort, string> = {
@@ -46,8 +47,9 @@ export function GroupTable({ data }: { data: LiveFlow }) {
       </table>
       <p className="text-[11px] mt-3" style={{ color: "var(--text-faint)" }}>
         Net bought adds up to zero across groups: every buyer has a seller. Aggressive net counts only the side that crossed the
-        spread, which is where conviction shows. Unattributed is volume recovered after a reconnect, which arrives without accounts.
+        spread, which is where conviction shows.
       </p>
+      <GroupKey rules={TRADER_GROUP_RULES} keys={data.cohorts.map((c) => c.cohort)} />
     </Card>
   );
 }

@@ -218,7 +218,7 @@ export function TraderView({ name }: { name: string }) {
         <AlertButton name={t.name} />
       </div>
       <p className="mt-2 text-[12px]" style={{ color: "var(--text-faint)" }}>
-        A nickname, not an address. {t.positionsAt ? `Positions read ${when(t.positionsAt)} UTC, valued at live prices.` : "Positions not read yet."}
+        {t.positionsAt ? `Positions read ${when(t.positionsAt)} UTC, valued at live prices.` : "Positions not read yet."}
       </p>
 
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -252,7 +252,7 @@ export function TraderView({ name }: { name: string }) {
         </Panel>
       </div>
       <p className="mt-4 text-[11px] max-w-3xl" style={{ color: "var(--text-faint)" }}>
-        Deposit and withdrawal amounts are rounded to two figures and times to the hour, so none can be traced to an address.
+        Deposit and withdrawal amounts are rounded to two figures and times to the hour.
       </p>
     </div>
   );

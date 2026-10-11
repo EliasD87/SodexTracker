@@ -38,8 +38,8 @@ function Coverage({ d }: { d: PositionsOverview }) {
       </p>
       {!complete && (
         <p className="text-[12.5px] px-3 py-2 rounded-lg" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>
-          Partial: {count(c.swept)} of {count(c.traders)} traders checked for open positions so far, busiest first. The first full
-          check takes about half a day once the collector runs on the server.
+          Partial: {count(c.swept)} of {count(c.traders)} traders checked for open positions so far, busiest first. The first full check takes about half a day
+          once the collector runs on the server.
         </p>
       )}
     </div>
@@ -52,8 +52,12 @@ function GroupCard({ g, className = "" }: { g: GroupStat; className?: string }) 
     <div className={`flex flex-col rounded-[14px] p-4 ${className}`} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-[14px] font-semibold" style={{ color: "var(--text)" }}>{g.label}</div>
-          <div className="text-[11.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>{g.rule}</div>
+          <div className="text-[14px] font-semibold" style={{ color: "var(--text)" }}>
+            {g.label}
+          </div>
+          <div className="text-[11.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>
+            {g.rule}
+          </div>
         </div>
         <BiasTag bias={g.bias} />
       </div>
@@ -80,11 +84,15 @@ function GroupCard({ g, className = "" }: { g: GroupStat; className?: string }) 
         </div>
         <div>
           <dt>Leverage</dt>
-          <dd className="mono text-[13px] mt-0.5" style={{ color: "var(--text)" }}>{g.leverage == null ? "—" : `${g.leverage.toFixed(1)}×`}</dd>
+          <dd className="mono text-[13px] mt-0.5" style={{ color: "var(--text)" }}>
+            {g.leverage == null ? "—" : `${g.leverage.toFixed(1)}×`}
+          </dd>
         </div>
         <div>
           <dt>In profit</dt>
-          <dd className="mono text-[13px] mt-0.5" style={{ color: "var(--text)" }}>{g.inProfit == null ? "—" : pct(g.inProfit, 0)}</dd>
+          <dd className="mono text-[13px] mt-0.5" style={{ color: "var(--text)" }}>
+            {g.inProfit == null ? "—" : pct(g.inProfit, 0)}
+          </dd>
         </div>
       </dl>
     </div>
@@ -103,7 +111,9 @@ function Heatmap({ d }: { d: PositionsOverview }) {
           <tr style={{ color: "var(--text-faint)" }}>
             <th className="text-left font-normal px-1 pb-1 w-[72px] sm:w-[110px]">Market</th>
             {groups.map((g) => (
-              <th key={g.key} className="font-normal pb-1 text-center text-[10.5px] sm:text-[12px] truncate">{g.label}</th>
+              <th key={g.key} className="font-normal pb-1 text-center text-[10.5px] sm:text-[12px] truncate">
+                {g.label}
+              </th>
             ))}
           </tr>
         </thead>
@@ -149,17 +159,19 @@ function Heatmap({ d }: { d: PositionsOverview }) {
 function LiquidationMap({ d }: { d: PositionsOverview }) {
   const [market, setMarket] = useState(d.liquidation.markets[0] ?? "");
   const m = d.liquidation.byMarket[market];
-  if (!m) return <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>No liquidation levels within range yet.</p>;
+  if (!m)
+    return (
+      <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+        No liquidation levels within range yet.
+      </p>
+    );
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <PillTabs
-          label="Market"
-          value={market}
-          onChange={setMarket}
-          options={d.liquidation.markets.map((x) => ({ value: x, label: x.replace("-USD", "") }))}
-        />
-        <span className="text-[11.5px]" style={{ color: "var(--text-faint)" }}>Within ±12.5% of price, in 0.5% steps</span>
+        <PillTabs label="Market" value={market} onChange={setMarket} options={d.liquidation.markets.map((x) => ({ value: x, label: x.replace("-USD", "") }))} />
+        <span className="text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+          Within ±12.5% of price, in 0.5% steps
+        </span>
       </div>
       <LiqLadder mark={m.mark} buckets={m.buckets} />
     </div>
@@ -168,7 +180,12 @@ function LiquidationMap({ d }: { d: PositionsOverview }) {
 
 function AtRisk({ d }: { d: PositionsOverview }) {
   const { shown, toggle } = useRowLimit(d.atRisk, 10, 5);
-  if (!d.atRisk.length) return <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>No position of $10K or more is within 10% of liquidation right now.</p>;
+  if (!d.atRisk.length)
+    return (
+      <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+        No position of $10K or more is within 10% of liquidation right now.
+      </p>
+    );
   const label = new Map(d.bySize.map((g) => [g.key, g.label]));
   return (
     <div className="overflow-hidden">
@@ -189,10 +206,16 @@ function AtRisk({ d }: { d: PositionsOverview }) {
           {shown.map((r, i) => (
             <tr key={`${r.name}-${r.market}-${i}`} style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <td className="py-2">
-                <Link href={`/analytics/trader/${r.name}`} className="font-sans text-[12.5px] break-all sm:break-normal hover:underline underline-offset-2" style={{ color: "var(--text)" }}>
+                <Link
+                  href={`/analytics/trader/${r.name}`}
+                  className="font-sans text-[12.5px] break-all sm:break-normal hover:underline underline-offset-2"
+                  style={{ color: "var(--text)" }}
+                >
                   {r.name}
                 </Link>
-                <div className="font-sans text-[11px]" style={{ color: "var(--text-faint)" }}>{label.get(r.group)}</div>
+                <div className="font-sans text-[11px]" style={{ color: "var(--text-faint)" }}>
+                  {label.get(r.group)}
+                </div>
               </td>
               <td className="py-2 px-2 font-sans">
                 {/* On a phone the side goes under the market, so the row stays narrow. */}
@@ -201,31 +224,44 @@ function AtRisk({ d }: { d: PositionsOverview }) {
                     <TokenIcon symbol={r.market} size={16} />
                     {r.market.replace("-USD", "")}
                   </span>
-                  <span className="text-[10.5px] font-semibold" style={{ color: r.side === "LONG" ? LONG : SHORT }}>{r.side}</span>
+                  <span className="text-[10.5px] font-semibold" style={{ color: r.side === "LONG" ? LONG : SHORT }}>
+                    {r.side}
+                  </span>
                 </span>
               </td>
-              <td className="py-2 px-2 text-right" style={{ color: "var(--text)" }}>{usd(r.notional)}</td>
-              <td className="py-2 px-2 text-right hidden md:table-cell" style={{ color: "var(--text-muted)" }}>{r.leverage ? `${r.leverage}×` : "—"}</td>
-              <td className="py-2 px-2 text-right hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>{price(r.entry)}</td>
-              <td className="py-2 px-2 text-right hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>{price(r.liq)}</td>
+              <td className="py-2 px-2 text-right" style={{ color: "var(--text)" }}>
+                {usd(r.notional)}
+              </td>
+              <td className="py-2 px-2 text-right hidden md:table-cell" style={{ color: "var(--text-muted)" }}>
+                {r.leverage ? `${r.leverage}×` : "—"}
+              </td>
+              <td className="py-2 px-2 text-right hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>
+                {price(r.entry)}
+              </td>
+              <td className="py-2 px-2 text-right hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
+                {price(r.liq)}
+              </td>
               <td className="py-2 pl-2 sm:px-2">
                 <div className="flex items-center justify-end sm:justify-start gap-2">
                   {/* The meter is for scanning a long table; a phone keeps the figure. */}
                   <span className="flex-1 hidden sm:block">
                     <SegmentMeter share={1 - r.distance / 0.1} segments={12} color={r.distance < 0.02 ? SHORT : "var(--tier-niche)"} />
                   </span>
-                  <span className="text-[11.5px] w-11 text-right" style={{ color: "var(--text)" }}>{pct(r.distance, 1)}</span>
+                  <span className="text-[11.5px] w-11 text-right" style={{ color: "var(--text)" }}>
+                    {pct(r.distance, 1)}
+                  </span>
                 </div>
               </td>
-              <td className="py-2 text-right hidden md:table-cell" style={{ color: r.upnl >= 0 ? "var(--green)" : "var(--red)" }}>{signedUsd(r.upnl)}</td>
+              <td className="py-2 text-right hidden md:table-cell" style={{ color: r.upnl >= 0 ? "var(--green)" : "var(--red)" }}>
+                {signedUsd(r.upnl)}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
       <div className="-mx-4 sm:-mx-5">{toggle}</div>
       <p className="text-[11px] mt-3" style={{ color: "var(--text-faint)" }}>
-        Positions of $10K or more within 10% of their liquidation price, closest first. The fuller the bar, the closer to liquidation. Traders appear under a
-        nickname; addresses are never shown.
+        Positions of $10K or more within 10% of their liquidation price, closest first. The fuller the bar, the closer to liquidation.
       </p>
     </div>
   );
@@ -236,12 +272,17 @@ export function PositionsView() {
   const [by, setBy] = useState<"size" | "record">("size");
   const compact = useCompact();
 
-  if (error && !data) return <p className="mt-10 text-[13px]" style={{ color: "var(--red)" }}>{error}</p>;
+  if (error && !data)
+    return (
+      <p className="mt-10 text-[13px]" style={{ color: "var(--red)" }}>
+        {error}
+      </p>
+    );
   if (!data) return <TileSkeleton count={4} />;
 
   if (!data.available) {
     return (
-      <Section title="Positions" kicker="Every open position on SoDEX, grouped by trader size and track record. Addresses are never shown.">
+      <Section title="Positions" kicker="Every open position on SoDEX, grouped by trader size and track record.">
         <NoData title="Open positions" reason={data.reason} />
       </Section>
     );
@@ -323,15 +364,6 @@ export function PositionsView() {
         </Panel>
       </div>
 
-      <details className="mt-10 sm:mt-12 text-[12.5px] leading-relaxed max-w-3xl" style={{ color: "var(--text-muted)" }}>
-        <summary className="cursor-pointer font-semibold" style={{ color: "var(--text)" }}>How this is measured</summary>
-        <ul className="mt-3 flex flex-col gap-2 pl-4" style={{ listStyle: "disc" }}>
-          <li>Positions come from each account&apos;s own state on SoDEX, re-read whenever the account trades, and on a schedule by size: the biggest every 10 minutes, the smallest every 6 hours.</li>
-          <li>Unrealised PnL, bias and distance to liquidation are recalculated at live mark prices on every load.</li>
-          <li>Size groups use account equity; track-record groups use all-time PnL from SoDEX&apos;s leaderboard.</li>
-          <li>Bias is long minus short over long plus short: +1 is all long, −1 all short.</li>
-        </ul>
-      </details>
     </div>
   );
 }

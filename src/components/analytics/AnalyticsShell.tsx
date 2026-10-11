@@ -6,15 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Search } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useAnalyticsWindow, useApi, useExchangeAnalytics, WINDOW_KEYS } from "@/components/analytics/hooks";
-import { LiveDot } from "@/components/analytics/kit";
 import type { HealthStatus } from "@/lib/liveStore";
 
 const TABS = [
   { href: "/", label: "Overview", exact: true },
   { href: "/analytics/markets", label: "Markets" },
   { href: "/analytics/flow", label: "Money flow" },
-  { href: "/analytics/positions", label: "Positions", live: true },
-  { href: "/analytics/rankings", label: "Rankings", live: true },
+  { href: "/analytics/positions", label: "Positions" },
+  { href: "/analytics/rankings", label: "Rankings" },
   { href: "/analytics/traders", label: "Traders" },
   { href: "/analytics/funding", label: "Funding & risk" },
 ];
@@ -62,7 +61,6 @@ export function AnalyticsShell({ children }: { children: React.ReactNode }) {
   const { data } = useExchangeAnalytics(win);
   // Whether the live figures are current (SoDEX maintenance, collector down).
   const health = useApi<{ status: HealthStatus }>("/api/analytics/health", 30_000, 60_000).data?.status;
-  const liveOn = !(health && (health.state === "paused" || health.state === "offline"));
 
   const tab = TABS.find((t) => (t.exact ? pathname === t.href : pathname.startsWith(t.href)));
   const detail = pathname.startsWith("/analytics/markets/") ? "Market" : pathname.startsWith("/analytics/trader/") ? "Trader" : null;
@@ -173,7 +171,6 @@ export function AnalyticsShell({ children }: { children: React.ReactNode }) {
                   }}
                 >
                   {t.label}
-                  {t.live && <LiveDot on={liveOn} />}
                 </Link>
               );
             })}

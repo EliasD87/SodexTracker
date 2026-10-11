@@ -722,19 +722,6 @@ export function OverviewView() {
         </Panel>
       </div>
 
-      <details className="mt-8 sm:mt-10 text-[12.5px] leading-relaxed max-w-3xl" style={{ color: "var(--text-muted)" }}>
-        <summary className="cursor-pointer font-semibold" style={{ color: "var(--text)" }}>
-          How these figures are worked out
-        </summary>
-        <ul className="mt-3 flex flex-col gap-2 pl-4" style={{ listStyle: "disc" }}>
-          <li>Volume, trades, fees, users, open interest, TVL and funding: SoDEX&apos;s own daily statistics. Days are UTC; today is left out until it is complete.</li>
-          <li>Traders, positioning and money flow (marked with a green dot): our own collector, from every trade, every account&apos;s positions and deposit history.</li>
-          <li>Tiers use average distinct traders per day: Active 50 or more, Niche 7 to 49, Thin 6 or fewer.</li>
-          <li>Estimated fees are volume times each market&apos;s standard maker plus taker rate. VIP discounts and rebates bring the actual figure lower.</li>
-          <li>Funding is annualised from the average rate, weighted by open interest. Positive means longs pay shorts.</li>
-          <li>Comparisons are against the preceding window of the same length, shown only when that whole window is covered.</li>
-        </ul>
-      </details>
     </div>
   );
 }

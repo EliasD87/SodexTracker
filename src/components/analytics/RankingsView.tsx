@@ -6,7 +6,7 @@ import type { RankEntry, RankingsResult } from "@/lib/rankingStore";
 import { count, usd } from "@/lib/analyticsFormat";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton } from "@/components/analytics/ui";
-import { Panel, PillTabs } from "@/components/analytics/kit";
+import { GroupKey, Panel, PillTabs, SIZE_GROUP_RULES } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
 /**
@@ -173,8 +173,7 @@ export function RankingsView() {
     <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.2s" }} aria-busy={loading}>
       <p className="mt-4 sm:mt-6 text-[12px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
         <span className="inline-block w-1.5 h-1.5 mr-2 mb-[1px] rounded-full" style={{ background: "var(--green)" }} aria-hidden />
-        From {count(data.coverage.traders)} traders tracked, {count(data.coverage.holders)} with open positions · positions valued at live prices · names
-        are nicknames, never addresses
+        From {count(data.coverage.traders)} traders tracked, {count(data.coverage.holders)} with open positions · positions valued at live prices
       </p>
 
       {compact ? (
@@ -188,6 +187,7 @@ export function RankingsView() {
       ) : (
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{boards.map((b) => b.node)}</div>
       )}
+      <GroupKey rules={SIZE_GROUP_RULES} title="Size groups, by account equity" />
       <p className="mt-4 text-[11px] max-w-3xl" style={{ color: "var(--text-faint)" }}>
         Highest exposure is open positions over equity, for accounts with $10K or more. Deposit and withdrawal totals are rounded to two figures.
       </p>

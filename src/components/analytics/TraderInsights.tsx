@@ -7,7 +7,7 @@ import { Search } from "lucide-react";
 import type { TraderInsights as Insights } from "@/lib/liveStore";
 import { count, pct, usd } from "@/lib/analyticsFormat";
 import { useApi } from "@/components/analytics/hooks";
-import { Panel, SegmentMeter, SplitBar } from "@/components/analytics/kit";
+import { GroupKey, Panel, SegmentMeter, SplitBar, TRADER_GROUP_RULES } from "@/components/analytics/kit";
 import { useRowLimit } from "@/components/analytics/ui";
 
 /** Who trades on SoDEX, whether they come back, and a way into any trader's page. */
@@ -41,9 +41,9 @@ function Groups({ d }: { d: Insights }) {
         ))}
       </ul>
       <p className="mt-2 text-[11px]" style={{ color: "var(--text-faint)" }}>
-        Share of volume, each side of a trade counted for its own account. Market makers: constant, mostly passive, two-sided, near flat. Smart money: top 100
-        by 30-day PnL. Big traders: average trade $10K or more.
+        Share of volume, each side of a trade counted for its own account.
       </p>
+      <GroupKey rules={TRADER_GROUP_RULES} keys={d.groups.map((g) => g.cohort)} />
     </Panel>
   );
 }
@@ -91,7 +91,7 @@ function FindTrader({ d }: { d: Insights }) {
       </ol>
       <div className="-mx-4 sm:-mx-5">{toggle}</div>
       <p className="mt-3 text-[11px]" style={{ color: "var(--text-faint)" }}>
-        Every trader on the site has a nickname instead of an address. More on the{" "}
+        More on the{" "}
         <Link href="/analytics/rankings" className="underline underline-offset-2">Rankings</Link> tab.
       </p>
     </Panel>
