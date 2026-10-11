@@ -294,16 +294,6 @@ export const TRADER_GROUP_RULES: { key: string; label: string; rule: string }[] 
   { key: "unattributed", label: "Unattributed", rule: "Volume recovered after a reconnect, which arrives without accounts" },
 ];
 
-/** Size groups by account equity (mirrors SIZE_GROUPS in lib/positionStore). */
-export const SIZE_GROUP_RULES: { key: string; label: string; rule: string }[] = [
-  { key: "leviathan", label: "Leviathan", rule: "$1M+ equity" },
-  { key: "whale", label: "Whale", rule: "$250K–1M" },
-  { key: "shark", label: "Shark", rule: "$50K–250K" },
-  { key: "dolphin", label: "Dolphin", rule: "$10K–50K" },
-  { key: "fish", label: "Fish", rule: "$1K–10K" },
-  { key: "shrimp", label: "Shrimp", rule: "Under $1K" },
-];
-
 /**
  * A table's key: each group as a plain black-and-white tag, with the rule
  * that puts an account in it. Wide cards lay the groups out as one row of
@@ -336,6 +326,58 @@ export function GroupKey({ rules, keys, title = "How groups are set" }: { rules:
           </div>
         ))}
       </dl>
+    </div>
+  );
+}
+
+/** Size groups smallest first (mirrors SIZE_GROUPS in lib/positionStore), each with the equity where the next one starts. */
+const SIZE_SCALE: { label: string; upTo: string | null }[] = [
+  { label: "Shrimp", upTo: "$1K" },
+  { label: "Fish", upTo: "$10K" },
+  { label: "Dolphin", upTo: "$50K" },
+  { label: "Shark", upTo: "$250K" },
+  { label: "Whale", upTo: "$1M" },
+  { label: "Leviathan", upTo: null },
+];
+
+/**
+ * The size groups as one scale: a bar stepping from the smallest to the
+ * biggest, deepening as it goes, with each threshold marked once, where one
+ * group ends and the next begins.
+ */
+export function SizeScale({ title = "Size groups, by account equity" }: { title?: string }) {
+  const n = SIZE_SCALE.length;
+  return (
+    <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-faint)" }}>
+        {title}
+      </div>
+      <div className="mt-3 relative" role="img" aria-label={SIZE_SCALE.map((g, i) => `${g.label}: ${i ? `from ${SIZE_SCALE[i - 1].upTo}` : "under $1K"}`).join(", ")}>
+        {/* Thresholds, each sitting on the line between two groups. */}
+        <div className="relative h-4 text-[10px] mono" style={{ color: "var(--text-muted)" }} aria-hidden>
+          {SIZE_SCALE.slice(0, -1).map((g, i) => (
+            <span key={g.label} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${((i + 1) / n) * 100}%` }}>
+              {g.upTo}
+            </span>
+          ))}
+        </div>
+        <div className="mt-1 flex gap-[2px]" aria-hidden>
+          {SIZE_SCALE.map((g, i) => (
+            <span
+              key={g.label}
+              className="flex-1 h-2 first:rounded-l-full last:rounded-r-full"
+              style={{ background: `color-mix(in srgb, var(--text) ${Math.round(14 + (86 * i) / (n - 1))}%, var(--bg-elevated))` }}
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex" aria-hidden>
+          {SIZE_SCALE.map((g) => (
+            <span key={g.label} className="flex-1 min-w-0 text-center text-[10.5px] sm:text-[11px] font-medium truncate" style={{ color: "var(--text)" }}>
+              {g.label}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

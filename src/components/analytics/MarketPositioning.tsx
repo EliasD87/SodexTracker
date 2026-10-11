@@ -6,7 +6,7 @@ import type { MarketPositions } from "@/lib/positionStore";
 import type { Concentration } from "@/lib/liveStore";
 import { count, marketSlug, pct, usd } from "@/lib/analyticsFormat";
 import { useApi, useCompact } from "@/components/analytics/hooks";
-import { BiasTag, GroupKey, Panel, PillTabs, SegmentMeter, SIZE_GROUP_RULES, SplitBar } from "@/components/analytics/kit";
+import { BiasTag, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar } from "@/components/analytics/kit";
 import { useRowLimit } from "@/components/analytics/ui";
 import { LiqLadder } from "@/components/analytics/LiqLadder";
 
@@ -86,7 +86,7 @@ function Positioned({ p }: { p: MarketPositions }) {
             ))}
           </ul>
         )}
-        {by !== "liq" && <GroupKey rules={SIZE_GROUP_RULES} keys={groups.map((g) => g.key)} title="Size groups, by account equity" />}
+        {by !== "liq" && <SizeScale />}
       </div>
 
       {p.largest.length > 0 && (

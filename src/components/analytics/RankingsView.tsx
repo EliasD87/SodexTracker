@@ -6,7 +6,7 @@ import type { RankEntry, RankingsResult } from "@/lib/rankingStore";
 import { count, usd } from "@/lib/analyticsFormat";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton } from "@/components/analytics/ui";
-import { GroupKey, Panel, PillTabs, SIZE_GROUP_RULES } from "@/components/analytics/kit";
+import { Panel, PillTabs, SizeScale } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
 /**
@@ -187,7 +187,7 @@ export function RankingsView() {
       ) : (
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{boards.map((b) => b.node)}</div>
       )}
-      <GroupKey rules={SIZE_GROUP_RULES} title="Size groups, by account equity" />
+      <SizeScale />
       <p className="mt-4 text-[11px] max-w-3xl" style={{ color: "var(--text-faint)" }}>
         Highest exposure is open positions over equity, for accounts with $10K or more. Deposit and withdrawal totals are rounded to two figures.
       </p>
