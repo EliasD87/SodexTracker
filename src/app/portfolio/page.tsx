@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/Navbar";
-import { PortfolioPage } from "@/components/PortfolioPage";
+import { PortfolioView } from "@/components/wallet/PortfolioView";
 
 export const metadata: Metadata = {
   title: "Portfolio — SoDEX Tracker",
-  description: "Your saved trading portfolio on SoDEX — PnL, volume, rank, holdings, and trade history. Address saved for quick access.",
+  description: "Your SoDEX wallets in one place: what they're worth together across trading, Wealth and staking, and each one in full.",
 };
 
 export default function Portfolio() {
   return (
-    <main>
+    <>
       <Navbar />
-      <PortfolioPage />
-    </main>
+      <PortfolioView />
+    </>
   );
 }

@@ -65,7 +65,8 @@ function SignalMark({ id }: { id: number }) {
   );
 }
 
-export function AnnouncementCard() {
+/** `embedded`: inside the dashboard, which already gives it width and padding. */
+export function AnnouncementCard({ embedded = false }: { embedded?: boolean }) {
   const [item, setItem] = useState<LatestAnnouncement | null>(null);
   const [failed, setFailed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -91,16 +92,16 @@ export function AnnouncementCard() {
 
   return (
     <section
-      className="py-10 sm:py-16 border-b"
+      className={embedded ? "mt-14" : "py-10 sm:py-16 border-b"}
       style={{ borderColor: "var(--border-subtle)" }}
       data-ann={item?.label ?? "Updates"}
       data-ann-alert={isAlert ? "true" : undefined}
     >
-      <div className="max-w-[1200px] mx-auto px-5">
+      <div className={embedded ? "" : "max-w-[1200px] mx-auto px-5"}>
         {/* Section header — mirrors the other landing bands */}
         <div className="flex items-end justify-between mb-5 sm:mb-8">
           <h2
-            className="text-xl sm:text-[28px] font-bold tracking-tight leading-none"
+            className={embedded ? "text-[19px] sm:text-[22px] font-semibold tracking-tight leading-none" : "text-xl sm:text-[28px] font-bold tracking-tight leading-none"}
             style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
           >
             Latest from SoDEX

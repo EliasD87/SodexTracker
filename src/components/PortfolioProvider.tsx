@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
+import { useConnection, useConnectionEffect, useDisconnect } from "wagmi";
 import { supabase } from "@/lib/supabase";
 
 const LEGACY_STORAGE_KEY = "sodex-portfolio-address";
@@ -12,13 +13,26 @@ export interface SavedPortfolioAddress {
   id: string;
   address: string;
   label: string | null;
+  /** True for the entry that mirrors the connected wallet. */
+  connected?: boolean;
 }
+
+/**
+ * The connected wallet's entry. It is derived from the wallet on every render
+ * and never written to storage or Supabase, so disconnecting removes it and
+ * switching accounts inside the wallet moves it along.
+ */
+export const WALLET_ENTRY_ID = "connected-wallet";
 
 interface PortfolioContextValue {
   savedAddress: string | null;
+  /** The address of the connected wallet, if one is connected. */
+  connectedAddress: string | null;
   addresses: SavedPortfolioAddress[];
   activeId: string | null;
   loaded: boolean;
+  /** True when the list lives in the user's account (signed in), false when only on this device. */
+  synced: boolean;
   cachedData: unknown;
   cachedOverview: unknown;
   cachedChart: unknown[];
@@ -73,22 +87,47 @@ function resolveActiveId(list: SavedPortfolioAddress[], preferredId: string | nu
   return list[0]?.id ?? null;
 }
 
+/** The wallet first, then every saved address that isn't the same one. */
+function withWallet(list: SavedPortfolioAddress[], wallet: string | null): SavedPortfolioAddress[] {
+  if (!wallet) return list;
+  return [
+    { id: WALLET_ENTRY_ID, address: wallet, label: null, connected: true },
+    ...list.filter((entry) => entry.address.toLowerCase() !== wallet.toLowerCase()),
+  ];
+}
+
+interface Cache {
+  /** The address this data belongs to. */
+  address: string | null;
+  data: unknown;
+  overview: unknown;
+  chart: unknown[];
+}
+
+const EMPTY_CACHE: Cache = { address: null, data: null, overview: null, chart: [] };
+
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [addresses, setAddresses] = useState<SavedPortfolioAddress[]>([]);
+  // The preferred selection. It may name the wallet entry while no wallet is
+  // connected; the effective selection is resolved against the list at render.
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [hasCache, setHasCache] = useState(false);
   const userRef = useRef<User | null>(null);
-  const cacheRef = useRef<{ data: unknown; overview: unknown; chart: unknown[] }>({
-    data: null,
-    overview: null,
-    chart: [],
-  });
+  // userRef serves the callbacks; this is the same fact as state, for the UI.
+  const [synced, setSynced] = useState(false);
+  const [cache, setCacheState] = useState<Cache>(EMPTY_CACHE);
+
+  const { address: walletAddress } = useConnection();
+  const { mutate: disconnectWallet } = useDisconnect();
+  const wallet = walletAddress ?? null;
+  const walletRef = useRef<string | null>(null);
+  useEffect(() => {
+    walletRef.current = wallet;
+  }, [wallet]);
 
   const loadLocal = useCallback(() => {
-    const list = readLocalList();
-    setAddresses(list);
-    setActiveId(resolveActiveId(list, readLocalActiveId()));
+    setAddresses(readLocalList());
+    setActiveId(readLocalActiveId());
     setLoaded(true);
   }, []);
 
@@ -99,9 +138,8 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
       .select("id,address,label")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
-    const list = !error && data ? (data as SavedPortfolioAddress[]) : [];
-    setAddresses(list);
-    setActiveId(resolveActiveId(list, readLocalActiveId()));
+    setAddresses(!error && data ? (data as SavedPortfolioAddress[]) : []);
+    setActiveId(readLocalActiveId());
     setLoaded(true);
   }, []);
 
@@ -113,12 +151,14 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getUser().then(({ data }) => {
       userRef.current = data.user;
+      setSynced(!!data.user);
       if (data.user) void loadRemoteAddresses(data.user);
       else loadLocal();
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       userRef.current = session?.user ?? null;
+      setSynced(!!session?.user);
       if (session?.user) void loadRemoteAddresses(session.user);
       else loadLocal();
     });
@@ -129,14 +169,29 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   const switchAddress = useCallback((id: string) => {
     setActiveId(id);
     writeLocalActiveId(id);
-    cacheRef.current = { data: null, overview: null, chart: [] };
-    setHasCache(false);
+    setCacheState(EMPTY_CACHE);
   }, []);
+
+  // A wallet the user has just connected is what they want to look at. A
+  // silent reconnect on page load is not a choice, so it leaves the stored
+  // selection alone, which already names the wallet if it was last used.
+  useConnectionEffect({
+    onConnect({ isReconnected }) {
+      if (!isReconnected) switchAddress(WALLET_ENTRY_ID);
+    },
+  });
 
   const addAddress = useCallback((addr: string) => {
     const trimmed = addr.trim();
     if (!trimmed) return;
+    if (walletRef.current && walletRef.current.toLowerCase() === trimmed.toLowerCase()) {
+      switchAddress(WALLET_ENTRY_ID);
+      return;
+    }
     const user = userRef.current;
+    // Made once, out here: React may run the updater below twice, and two
+    // timestamps would leave the list and the selection naming different ids.
+    const newId = `${Date.now()}`;
 
     setAddresses((current) => {
       const existing = current.find((entry) => entry.address.toLowerCase() === trimmed.toLowerCase());
@@ -159,7 +214,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         return current;
       }
 
-      const entry: SavedPortfolioAddress = { id: `${Date.now()}`, address: trimmed, label: null };
+      const entry: SavedPortfolioAddress = { id: newId, address: trimmed, label: null };
       const next = [...current, entry];
       writeLocalList(next);
       switchAddress(entry.id);
@@ -168,9 +223,22 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
   }, [switchAddress]);
 
   const removeAddress = useCallback((id: string) => {
+    // "Removing" the wallet entry means disconnecting the wallet.
+    if (id === WALLET_ENTRY_ID) {
+      disconnectWallet();
+      return;
+    }
     const user = userRef.current;
     if (supabase && user) {
-      void supabase.from("portfolio_addresses").delete().eq("id", id);
+      // A Supabase query only runs once it's awaited or then'd: without this
+      // the row stayed, and the wallet came back on the next load.
+      void supabase
+        .from("portfolio_addresses")
+        .delete()
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) void loadRemoteAddresses(user);
+        });
     }
 
     setAddresses((current) => {
@@ -180,54 +248,67 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         if (currentActiveId !== id) return currentActiveId;
         const nextActiveId = next[0]?.id ?? null;
         writeLocalActiveId(nextActiveId);
-        cacheRef.current = { data: null, overview: null, chart: [] };
-        setHasCache(false);
+        setCacheState(EMPTY_CACHE);
         return nextActiveId;
       });
       return next;
     });
-  }, []);
+  }, [disconnectWallet, loadRemoteAddresses]);
 
   const renameAddress = useCallback((id: string, label: string) => {
+    if (id === WALLET_ENTRY_ID) return;
     const trimmed = label.trim();
     const user = userRef.current;
     if (supabase && user) {
-      void supabase.from("portfolio_addresses").update({ label: trimmed || null }).eq("id", id);
+      void supabase
+        .from("portfolio_addresses")
+        .update({ label: trimmed || null })
+        .eq("id", id)
+        .then(({ error }) => {
+          if (error) void loadRemoteAddresses(user);
+        });
     }
     setAddresses((current) => {
       const next = current.map((entry) => (entry.id === id ? { ...entry, label: trimmed || null } : entry));
       if (!supabase || !user) writeLocalList(next);
       return next;
     });
-  }, []);
+  }, [loadRemoteAddresses]);
+
+  const effectiveAddresses = withWallet(addresses, wallet);
+  const effectiveActiveId = resolveActiveId(effectiveAddresses, activeId);
+  const savedAddress = effectiveAddresses.find((entry) => entry.id === effectiveActiveId)?.address ?? null;
 
   const unbindAddress = useCallback(() => {
-    if (activeId) removeAddress(activeId);
-  }, [activeId, removeAddress]);
+    if (effectiveActiveId) removeAddress(effectiveActiveId);
+  }, [effectiveActiveId, removeAddress]);
 
+  // The page reporting data is always showing the active address, so that is
+  // the address the data is filed under.
   const setCache = useCallback((data: unknown, overview: unknown, chart: unknown[]) => {
-    cacheRef.current = { data, overview, chart };
-    setHasCache(true);
-  }, []);
+    setCacheState({ address: savedAddress, data, overview, chart });
+  }, [savedAddress]);
 
-  const clearCache = useCallback(() => {
-    cacheRef.current = { data: null, overview: null, chart: [] };
-    setHasCache(false);
-  }, []);
+  const clearCache = useCallback(() => setCacheState(EMPTY_CACHE), []);
 
-  const savedAddress = addresses.find((entry) => entry.id === activeId)?.address ?? null;
+  // Switching accounts inside the wallet changes the address without passing
+  // through switchAddress, so a cache from the previous account must not be
+  // handed to the new one.
+  const cacheMatches = cache.address !== null && cache.address === savedAddress;
 
   return (
     <PortfolioContext.Provider
       value={{
         savedAddress,
-        addresses,
-        activeId,
+        connectedAddress: wallet,
+        addresses: effectiveAddresses,
+        activeId: effectiveActiveId,
         loaded,
-        cachedData: cacheRef.current.data,
-        cachedOverview: cacheRef.current.overview,
-        cachedChart: cacheRef.current.chart,
-        hasCache,
+        synced,
+        cachedData: cache.data,
+        cachedOverview: cache.overview,
+        cachedChart: cache.chart,
+        hasCache: cacheMatches,
         bindAddress: addAddress,
         addAddress,
         removeAddress,

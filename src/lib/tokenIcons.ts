@@ -80,6 +80,19 @@ const ICONS: Record<string, string> = {
   orcl: "https://sodex.com/assets/img/tokens/orcl.svg",
   amd: "https://sodex.com/assets/img/tokens/amd.svg",
   ton: "https://static.sosovalue.com/sosovalue/2025/08/07/52717eae-5e17-4eaf-bab8-7b632ff7f9c3.jpg",
+  near: "https://sodex.com/assets/img/tokens/near.svg",
+  spcx: "https://sodex.com/assets/img/tokens/spcx.svg",
+  samsung: "https://sodex.com/assets/img/tokens/samsung.png",
+  cxmt: "https://sodex.com/assets/img/tokens/cxmt.svg",
+  dash: "https://sodex.com/assets/img/tokens/dash.svg",
+  mrvl: "https://sodex.com/assets/img/tokens/mrvl.svg",
+  skhy: "https://sodex.com/assets/img/tokens/skhy.svg",
+  bera: "https://sodex.com/assets/img/tokens/bera.svg",
+  etc: "https://sodex.com/assets/img/tokens/etc.svg",
+  xmr: "https://sodex.com/assets/img/tokens/xmr.svg",
+  tsm: "https://sodex.com/assets/img/tokens/tsm.svg",
+  qnt: "https://sodex.com/assets/img/tokens/qnt.jpg",
+  "1000bonk": "https://static.sosovalue.com/sosponge/droplist/23/06/13/ojoot0j0fwxr.png",
   soso: "https://static.sosovalue.com/sosovalue/2025/01/24/664617be-cb7b-4dce-8317-4deae2ff0a55.png",
   // SoSoValue index products (.ssi)
   mag7: "https://static.sosovalue.com/sosovalue/2024/12/21/3427fac3-fad7-4f54-b47c-a0e6e231c97c.svg",
@@ -98,6 +111,18 @@ const ALIASES: Record<string, string> = {
   pepe: "1000pepe", // spot lists PEPE, perps lists 1000PEPE
   shib: "1000shib", // spot lists SHIB, perps lists 1000SHIB
   cooper: "copper",
+  bonk: "1000bonk", // spot BONK vs perps 1000BONK
+  smag7: "mag7", // staked index tokens look like what they wrap
+  sdefi: "defi",
+  smeme: "meme",
+  // Tokenised stocks (xStocks) as the stock
+  tslax: "tsla",
+  nvdax: "nvda",
+  metax: "meta",
+  googlx: "google",
+  amznx: "amzn",
+  aaplx: "aapl",
+  msftx: "msft",
   wsoso: "soso", // wrapped SOSO
   ssoso: "soso", // staked SOSO (ValueChain ERC-20, not a spot coin)
   vusdc: "usdc",

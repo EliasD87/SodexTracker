@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Navbar } from "@/components/Navbar";
-import { TrackerPage } from "@/components/TrackerPage";
+import { TrackerView } from "@/components/wallet/TrackerView";
 
 export const metadata: Metadata = {
   title: "Tracker — SoDEX Tracker",
-  description: "Search any wallet address and reveal its complete trading portfolio on SoDEX — PnL, volume, rank, markets, and trade history.",
+  description: "Look inside any SoDEX wallet: net worth, open positions and liquidation levels, trading record, Wealth and staking, deposits and withdrawals.",
 };
 
 export default function Tracker() {
   return (
-    <main>
+    <>
       <Navbar />
+      {/* TrackerView reads ?address=, which needs a Suspense boundary. */}
       <Suspense fallback={null}>
-        <TrackerPage />
+        <TrackerView />
       </Suspense>
-    </main>
+    </>
   );
 }

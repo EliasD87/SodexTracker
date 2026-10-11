@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Analytics' Overview now lives on the home page (Markets). Query strings
+  // such as ?w=7D carry over.
+  async redirects() {
+    return [{ source: "/analytics", destination: "/", permanent: false }];
+  },
 };
 
 export default nextConfig;

@@ -62,3 +62,11 @@ AGENTS.md
 CLAUDE.md
 BUILDATHON.md
 svg-icons.md
+
+# Local collector database
+collector/data/
+
+# VPS package build outputs
+deploy/sodex-vps.tar.gz
+deploy/.build/
+collector/publisher/dist/

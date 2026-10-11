@@ -4,6 +4,8 @@
  */
 
 const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+/** No request waits longer than this: a stuck upstream fails instead of leaving a page loading forever. */
+const TIMEOUT_MS = 15_000;
 
 interface CacheEntry<T> {
   data: T;
@@ -40,7 +42,7 @@ export async function cachedFetchJson<T>(
   // Fire new request
   const promise = (async () => {
     try {
-      const res = await fetch(url, opts);
+      const res = await fetch(url, { ...opts, signal: opts?.signal ?? AbortSignal.timeout(TIMEOUT_MS) });
       const json = await res.json();
       cache.set(key, { data: json, expiresAt: Date.now() + ttl });
       return json;
@@ -78,7 +80,7 @@ export async function cachedApiFetch<T>(
     try {
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-          const res = await fetch(url);
+          const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
           if (res.status === 429) {
             if (attempt < retries) {
               await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));

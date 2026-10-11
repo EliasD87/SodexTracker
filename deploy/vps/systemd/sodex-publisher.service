@@ -1,0 +1,22 @@
+[Unit]
+Description=SoDEX publisher (collector database to Supabase live views)
+After=network-online.target sodex-collector.service
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=%h/sodex
+EnvironmentFile=%h/sodex/.env
+ExecStart=%h/.local/node/bin/node publisher/publisher.mjs
+Restart=always
+RestartSec=30
+Nice=15
+CPUWeight=10
+CPUQuota=40%
+IOWeight=10
+MemoryHigh=300M
+MemoryMax=500M
+StandardOutput=append:%h/sodex/logs/publisher.log
+StandardError=append:%h/sodex/logs/publisher.log
+
+[Install]
+WantedBy=default.target

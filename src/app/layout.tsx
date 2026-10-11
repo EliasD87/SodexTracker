@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PortfolioProvider } from "@/components/PortfolioProvider";
+import { WalletProvider } from "@/components/WalletProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -43,10 +44,12 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
-          <PortfolioProvider>
-            {children}
-            <SiteFooter />
-          </PortfolioProvider>
+          <WalletProvider>
+            <PortfolioProvider>
+              {children}
+              <SiteFooter />
+            </PortfolioProvider>
+          </WalletProvider>
         </ThemeProvider>
         <Analytics />
       </body>

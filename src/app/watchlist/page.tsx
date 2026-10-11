@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 export default function Watchlist() {
   return (
-    <main>
+    <>
       <Navbar />
       <WatchlistPage />
-    </main>
+    </>
   );
 }

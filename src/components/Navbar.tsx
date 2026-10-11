@@ -3,9 +3,10 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Radar } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
+import { ConnectWallet } from "@/components/ConnectWallet";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -18,21 +19,35 @@ type DropdownItem = { label: string; href: string; description: string; icon: Re
 type NavDropdown = { kind: "dropdown"; label: string; badge?: string; icon: React.ReactNode; items: DropdownItem[] };
 type NavItem = NavLink | NavDropdown;
 
+// Four everyday pages up front; everything else waits under More.
 const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Markets", href: "/" },
   { kind: "link", label: "Tracker", href: "/tracker" },
-  { kind: "link", label: "Intelligence", href: "/intelligence", icon: <Radar size={13} style={{ color: "#7C6BF0" }} /> },
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
-  { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} /> },
-  // "Search" becomes the glyph so the item stays on one line.
-  { kind: "link", label: "Reverse", href: "/reverse-search", ariaLabel: "Reverse Search",
-    iconAfter: <SearchX size={13} /> },
   {
     kind: "dropdown",
     label: "More",
     icon: <MoreHorizontal size={13} />,
     items: [
+      {
+        label: "Deep Analysis",
+        href: "/deep-analysis",
+        description: "SoDEX as pictures · beta",
+        icon: <Sparkles size={14} style={{ color: "var(--tier-active)" }} />,
+      },
+      {
+        label: "SoPoints",
+        href: "/sopoints",
+        description: "Points and tournament progress",
+        icon: <Zap size={14} style={{ color: "var(--green)" }} />,
+      },
+      {
+        label: "Reverse Search",
+        href: "/reverse-search",
+        description: "Find a wallet from its trades",
+        icon: <SearchX size={14} />,
+      },
       {
         label: "Trade History",
         href: "/trade-history",
@@ -125,7 +140,7 @@ function NavDropdownMenu({
             boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
             borderRadius: 10,
             zIndex: 60,
-            minWidth: 132,
+            minWidth: 250,
           }}
           onMouseEnter={show}
           onMouseLeave={hide}
@@ -170,7 +185,7 @@ function NavDropdownMenu({
                   key={child.href}
                   href={child.href}
                   prefetch={true}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors"
+                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors"
                   style={{ color: "var(--text-muted)" }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
@@ -182,9 +197,10 @@ function NavDropdownMenu({
                   }}
                   onClick={() => setOpen(false)}
                 >
-                  <span className="shrink-0" style={{ color: "var(--accent)" }}>{child.icon}</span>
-                  <span className="text-[11.5px] font-medium flex-1" style={{ color: "var(--text)" }}>
-                    {child.label}
+                  <span className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[8px]" style={{ color: "var(--accent)", background: "var(--bg-elevated)" }}>{child.icon}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[12.5px] font-medium" style={{ color: "var(--text)" }}>{child.label}</span>
+                    <span className="block text-[11px]" style={{ color: "var(--text-faint)" }}>{child.description}</span>
                   </span>
                 </Link>
               );
@@ -231,7 +247,6 @@ type SheetPage = { label: string; href: string; icon: React.ElementType; iconCol
 const SHEET_PAGES: SheetPage[] = [
   { label: "Markets", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
-  { label: "Intelligence", href: "/intelligence", icon: Radar, iconColor: "#7C6BF0" },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap, iconColor: "var(--green)" },
@@ -240,6 +255,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
   { label: "Accrued Funding", href: "/accrued-funding", icon: Coins },
   { label: "Reverse Search", href: "/reverse-search", icon: SearchX },
+  { label: "Deep Analysis", href: "/deep-analysis", icon: Sparkles, iconColor: "var(--tier-active)" },
 ];
 
 export function Navbar() {
@@ -278,7 +294,8 @@ export function Navbar() {
 
   const isActive = (href: string) => {
     const path = href.split("#")[0];
-    if (path === "/" || path === "") return pathname === "/";
+    // Markets is the home page and every analytics tab under it.
+    if (path === "/" || path === "") return pathname === "/" || pathname.startsWith("/analytics");
     return pathname.startsWith(path);
   };
 
@@ -340,11 +357,20 @@ export function Navbar() {
             <span className="font-semibold tracking-tight text-[15px]" style={{ color: "var(--text)" }}>
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>
+            {/* The new analytics are still being tested in public: say so everywhere. */}
+            <span
+              className="px-1 sm:px-1.5 py-[3px] rounded-[5px] sm:rounded-[6px] text-[9px] sm:text-[10px] font-semibold uppercase sm:tracking-wide leading-none whitespace-nowrap"
+              style={{ background: "color-mix(in srgb, var(--tier-niche) 16%, transparent)", color: "var(--tier-niche)" }}
+              title="New features are in a test phase: figures may change while we check them"
+            >
+              Test<span className="hidden sm:inline"> phase</span>
+            </span>
           </Link>
           </div>
 
           {/* Mobile watchlist + account icons (top-right) */}
           <div className="md:hidden flex items-center gap-1 relative">
+            <ConnectWallet variant="icon" />
             <Link
               href="/watchlist"
               prefetch={true}
@@ -569,22 +595,7 @@ export function Navbar() {
             >
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <Link
-                href="/tracker"
-                prefetch={true}
-                className="relative overflow-hidden flex items-center px-3.5 py-1.5 text-[13.5px] font-semibold rounded-lg transition-opacity hover:opacity-90"
-                style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-              >
-                <span className="relative z-[1]">Open Tracker</span>
-                {/* the roaming inspector */}
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-1/2 pointer-events-none"
-                  style={{ animation: "spySweep 7s ease-in-out infinite", opacity: 0, zIndex: 2 }}
-                >
-                  <Search size={13} strokeWidth={2.6} style={{ color: "var(--accent-fg)", filter: "drop-shadow(0 0 3px rgba(0,0,0,0.25))" }} />
-                </span>
-              </Link>
+            <ConnectWallet />
           </div>
         </div>
       </nav>

@@ -135,13 +135,10 @@ export default function PrivacyPolicy() {
               <B>SoDEX</B> — public gateway and data APIs, plus token artwork from sodex.com.
             </li>
             <li>
-              <B>SoSoValue</B> — index data and token artwork.
+              <B>SoSoValue</B> — token artwork.
             </li>
             <li>
               <B>ValueChain</B> — the public RPC endpoint, read-only, for on-chain balances.
-            </li>
-            <li>
-              <B>ValueMint</B> — collection artwork shown in the minting section.
             </li>
           </ul>
         </Section>

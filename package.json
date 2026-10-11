@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
+    "@tanstack/react-query": "^5.104.0",
     "@vercel/analytics": "^2.0.1",
     "gifenc": "^1.0.3",
     "gifuct-js": "^2.1.2",
@@ -22,7 +23,9 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-colorful": "^5.7.0",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "viem": "^2.57.1",
+    "wagmi": "^3.7.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

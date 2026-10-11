@@ -16,12 +16,6 @@
 - **Watchlists** — group and follow the pairs and wallets you care about.
 - **Reverse search** — look up any wallet and explore its activity.
 
-### Intelligence
-- **Index X-ray** — break any tokenized index down into its live constituents, their weights, and how much each one contributes.
-- **Portfolio Look-Through** — paste any wallet and see its *true* underlying token exposure, visualized as a clean flow breakdown.
-- **Pair Intelligence** — a per-pair cross-read of SoDEX venue data against global market context: cycle position vs ATH, valuation, momentum, funding, and volume share.
-- **ETF flows & macro** — daily crypto ETF net flows and an upcoming macro-events calendar.
-
 ### Tools
 - **Demo Trading** — a full paper-trading perps terminal (weighted-average entry, reduce/flip, liquidation, funding) to rehearse a strategy risk-free.
 - **Journal** — log and annotate your trades.
@@ -33,4 +27,4 @@
 
 ---
 
-Built with Next.js and React. Data comes from SoDEX and SoSoValue.
+Built with Next.js and React. Data comes from SoDEX.

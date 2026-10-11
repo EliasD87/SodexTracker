@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
-import { PairIcon } from "@/components/TopPairs";
+import { TokenIcon } from "@/components/TokenIcon";
 
 interface Kline {
   t: number;
@@ -194,7 +194,7 @@ export function PairAnalysisModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-3">
-            <PairIcon symbol={symbol} size={32} />
+            <TokenIcon symbol={symbol} size={32} />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold mono" style={{ color: "var(--text)" }}>{symbol}</span>

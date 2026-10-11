@@ -1,0 +1,8 @@
+[Unit]
+Description=Trim SoDEX logs to their last 10 MB
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash %h/sodex/trim-logs.sh
+Nice=19
+IOWeight=10

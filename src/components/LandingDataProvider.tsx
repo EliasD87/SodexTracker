@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useTransition, type ReactNode } from "react";
 import { cachedFetchJson } from "@/lib/fetchCache";
 
-const GW_BASE = "https://mainnet-gw.sodex.dev/api/v1";
 const DATA_BASE = "https://mainnet-data.sodex.dev/api/v1";
 
 const USERS_TTL = 30 * 60 * 1000; // 30 min — users count changes slowly
@@ -33,7 +32,6 @@ interface LandingData {
   oiRaw: any;
   usersRaw: any;
   tvlRaw: any;
-  markPricesRaw: any;
   loadingCards: boolean;
 
   volumeAllRaw: any;
@@ -41,11 +39,6 @@ interface LandingData {
   volumeFutRaw: any;
   loadingVolume: boolean;
   loadVolume: () => void;
-
-  pnlLeadersRaw: any;
-  volLeadersRaw: any;
-  loadingLeaders: boolean;
-  loadLeaders: () => void;
 }
 
 const LandingContext = createContext<LandingData | null>(null);
@@ -62,7 +55,6 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
   const [oiRaw, setOiRaw] = useState<any>(null);
   const [usersRaw, setUsersRaw] = useState<any>(null);
   const [tvlRaw, setTvlRaw] = useState<any>(null);
-  const [markPricesRaw, setMarkPricesRaw] = useState<any>(null);
   const [loadingCards, setLoadingCards] = useState(true);
 
   const [volumeAllRaw, setVolumeAllRaw] = useState<any>(null);
@@ -71,19 +63,14 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
   const [loadingVolume, setLoadingVolume] = useState(true);
   const [volumeRequested, setVolumeRequested] = useState(false);
 
-  const [pnlLeadersRaw, setPnlLeadersRaw] = useState<any>(null);
-  const [volLeadersRaw, setVolLeadersRaw] = useState<any>(null);
-  const [loadingLeaders, setLoadingLeaders] = useState(true);
-  const [leadersRequested, setLeadersRequested] = useState(false);
-
-  // Batch 1: above-the-fold cards + mark prices (5 parallel requests)
+  // Batch 1: the hero's headline cards (4 parallel requests)
   useEffect(() => {
     let cancelled = false;
 
     async function fetchCards() {
       const { start, end, today } = getUtcDateRange();
 
-      const [vol24h, oi, users, tvl, markPrices] = await Promise.all([
+      const [vol24h, oi, users, tvl] = await Promise.all([
         fetchJson(`${DATA_BASE}/dashboard/volume?start_date=${start}&end_date=${end}&market_type=all`),
         fetchJson(`${DATA_BASE}/dashboard/open-interest?start_date=${start}&end_date=${end}`),
         fetchJson(`${DATA_BASE}/dashboard/users?start_date=2024-01-01&end_date=${today}`, undefined, USERS_TTL),
@@ -92,7 +79,6 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
         }),
-        fetchJson(`${GW_BASE}/perps/markets/mark-prices`),
       ]);
       if (cancelled) return;
       startTransition(() => {
@@ -100,7 +86,6 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
         setOiRaw(oi);
         setUsersRaw(users);
         setTvlRaw(tvl);
-        setMarkPricesRaw(markPrices);
         setLoadingCards(false);
       });
     }
@@ -139,32 +124,6 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [volumeRequested]);
 
-  // Batch 3: leaderboard — lazy-loaded when TopTraders mounts
-  const loadLeaders = useCallback(() => {
-    setLeadersRequested(true);
-  }, []);
-
-  useEffect(() => {
-    if (!leadersRequested) return;
-    let cancelled = false;
-
-    async function fetchLeaders() {
-      const [pnl, vol] = await Promise.all([
-        fetchJson(`${DATA_BASE}/leaderboard?window_type=24H&page=1&page_size=10&sort_order=desc&sort_by=pnl`),
-        fetchJson(`${DATA_BASE}/leaderboard?window_type=24H&page=1&page_size=10&sort_order=desc&sort_by=volume`),
-      ]);
-      if (cancelled) return;
-      startTransition(() => {
-        setPnlLeadersRaw(pnl);
-        setVolLeadersRaw(vol);
-        setLoadingLeaders(false);
-      });
-    }
-
-    fetchLeaders();
-    return () => { cancelled = true; };
-  }, [leadersRequested]);
-
   return (
     <LandingContext.Provider
       value={{
@@ -172,17 +131,12 @@ export function LandingDataProvider({ children }: { children: ReactNode }) {
         oiRaw,
         usersRaw,
         tvlRaw,
-        markPricesRaw,
         loadingCards,
         volumeAllRaw,
         volumeSpotRaw,
         volumeFutRaw,
         loadingVolume,
         loadVolume,
-        pnlLeadersRaw,
-        volLeadersRaw,
-        loadingLeaders,
-        loadLeaders,
       }}
     >
       {children}

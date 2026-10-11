@@ -1,0 +1,26 @@
+[Unit]
+Description=SoDEX collector (trades, deposits, positions, alerts)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=%h/sodex
+EnvironmentFile=%h/sodex/.env
+ExecStart=%h/.local/node/bin/node collector/src/index.mjs
+# Ctrl+C equivalent: the collector flushes to disk before exiting.
+KillSignal=SIGINT
+TimeoutStopSec=30
+Restart=always
+RestartSec=10
+# Stay out of the trading bots' way: lowest priority, capped CPU and memory.
+Nice=10
+CPUWeight=20
+CPUQuota=60%
+IOWeight=10
+MemoryHigh=500M
+MemoryMax=800M
+StandardOutput=append:%h/sodex/logs/collector.log
+StandardError=append:%h/sodex/logs/collector.log
+
+[Install]
+WantedBy=default.target
