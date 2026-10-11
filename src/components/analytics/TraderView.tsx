@@ -6,7 +6,7 @@ import type { TraderProfile, TraderResult } from "@/lib/traderStore";
 import { count, pct, usd } from "@/lib/analyticsFormat";
 import { useApi } from "@/components/analytics/hooks";
 import { TileSkeleton } from "@/components/analytics/ui";
-import { BiasTag, Kpi, Panel, SegmentMeter, SplitBar } from "@/components/analytics/kit";
+import { BiasTag, groupRule, Kpi, Panel, SegmentMeter, SplitBar } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
 /**
@@ -26,16 +26,27 @@ const age = (ms: number) => {
   return h < 24 ? `${Math.max(1, Math.round(h))}h` : `${Math.round(h / 24)}d`;
 };
 
-function Badge({ children }: { children: React.ReactNode }) {
+/** A group the trader is in; hovering it says what puts them there. */
+function Badge({ children }: { children: string }) {
+  const rule = groupRule(children);
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-medium" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}>
+    <span
+      title={rule}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11.5px] font-medium ${rule ? "cursor-help" : ""}`}
+      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)" }}
+    >
       {children}
     </span>
   );
 }
 
 function Positions({ t }: { t: TraderProfile }) {
-  if (!t.positions.length) return <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>No open positions{t.positionsAt ? ` as of ${when(t.positionsAt)} UTC` : ""}.</p>;
+  if (!t.positions.length)
+    return (
+      <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+        No open positions{t.positionsAt ? ` as of ${when(t.positionsAt)} UTC` : ""}.
+      </p>
+    );
   return (
     <table className="w-full text-[12.5px]">
       <thead>
@@ -57,29 +68,49 @@ function Positions({ t }: { t: TraderProfile }) {
               <span className="inline-flex items-center gap-2" style={{ color: "var(--text)" }}>
                 <TokenIcon symbol={p.market} size={18} />
                 <span className="font-semibold">{p.market.replace("-USD", "")}</span>
-                <span className="text-[10.5px] font-semibold" style={{ color: p.side === "LONG" ? LONG : SHORT }}>{p.side}</span>
+                <span className="text-[10.5px] font-semibold" style={{ color: p.side === "LONG" ? LONG : SHORT }}>
+                  {p.side}
+                </span>
                 {/* Leverage steps out on a phone, where the row has room for three figures only. */}
-                {p.leverage && <span className="text-[11px] hidden sm:inline" style={{ color: "var(--text-faint)" }}>{p.leverage}× {p.marginMode === "ISOLATED" ? "isolated" : "cross"}</span>}
+                {p.leverage && (
+                  <span className="text-[11px] hidden sm:inline" style={{ color: "var(--text-faint)" }}>
+                    {p.leverage}× {p.marginMode === "ISOLATED" ? "isolated" : "cross"}
+                  </span>
+                )}
               </span>
             </td>
-            <td className="py-2.5 px-2 text-right" style={{ color: "var(--text)" }}>{usd(p.notional)}</td>
-            <td className="py-2.5 px-2 text-right hidden md:table-cell" style={{ color: "var(--text-muted)" }}>{price(p.entry)}</td>
-            <td className="py-2.5 px-2 text-right hidden md:table-cell" style={{ color: "var(--text-muted)" }}>{price(p.mark)}</td>
-            <td className="py-2.5 px-2 text-right hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>{p.liq ? price(p.liq) : "—"}</td>
+            <td className="py-2.5 px-2 text-right" style={{ color: "var(--text)" }}>
+              {usd(p.notional)}
+            </td>
+            <td className="py-2.5 px-2 text-right hidden md:table-cell" style={{ color: "var(--text-muted)" }}>
+              {price(p.entry)}
+            </td>
+            <td className="py-2.5 px-2 text-right hidden md:table-cell" style={{ color: "var(--text-muted)" }}>
+              {price(p.mark)}
+            </td>
+            <td className="py-2.5 px-2 text-right hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
+              {p.liq ? price(p.liq) : "—"}
+            </td>
             <td className="py-2.5 px-2 hidden lg:table-cell">
               {p.distance != null && p.distance >= 0 ? (
                 <span className="flex items-center gap-2">
                   <span className="flex-1">
                     <SegmentMeter share={1 - Math.min(1, p.distance / 0.5)} segments={10} color={p.distance < 0.05 ? SHORT : "var(--tier-niche)"} />
                   </span>
-                  <span className="text-[11px] w-10 text-right" style={{ color: "var(--text)" }}>{pct(p.distance, p.distance < 0.1 ? 1 : 0)}</span>
+                  <span className="text-[11px] w-10 text-right" style={{ color: "var(--text)" }}>
+                    {pct(p.distance, p.distance < 0.1 ? 1 : 0)}
+                  </span>
                 </span>
               ) : (
                 <span style={{ color: "var(--text-faint)" }}>—</span>
               )}
             </td>
-            <td className="py-2.5 px-2 text-right hidden lg:table-cell" style={{ color: "var(--text-faint)" }}>{p.openedAt ? age(p.openedAt) : "—"}</td>
-            <td className="py-2.5 text-right" style={{ color: tone(p.upnl) }}>{signedUsd(p.upnl)}</td>
+            <td className="py-2.5 px-2 text-right hidden lg:table-cell" style={{ color: "var(--text-faint)" }}>
+              {p.openedAt ? age(p.openedAt) : "—"}
+            </td>
+            <td className="py-2.5 text-right" style={{ color: tone(p.upnl) }}>
+              {signedUsd(p.upnl)}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -89,7 +120,12 @@ function Positions({ t }: { t: TraderProfile }) {
 
 function Money({ t }: { t: TraderProfile }) {
   const m = t.money;
-  if (!m || !m.read) return <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>This trader&apos;s deposits and withdrawals haven&apos;t been read yet.</p>;
+  if (!m || !m.read)
+    return (
+      <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+        This trader&apos;s deposits and withdrawals haven&apos;t been read yet.
+      </p>
+    );
   return (
     <div>
       <div className="grid grid-cols-3 gap-2">
@@ -100,7 +136,9 @@ function Money({ t }: { t: TraderProfile }) {
           ["Net", m.in - m.out, tone(m.in - m.out)],
         ].map(([label, v, c]) => (
           <div key={label as string} className="min-w-0 rounded-[12px] px-2.5 sm:px-3 py-2.5" style={{ background: "var(--bg-elevated)" }}>
-            <div className="text-[11.5px]" style={{ color: "var(--text-muted)" }}>{label}</div>
+            <div className="text-[11.5px]" style={{ color: "var(--text-muted)" }}>
+              {label}
+            </div>
             <div className="mono text-[14px] sm:text-[17px] font-semibold mt-0.5 truncate" style={{ color: c as string }}>
               {label === "Net" ? signedUsd(v as number) : `≈${usd(v as number)}`}
             </div>
@@ -108,13 +146,17 @@ function Money({ t }: { t: TraderProfile }) {
         ))}
       </div>
       {m.chains.length > 0 && (
-        <p className="mt-3 text-[11.5px]" style={{ color: "var(--text-faint)" }}>Chains used: {m.chains.join(", ")}</p>
+        <p className="mt-3 text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+          Chains used: {m.chains.join(", ")}
+        </p>
       )}
       {m.recent.length > 0 && (
         <ul className="mt-3">
           {m.recent.map((r, i) => (
             <li key={i} className="flex items-center justify-between gap-3 py-1.5 text-[12.5px]" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-              <span className="mono shrink-0" style={{ color: "var(--text-faint)" }}>{when(r.hour)}</span>
+              <span className="mono shrink-0" style={{ color: "var(--text-faint)" }}>
+                {when(r.hour)}
+              </span>
               <span className="flex-1 min-w-0 inline-flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
                 <TokenIcon symbol={r.coin} size={14} />
                 <span className="truncate">
@@ -134,7 +176,12 @@ function Money({ t }: { t: TraderProfile }) {
 
 function Activity({ t }: { t: TraderProfile }) {
   const a = t.activity;
-  if (!a) return <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>No trades recorded by the live collector in the last 30 days.</p>;
+  if (!a)
+    return (
+      <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+        No trades recorded by the live collector in the last 30 days.
+      </p>
+    );
   const slots = a.days; // 30 day slots from the server
   const max = Math.max(...slots.map((d) => d.volume), 1);
   const total = a.markets.reduce((s, m) => s + m.volume, 0) || 1;
@@ -152,7 +199,14 @@ function Activity({ t }: { t: TraderProfile }) {
         ))}
       </div>
       <div className="mt-4">
-        <SplitBar parts={a.markets.map((m, i) => ({ label: m.market.replace("-USD", ""), value: m.volume, color: palette[i % palette.length], note: pct(m.volume / total, 0) }))} />
+        <SplitBar
+          parts={a.markets.map((m, i) => ({
+            label: m.market.replace("-USD", ""),
+            value: m.volume,
+            color: palette[i % palette.length],
+            note: pct(m.volume / total, 0),
+          }))}
+        />
       </div>
       <p className="mt-3 text-[11.5px]" style={{ color: "var(--text-faint)" }}>
         {count(a.fills)} fills{a.makerShare != null ? ` · ${pct(a.makerShare, 0)} as maker` : ""}
@@ -197,9 +251,31 @@ export function TraderView({ name }: { name: string }) {
       <ArrowLeft size={13} /> Rankings
     </Link>
   );
-  if (error && !data) return <>{back}<p className="mt-6 text-[13px]" style={{ color: "var(--red)" }}>{error}</p></>;
-  if (!data) return <>{back}<TileSkeleton count={4} /></>;
-  if (!data.available) return <>{back}<p className="mt-6 text-[14px]" style={{ color: "var(--text-muted)" }}>{data.reason}</p></>;
+  if (error && !data)
+    return (
+      <>
+        {back}
+        <p className="mt-6 text-[13px]" style={{ color: "var(--red)" }}>
+          {error}
+        </p>
+      </>
+    );
+  if (!data)
+    return (
+      <>
+        {back}
+        <TileSkeleton count={4} />
+      </>
+    );
+  if (!data.available)
+    return (
+      <>
+        {back}
+        <p className="mt-6 text-[14px]" style={{ color: "var(--text-muted)" }}>
+          {data.reason}
+        </p>
+      </>
+    );
 
   const t = data;
   const bias = t.totals.notional ? (t.totals.longUsd - t.totals.shortUsd) / t.totals.notional : null;
@@ -222,7 +298,11 @@ export function TraderView({ name }: { name: string }) {
       </p>
 
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi label="Equity" value={t.equity == null ? "—" : usd(t.equity)} caption={t.totals.exposure == null ? "Account value" : `Exposure ${t.totals.exposure.toFixed(1)}×`} />
+        <Kpi
+          label="Equity"
+          value={t.equity == null ? "—" : usd(t.equity)}
+          caption={t.totals.exposure == null ? "Account value" : `Exposure ${t.totals.exposure.toFixed(1)}×`}
+        />
         <Kpi label="Open positions" value={usd(t.totals.notional)} caption={`${t.positions.length} position${t.positions.length === 1 ? "" : "s"}`}>
           {t.totals.notional > 0 && (
             <SplitBar
@@ -235,7 +315,11 @@ export function TraderView({ name }: { name: string }) {
           )}
         </Kpi>
         <Kpi label="Unrealised PnL" value={signedUsd(t.totals.upnl)} caption={bias == null ? "No open positions" : <BiasTag bias={bias} />} />
-        <Kpi label="All-time PnL" value={t.alltimePnl == null ? "—" : signedUsd(t.alltimePnl)} caption={t.alltimeVolume ? `${usd(t.alltimeVolume)} traded` : "From SoDEX's leaderboard"} />
+        <Kpi
+          label="All-time PnL"
+          value={t.alltimePnl == null ? "—" : signedUsd(t.alltimePnl)}
+          caption={t.alltimeVolume ? `${usd(t.alltimeVolume)} traded` : "From SoDEX's leaderboard"}
+        />
       </div>
 
       <div className="mt-4">

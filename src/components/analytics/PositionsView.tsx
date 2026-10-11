@@ -6,7 +6,7 @@ import type { GroupStat, PositionsOverview, PositionsResult } from "@/lib/positi
 import { count, pct, usd } from "@/lib/analyticsFormat";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
-import { BiasTag, Kpi, Panel, PillTabs, SegmentMeter, SplitBar } from "@/components/analytics/kit";
+import { BiasTag, Kpi, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { LiqLadder } from "@/components/analytics/LiqLadder";
 
@@ -352,6 +352,7 @@ export function PositionsView() {
       <div className="mt-4 grid grid-cols-1 gap-4">
         <Panel title="Positioning heatmap">
           <Heatmap d={data} />
+          <SizeScale />
         </Panel>
         <Panel title="Liquidation map">
           <LiquidationMap d={data} />

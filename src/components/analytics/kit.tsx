@@ -287,18 +287,18 @@ export function BiasTag({ bias }: { bias: number | null }) {
  * from the last two UTC days of trading; the first rule that fits wins.
  */
 export const TRADER_GROUP_RULES: { key: string; label: string; rule: string }[] = [
-  { key: "mm", label: "Market makers", rule: "500+ fills in 2 days, 60%+ as maker, across 3+ markets, with buys and sells nearly cancelling out" },
+  { key: "mm", label: "Market makers", rule: "500+ fills in 2 days, 60%+ as maker, 3+ markets, buys and sells nearly even" },
   { key: "smart", label: "Smart money", rule: "Top 100 by 30-day PnL on the SoDEX leaderboard" },
   { key: "whale", label: "Big traders", rule: "Average fill of $10K or more, over 3+ fills" },
   { key: "retail", label: "Retail", rule: "Every other account" },
-  { key: "unattributed", label: "Unattributed", rule: "Volume recovered after a reconnect, which arrives without accounts" },
+  { key: "unattributed", label: "Unattributed", rule: "Volume recovered after a reconnect, without accounts" },
 ];
 
 /**
- * A table's key: each group as a plain black-and-white tag, with the rule
- * that puts an account in it. Wide cards lay the groups out as one row of
- * equal columns; narrow ones (and phones) as an aligned list. `keys` limits
- * it to the groups the table shows.
+ * A table's key: one small tile per group, its name over the rule that puts
+ * an account in it. A row of equal tiles where the card is wide enough, two
+ * to a row otherwise (an odd last one spans both). `keys` limits it to the
+ * groups the table shows, in the table's order.
  */
 export function GroupKey({ rules, keys, title = "How groups are set" }: { rules: { key: string; label: string; rule: string }[]; keys?: string[]; title?: string }) {
   // In the table's own order, so the key reads alongside it.
@@ -309,18 +309,13 @@ export function GroupKey({ rules, keys, title = "How groups are set" }: { rules:
       <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--text-faint)" }}>
         {title}
       </div>
-      <dl className="mt-2.5 grid grid-cols-1 gap-y-2 @3xl:gap-x-5 @3xl:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]" style={{ ["--n" as string]: shown.length }}>
+      <dl className="mt-2.5 grid grid-cols-2 gap-2 @2xl:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]" style={{ ["--n" as string]: shown.length }}>
         {shown.map((r) => (
-          <div key={r.key} className="grid content-start grid-cols-[104px_1fr] items-baseline gap-x-3 @3xl:grid-cols-1 @3xl:gap-y-1.5">
-            <dt className="justify-self-start">
-              <span
-                className="inline-block px-[6px] py-[3px] text-[10.5px] font-semibold leading-none whitespace-nowrap"
-                style={{ background: "var(--text)", color: "var(--bg)", borderRadius: 4 }}
-              >
-                {r.label}
-              </span>
+          <div key={r.key} className="odd:last:col-span-2 @2xl:odd:last:col-span-1 px-3 py-2.5" style={{ background: "var(--bg-elevated)", borderRadius: 10 }}>
+            <dt className="text-[12px] font-semibold leading-tight" style={{ color: "var(--text)" }}>
+              {r.label}
             </dt>
-            <dd className="text-[11.5px] leading-snug" style={{ color: "var(--text-muted)" }}>
+            <dd className="mt-1 text-[11px] leading-snug" style={{ color: "var(--text-muted)" }}>
               {r.rule}
             </dd>
           </div>
@@ -380,4 +375,25 @@ export function SizeScale({ title = "Size groups, by account equity" }: { title?
       </div>
     </div>
   );
+}
+
+/** Track-record groups by all-time PnL (mirrors RECORD_GROUPS in lib/positionStore). */
+const RECORD_RULES: Record<string, string> = {
+  "Top earners": "+$1M or more all time",
+  "Very profitable": "+$100K to +$1M all time",
+  Profitable: "+$1K to +$100K all time",
+  "About even": "Within $1K all time",
+  Losing: "−$1K to −$100K all time",
+  "Heavy losses": "−$100K or worse all time",
+};
+
+/** The rule behind any group label the site shows: size, track record or trading behaviour. */
+export function groupRule(label: string): string | undefined {
+  const i = SIZE_SCALE.findIndex((g) => g.label === label);
+  if (i >= 0) {
+    const from = i ? SIZE_SCALE[i - 1].upTo : null;
+    const to = SIZE_SCALE[i].upTo;
+    return `Account equity ${from && to ? `${from}–${to}` : from ? `${from} or more` : `under ${to}`}`;
+  }
+  return RECORD_RULES[label] ?? TRADER_GROUP_RULES.find((r) => r.label === label)?.rule;
 }
