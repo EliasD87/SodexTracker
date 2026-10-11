@@ -55,7 +55,7 @@ export function DeepAnalysisView() {
             </h1>
             <span
               className="text-[10.5px] font-semibold uppercase tracking-wide px-1.5 py-[3px] rounded-[6px]"
-              style={{ background: "color-mix(in srgb, var(--tier-niche) 16%, transparent)", color: "var(--tier-niche)" }}
+              style={{ background: "var(--text)", color: "var(--bg)" }}
             >
               Test phase
             </span>

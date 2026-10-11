@@ -1,9 +1,9 @@
 "use client";
 
 import { useTheme } from "@/components/ThemeProvider";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Sparkles } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, Menu, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
 import { ConnectWallet } from "@/components/ConnectWallet";
@@ -14,67 +14,98 @@ type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNo
   /** Rendered after the label — lets a word be replaced by a glyph. */
   iconAfter?: React.ReactNode;
   /** Spoken name, when the visible label is abbreviated. */
-  ariaLabel?: string };
-type DropdownItem = { label: string; href: string; description: string; icon: React.ReactNode; comingSoon?: boolean; beta?: boolean };
+  ariaLabel?: string;
+  /** Only on wide screens; narrower ones find it under More instead. */
+  wideOnly?: boolean };
+type DropdownItem = { label: string; href: string; icon: React.ReactNode;
+  /** Listed under More only where the top bar has no room for it. */
+  narrowOnly?: boolean; comingSoon?: boolean; beta?: boolean };
 type NavDropdown = { kind: "dropdown"; label: string; badge?: string; icon: React.ReactNode; items: DropdownItem[] };
 type NavItem = NavLink | NavDropdown;
 
-// Four everyday pages up front; everything else waits under More.
+// The everyday pages up front; everything else waits under More.
 const NAV_ITEMS: NavItem[] = [
-  { kind: "link", label: "Markets", href: "/" },
+  { kind: "link", label: "Stats", href: "/" },
   { kind: "link", label: "Tracker", href: "/tracker" },
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
+  { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} />, wideOnly: true },
+  // "Search" becomes the glyph so the item stays on one line.
+  { kind: "link", label: "Reverse", href: "/reverse-search", ariaLabel: "Reverse Search", iconAfter: <SearchX size={13} />, wideOnly: true },
   {
     kind: "dropdown",
     label: "More",
     icon: <MoreHorizontal size={13} />,
     items: [
+      { label: "SoPoints", href: "/sopoints", icon: <Zap size={14} style={{ color: "var(--green)" }} />, narrowOnly: true },
+      { label: "Reverse Search", href: "/reverse-search", icon: <SearchX size={14} />, narrowOnly: true },
       {
         label: "Deep Analysis",
         href: "/deep-analysis",
-        description: "SoDEX as pictures · beta",
         icon: <Sparkles size={14} style={{ color: "var(--tier-active)" }} />,
-      },
-      {
-        label: "SoPoints",
-        href: "/sopoints",
-        description: "Points and tournament progress",
-        icon: <Zap size={14} style={{ color: "var(--green)" }} />,
-      },
-      {
-        label: "Reverse Search",
-        href: "/reverse-search",
-        description: "Find a wallet from its trades",
-        icon: <SearchX size={14} />,
       },
       {
         label: "Trade History",
         href: "/trade-history",
-        description: "Full trade export & analytics",
         icon: <History size={14} />,
       },
       {
         label: "Accrued Funding",
         href: "/accrued-funding",
-        description: "Track funding payments over time",
         icon: <Coins size={14} />,
       },
       {
         label: "Journal",
         href: "/journal",
-        description: "Log and annotate your trades",
         icon: <BookOpen size={14} />,
       },
       {
         label: "Demo Trading",
         href: "/trade/BTC-USD",
-        description: "Practice with paper money",
         icon: <PlayCircle size={14} />,
       },
     ],
   },
 ];
+
+/** When the public test of the new analytics ends: 48 hours from launch. */
+const TEST_PHASE_ENDS = Date.parse("2026-10-13T16:00:00Z");
+
+const everySecond = (tick: () => void) => {
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id);
+};
+
+/**
+ * "Test phase" and the time left in it, ticking. The countdown appears once
+ * the page is running in the browser (the server can't know the time the
+ * page is read), and drops away when the test is over.
+ */
+function TestPhaseBadge() {
+  const now = useSyncExternalStore(everySecond, () => Math.floor(Date.now() / 1000), () => 0);
+  const left = now ? Math.max(0, Math.floor(TEST_PHASE_ENDS / 1000) - now) : 0;
+  const h = Math.floor(left / 3600);
+  const m = Math.floor((left % 3600) / 60);
+  const sec = left % 60;
+  const two = (n: number) => String(n).padStart(2, "0");
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1 sm:px-1.5 py-[3px] rounded-[5px] sm:rounded-[6px] text-[9px] sm:text-[10px] font-semibold uppercase sm:tracking-wide leading-none whitespace-nowrap"
+      style={{ background: "var(--text)", color: "var(--bg)" }}
+      title="New features are in a test phase: figures may change while we check them"
+    >
+      Test<span className="hidden sm:inline"> phase</span>
+      {left > 0 && (
+        <span className="mono tabular-nums normal-case tracking-normal" style={{ opacity: 0.7 }} aria-label={`${h} hours ${m} minutes left`}>
+          <span className="sm:hidden">{h > 0 ? `${h}h` : `${m}m`}</span>
+          <span className="hidden sm:inline">
+            {two(h)}:{two(m)}:{two(sec)}
+          </span>
+        </span>
+      )}
+    </span>
+  );
+}
 
 function NavDropdownMenu({
   item,
@@ -140,7 +171,7 @@ function NavDropdownMenu({
             boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
             borderRadius: 10,
             zIndex: 60,
-            minWidth: 250,
+            minWidth: 200,
           }}
           onMouseEnter={show}
           onMouseLeave={hide}
@@ -185,7 +216,7 @@ function NavDropdownMenu({
                   key={child.href}
                   href={child.href}
                   prefetch={true}
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors"
+                  className={`${child.narrowOnly ? "flex xl:hidden" : "flex"} items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors`}
                   style={{ color: "var(--text-muted)" }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
@@ -198,10 +229,7 @@ function NavDropdownMenu({
                   onClick={() => setOpen(false)}
                 >
                   <span className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[8px]" style={{ color: "var(--accent)", background: "var(--bg-elevated)" }}>{child.icon}</span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[12.5px] font-medium" style={{ color: "var(--text)" }}>{child.label}</span>
-                    <span className="block text-[11px]" style={{ color: "var(--text-faint)" }}>{child.description}</span>
-                  </span>
+                  <span className="flex-1 min-w-0 text-[12.5px] font-medium" style={{ color: "var(--text)" }}>{child.label}</span>
                 </Link>
               );
             })}
@@ -245,7 +273,7 @@ function AnimatedBookmark({ size = 16 }: { size?: number }) {
 /* ── All pages shown in the More sheet ── */
 type SheetPage = { label: string; href: string; icon: React.ElementType; iconColor?: string; comingSoon?: boolean; beta?: boolean };
 const SHEET_PAGES: SheetPage[] = [
-  { label: "Markets", href: "/", icon: BarChart3 },
+  { label: "Stats", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
@@ -294,7 +322,7 @@ export function Navbar() {
 
   const isActive = (href: string) => {
     const path = href.split("#")[0];
-    // Markets is the home page and every analytics tab under it.
+    // Stats is the home page and every analytics tab under it.
     if (path === "/" || path === "") return pathname === "/" || pathname.startsWith("/analytics");
     return pathname.startsWith(path);
   };
@@ -341,35 +369,19 @@ export function Navbar() {
         }}
       >
         <div className="max-w-[1200px] mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
-          {/* Menu + wordmark */}
+          {/* Wordmark */}
           <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={() => setMoreOpen(true)}
-            className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-colors -ml-2"
-            style={{ color: moreOpen ? "var(--accent)" : "var(--text-muted)" }}
-            aria-label="Open menu"
-            aria-expanded={moreOpen}
-          >
-            <MoreHorizontal size={20} />
-          </button>
           <Link href="/" prefetch={true} className="flex items-center gap-2 shrink-0">
             <LogoMark size={20} />
             <span className="font-semibold tracking-tight text-[15px]" style={{ color: "var(--text)" }}>
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>
-            {/* The new analytics are still being tested in public: say so everywhere. */}
-            <span
-              className="px-1 sm:px-1.5 py-[3px] rounded-[5px] sm:rounded-[6px] text-[9px] sm:text-[10px] font-semibold uppercase sm:tracking-wide leading-none whitespace-nowrap"
-              style={{ background: "color-mix(in srgb, var(--tier-niche) 16%, transparent)", color: "var(--tier-niche)" }}
-              title="New features are in a test phase: figures may change while we check them"
-            >
-              Test<span className="hidden sm:inline"> phase</span>
-            </span>
+            <TestPhaseBadge />
           </Link>
           </div>
 
-          {/* Mobile watchlist + account icons (top-right) */}
-          <div className="md:hidden flex items-center gap-1 relative">
+          {/* Phone and tablet: wallet, watchlist, account, then the menu (top-right) */}
+          <div className="lg:hidden flex items-center gap-1 relative">
             <ConnectWallet variant="icon" />
             <Link
               href="/watchlist"
@@ -393,6 +405,15 @@ export function Navbar() {
               aria-label="Account"
             >
               {user ? <UserRound size={18} style={{ color: "var(--green)" }} /> : <UserRound size={18} />}
+            </button>
+            <button
+              onClick={() => setMoreOpen(true)}
+              className="w-9 h-9 -mr-2 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: moreOpen ? "var(--accent)" : "var(--text-muted)" }}
+              aria-label="Open menu"
+              aria-expanded={moreOpen}
+            >
+              <Menu size={20} />
             </button>
 
             {accountOpen && (
@@ -477,7 +498,7 @@ export function Navbar() {
           </div>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-1 flex-1 justify-center px-4">
+          <div className="hidden lg:flex items-center gap-1 flex-1 justify-center px-4">
             {NAV_ITEMS.map((item) => {
               if (item.kind === "link") {
                 const active = isActive(item.href);
@@ -486,7 +507,7 @@ export function Navbar() {
                     key={item.label}
                     href={item.href}
                     prefetch={true}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors whitespace-nowrap"
+                    className={`${item.wideOnly ? "hidden xl:flex" : "flex"} items-center gap-1.5 px-3 py-1.5 text-[13.5px] font-medium rounded-lg transition-colors whitespace-nowrap`}
                     style={{ color: active ? "var(--text)" : "var(--text-muted)" }}
                     aria-label={item.ariaLabel}
                     title={item.ariaLabel}
@@ -510,7 +531,7 @@ export function Navbar() {
           </div>
 
           {/* Right controls (desktop only) */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
             {/* Watchlist icon with stamp animation + glow */}
             <Link
               href="/watchlist"
@@ -600,10 +621,10 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* ── Mobile drawer, entering from the left ── */}
+      {/* ── Mobile drawer, entering from the right, under the menu button ── */}
       {moreOpen && (
         <div
-          className="md:hidden fixed inset-0 z-[60]"
+          className="lg:hidden fixed inset-0 z-[60]"
           style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
           onClick={() => setMoreOpen(false)}
         />
@@ -611,12 +632,12 @@ export function Navbar() {
 
       {moreOpen && (
         <aside
-          className="drawer-in md:hidden fixed top-0 bottom-0 left-0 z-[70] flex flex-col"
+          className="drawer-in lg:hidden fixed top-0 bottom-0 right-0 z-[70] flex flex-col"
           style={{
             width: "min(80vw, 310px)",
             background: "var(--bg-surface)",
-            borderRight: "1px solid var(--border)",
-            boxShadow: "14px 0 40px rgba(0,0,0,0.28)",
+            borderLeft: "1px solid var(--border)",
+            boxShadow: "-14px 0 40px rgba(0,0,0,0.28)",
           }}
         >
           {/* Drawer header */}

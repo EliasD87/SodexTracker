@@ -296,13 +296,24 @@ function AddPanel({ wl, groupId, onDone }: { wl: Watchlist; groupId: string; onD
         {one && (
           <input value={name} onChange={(ev) => setName(ev.target.value)} placeholder="Name (optional)" aria-label="Name" className="h-9 px-3 rounded-[10px] bg-transparent outline-none text-[13px] w-full sm:w-[180px]" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text)" }} />
         )}
-        <select value={target} onChange={(ev) => setTarget(ev.target.value)} aria-label="Group" className="h-9 px-2 rounded-[10px] text-[13px] outline-none" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", color: "var(--text)" }}>
-          {wl.groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
+        {/* Which group: chips rather than a native select, whose open list can't be styled. Nothing to pick with one group. */}
+        {wl.groups.length > 1 && (
+          <span className="scroll-row inline-flex items-center gap-0.5 max-w-full h-9 p-[3px] rounded-[10px]" role="radiogroup" aria-label="Group" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }}>
+            {wl.groups.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                role="radio"
+                aria-checked={target === g.id}
+                onClick={() => setTarget(g.id)}
+                className="shrink-0 h-full px-2.5 rounded-[7px] text-[12.5px] font-medium whitespace-nowrap transition-colors"
+                style={{ background: target === g.id ? "var(--text)" : "transparent", color: target === g.id ? "var(--bg)" : "var(--text-muted)" }}
+              >
+                {g.name}
+              </button>
+            ))}
+          </span>
+        )}
         <span className="flex items-center gap-2 sm:gap-1.5 px-1" role="radiogroup" aria-label="Colour">
           {WATCHLIST_COLORS.map((c) => (
             <button key={c} type="button" role="radio" aria-checked={color === c} aria-label={`Colour ${c}`} onClick={() => setColor(c)} className="w-6 h-6 sm:w-5 sm:h-5 rounded-full" style={{ background: c, boxShadow: color === c ? "0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--text)" : undefined }} />
