@@ -15,11 +15,12 @@ const TABS = [
   { href: "/analytics/positions", label: "Positions" },
   { href: "/analytics/rankings", label: "Rankings" },
   { href: "/analytics/traders", label: "Traders" },
+  { href: "/analytics/wealth", label: "Wealth" },
   { href: "/analytics/funding", label: "Funding & risk" },
 ];
 
 /** Views that show the live picture, where the daily window doesn't apply. */
-const LIVE_PATHS = ["/analytics/positions", "/analytics/rankings", "/analytics/trader/"];
+const LIVE_PATHS = ["/analytics/positions", "/analytics/rankings", "/analytics/trader/", "/analytics/wealth"];
 
 /** Find a wallet: the address search that used to sit in the home page hero. */
 function AddressSearch() {

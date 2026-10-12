@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { wealthTvl } from "@/lib/wealthTvl";
 
 /**
  * GET /api/wealth?address=0x…   one wallet's SoDEX Wealth holdings, PnL and history
  * GET /api/wealth?view=funds     every Wealth product with its price and yield
+ * GET /api/wealth?view=tvl       how much money sits in each product, and in all
  *
  * SoDEX's Wealth API (wealth.sodex.dev) answers publicly per wallet but only
  * allows sodex.com in the browser, so the site reads it through here. Each
@@ -33,6 +35,12 @@ export async function GET(request: NextRequest) {
     const [funds, markets] = await Promise.all([get<unknown[]>("/funds"), get<{ quotes: unknown[] }>("/markets")]);
     if (!funds) return NextResponse.json({ code: 1, message: "SoDEX Wealth didn't answer" }, { status: 502 });
     return NextResponse.json({ code: 0, data: { funds, quotes: markets?.quotes ?? [] } }, { headers });
+  }
+
+  if (q.get("view") === "tvl") {
+    const tvl = await wealthTvl();
+    if (!tvl) return NextResponse.json({ code: 1, message: "SoDEX Wealth didn't answer" }, { status: 502 });
+    return NextResponse.json({ code: 0, data: tvl }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } });
   }
 
   const address = q.get("address") ?? "";

@@ -20,7 +20,7 @@ interface Rect {
 }
 
 /** Squarified treemap: rows of tiles kept as close to square as the space allows. */
-function squarify(values: number[], x: number, y: number, w: number, h: number): Rect[] {
+export function squarify(values: number[], x: number, y: number, w: number, h: number): Rect[] {
   const total = values.reduce((a, v) => a + v, 0);
   if (!total || w <= 0 || h <= 0) return [];
   const areas = values.map((v) => (v / total) * w * h);

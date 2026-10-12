@@ -7,10 +7,12 @@ import type { Delta, ExchangeAnalytics, MarketRow, SeriesPoint, WindowKey } from
 import type { LiveTraders, TraderInsights } from "@/lib/liveStore";
 import type { MoneyResult } from "@/lib/moneyStore";
 import type { PositionsResult } from "@/lib/positionStore";
+import type { WealthTvl } from "@/lib/wealthTvl";
+import { GROUP, GROUPS as WEALTH_GROUPS, GroupTag, groupOf, ProductMark, productName } from "@/components/analytics/wealthMeta";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { TierBars } from "@/components/analytics/TierBars";
 import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
-import { GridSkeleton } from "@/components/analytics/ui";
+import { GridSkeleton, useRowLimit } from "@/components/analytics/ui";
 import { BiasTag, DeltaPill, DetailsLink, Figure, Panel, PillTabs, SegmentMeter, SplitBar } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
@@ -613,6 +615,88 @@ function CalendarCard() {
   );
 }
 
+/* ── Row 6: Wealth ─────────────────────────────────────────────────────── */
+
+/**
+ * How much sits in SoDEX Wealth: every vault, Earn and fund, biggest first,
+ * each with its share of the total, its day's move and its yield.
+ */
+function WealthCard() {
+  const { data, error } = useApi<WealthTvl>("/api/wealth?view=tvl", 300_000, 300_000);
+  // Every product on a wider screen; the top five on a phone.
+  const { shown, toggle } = useRowLimit(data?.products ?? [], 99, 5);
+  if (!data) {
+    return (
+      <Panel title="Wealth" sub="Money in SoDEX's Specialty vaults, Curated ETFs and Stable Earn" className="lg:col-span-12">
+        <Pending reason={error ? "SoDEX Wealth didn't answer. Try again in a moment." : undefined} height={180} />
+      </Panel>
+    );
+  }
+  const max = Math.max(1, ...data.products.map((p) => p.tvl ?? 0));
+  const byGroup = WEALTH_GROUPS.map((g) => ({ g, tvl: data.products.filter((p) => groupOf(p) === g.key).reduce((a, p) => a + (p.tvl ?? 0), 0) }));
+  return (
+    <Panel
+      title="Wealth"
+      sub="Money in SoDEX's Specialty vaults, Curated ETFs and Stable Earn"
+      right={<DetailsLink href="/analytics/wealth" />}
+      className="lg:col-span-12"
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)] gap-x-10 gap-y-5">
+        {/* Total, and how it splits by group */}
+        <div>
+          <Figure>{usd(data.total)}</Figure>
+          <p className="mt-1.5 text-[12px]" style={{ color: "var(--text-faint)" }}>
+            Total value locked across {data.products.length} products
+          </p>
+          <div className="mt-4">
+            <SplitBar
+              height={8}
+              parts={byGroup.filter((x) => x.tvl > 0).map((x) => ({ label: x.g.label, value: x.tvl, color: x.g.color, note: `${pct(x.tvl / (data.total || 1), 0)}` }))}
+            />
+          </div>
+          <p className="mt-4 text-[11.5px] leading-relaxed" style={{ color: "var(--text-faint)" }}>
+            Vaults report their own size. The rest are their share tokens on ValueChain times the price.
+          </p>
+        </div>
+
+        {/* Every product, biggest first, down one column then the next */}
+        <div className="md:columns-2 md:gap-x-8">
+          {shown.map((p) => (
+            <div key={p.fundId} className="py-2 break-inside-avoid" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+              <div className="flex items-center justify-between gap-3 text-[13px]">
+                <span className="flex items-center gap-2 min-w-0">
+                  <ProductMark p={p} size={18} />
+                  <span className="font-medium truncate" style={{ color: "var(--text)" }}>
+                    {productName(p)}
+                  </span>
+                  <span className="hidden sm:inline-flex">
+                    <GroupTag p={p} />
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="mono tabular-nums font-semibold" style={{ color: "var(--text)" }}>
+                    {p.tvl == null ? "—" : usd(p.tvl)}
+                  </span>
+                  <DeltaPill value={p.change24h} title="Price change over the last day" />
+                </span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-3">
+                <span className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: "var(--bg-elevated)" }} aria-hidden>
+                  <span className="block h-full rounded-full" style={{ width: `${Math.max(2, ((p.tvl ?? 0) / max) * 100)}%`, background: GROUP[groupOf(p)].color }} />
+                </span>
+                <span className="shrink-0 w-[88px] text-right text-[11px] mono" style={{ color: "var(--text-faint)" }} title={p.fundId === "Morpho-Earn" ? "7-day APY" : "Dividend yield"}>
+                  {p.yield == null ? "" : `${pct(p.yield, 1)} ${p.fundId === "Morpho-Earn" ? "APY" : "yield"}`}
+                </span>
+              </div>
+            </div>
+          ))}
+          {toggle && <div className="md:hidden -mx-4">{toggle}</div>}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 /* ── Row 5: movers and tiers ───────────────────────────────────────────── */
 
 function MoversCard({ data, win }: { data: ExchangeAnalytics; win: WindowKey }) {
@@ -720,6 +804,8 @@ export function OverviewView() {
         <Panel title="Where the activity is" sub="Markets, trades and volume by how busy each market is" right={<DetailsLink href={`/analytics/markets?w=${win}`} />} className="lg:col-span-6">
           <TierBars data={data} bare />
         </Panel>
+
+        <WealthCard />
       </div>
 
     </div>
