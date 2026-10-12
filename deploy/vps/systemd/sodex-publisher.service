@@ -11,10 +11,10 @@ Restart=always
 RestartSec=30
 Nice=15
 CPUWeight=10
-CPUQuota=40%
+CPUQuota=100%
 IOWeight=10
-MemoryHigh=300M
-MemoryMax=500M
+MemoryHigh=2G
+MemoryMax=2500M
 StandardOutput=append:%h/sodex/logs/publisher.log
 StandardError=append:%h/sodex/logs/publisher.log
 

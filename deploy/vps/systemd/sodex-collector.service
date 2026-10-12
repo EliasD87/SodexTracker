@@ -17,8 +17,8 @@ Nice=10
 CPUWeight=20
 CPUQuota=60%
 IOWeight=10
-MemoryHigh=500M
-MemoryMax=800M
+MemoryHigh=1G
+MemoryMax=1500M
 StandardOutput=append:%h/sodex/logs/collector.log
 StandardError=append:%h/sodex/logs/collector.log
 

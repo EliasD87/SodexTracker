@@ -11,7 +11,7 @@ Two services that run next to your trading bots without touching them:
 **Kept apart from the bots:**
 - **Own account:** a separate Linux user (`collector`), with its own Node in its home folder. No root, no system packages, nothing installed globally.
 - **No incoming connections:** no open ports; everything is outgoing.
-- **Lowest priority:** CPU capped at 60% and 40% of one core, memory capped at 800 MB and 500 MB, lowest IO priority.
+- **Lowest priority:** CPU capped at 60% and 100% of one core, memory capped at 1.5 GB and 2.5 GB (4 GB of the 8 GB server at most), lowest IO priority.
 - **Request cap:** SoDEX REST is capped at 240 of the IP's 1200 weight a minute, and it backs off a full minute on any rate-limit reply. It uses 2 of SoDEX's 10 WebSocket connections per IP.
 
 Commands marked **(root)** run as root; everything else runs as `collector`.
