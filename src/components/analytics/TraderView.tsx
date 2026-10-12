@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Bell } from "lucide-react";
 import type { TraderProfile, TraderResult } from "@/lib/traderStore";
 import { count, pct, timeAgo, usd } from "@/lib/analyticsFormat";
+import { traderName } from "@/lib/traderNames";
 import { useApi } from "@/components/analytics/hooks";
 import { TileSkeleton } from "@/components/analytics/ui";
 import { BiasTag, groupRule, Kpi, Panel, SegmentMeter, SplitBar, StatStrip } from "@/components/analytics/kit";
@@ -284,7 +285,7 @@ export function TraderView({ name }: { name: string }) {
       {back}
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <h2 className="text-[26px] sm:text-[32px] font-bold tracking-tight leading-none" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>
-          {t.name}
+          {traderName(t.name)}
         </h2>
         <div className="flex flex-wrap gap-1.5 flex-1">
           {t.groups.size && <Badge>{t.groups.size}</Badge>}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { MarketPositions } from "@/lib/positionStore";
 import type { Concentration } from "@/lib/liveStore";
 import { count, marketSlug, pct, usd } from "@/lib/analyticsFormat";
+import { traderHref, traderName } from "@/lib/traderNames";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { BiasTag, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar } from "@/components/analytics/kit";
 import { useRowLimit } from "@/components/analytics/ui";
@@ -96,7 +97,7 @@ function Positioned({ p }: { p: MarketPositions }) {
             {largest.shown.map((x, i) => (
               <li key={`${x.name}-${i}`} className="flex items-center justify-between gap-3 py-1.5 text-[12.5px]">
                 <span className="min-w-0 truncate sm:overflow-visible sm:whitespace-normal">
-                  <Link href={`/analytics/trader/${x.name}`} className="truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>{x.name}</Link>
+                  <Link href={traderHref(x.name)} className="truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>{traderName(x.name)}</Link>
                   <span className="text-[11px]" style={{ color: "var(--text-faint)" }}> · {x.group}</span>
                 </span>
                 <span className="mono shrink-0 text-right">
@@ -137,7 +138,7 @@ function Concentrated({ c }: { c: Concentration }) {
         {shown.map((t, i) => (
           <li key={t.name} className="flex items-center gap-3 py-1.5 text-[12.5px]">
             <span className="mono text-[11px] w-4 text-right" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
-            <Link href={`/analytics/trader/${t.name}`} className="flex-1 truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>{t.name}</Link>
+            <Link href={traderHref(t.name)} className="flex-1 truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>{traderName(t.name)}</Link>
             {t.makerShare != null && <span className="text-[11px]" style={{ color: "var(--text-faint)" }}>{pct(t.makerShare, 0)} maker</span>}
             <span className="mono w-12 text-right" style={{ color: "var(--text)" }}>{pct(t.share, 1)}</span>
           </li>

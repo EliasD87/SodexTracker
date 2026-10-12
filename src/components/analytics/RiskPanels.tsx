@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { RiskData, RiskResult } from "@/lib/riskStore";
 import { count, pct, span, timeAgo, usd } from "@/lib/analyticsFormat";
+import { traderHref, traderName } from "@/lib/traderNames";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { Panel, PillTabs, SegmentMeter, SplitBar } from "@/components/analytics/kit";
@@ -85,8 +86,8 @@ function Liquidations({ d }: { d: RiskData["liquidations"] }) {
                   {when(l.ts)}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <Link href={`/analytics/trader/${l.name}`} className="block truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>
-                    {l.name}
+                  <Link href={traderHref(l.name)} className="block truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>
+                    {traderName(l.name)}
                   </Link>
                   <span className="inline-flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
                     <TokenIcon symbol={l.market} size={12} />

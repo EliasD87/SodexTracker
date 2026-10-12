@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { GroupStat, PositionsOverview, PositionsResult } from "@/lib/positionStore";
 import { count, pct, timeAgo, usd } from "@/lib/analyticsFormat";
+import { traderHref, traderName } from "@/lib/traderNames";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
 import { BiasTag, Kpi, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar, StatStrip } from "@/components/analytics/kit";
@@ -206,11 +207,11 @@ function AtRisk({ d }: { d: PositionsOverview }) {
             <tr key={`${r.name}-${r.market}-${i}`} style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <td className="py-2">
                 <Link
-                  href={`/analytics/trader/${r.name}`}
+                  href={traderHref(r.name)}
                   className="font-sans text-[12.5px] break-all sm:break-normal hover:underline underline-offset-2"
                   style={{ color: "var(--text)" }}
                 >
-                  {r.name}
+                  {traderName(r.name)}
                 </Link>
                 <div className="font-sans text-[11px]" style={{ color: "var(--text-faint)" }}>
                   {label.get(r.group)}

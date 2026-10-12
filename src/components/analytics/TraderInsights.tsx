@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import type { TraderInsights as Insights } from "@/lib/liveStore";
 import { count, pct, usd } from "@/lib/analyticsFormat";
+import { nicknameOf, traderHref, traderName } from "@/lib/traderNames";
 import { useApi } from "@/components/analytics/hooks";
 import { GroupKey, Panel, SegmentMeter, SplitBar, TRADER_GROUP_RULES } from "@/components/analytics/kit";
 import { useRowLimit } from "@/components/analytics/ui";
@@ -51,12 +52,18 @@ function Groups({ d }: { d: Insights }) {
 function FindTrader({ d }: { d: Insights }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  // What was typed, when it isn't a trader's name.
+  const [missing, setMissing] = useState<string | null>(null);
   // The whole list on a wider screen; the top five on a phone.
   const { shown, toggle } = useRowLimit(d.mostActive, d.mostActive.length, 5);
   const go = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = q.trim().toLowerCase().replace(/\s+/g, "-");
-    if (name) router.push(`/analytics/trader/${encodeURIComponent(name)}`);
+    const typed = q.trim();
+    if (!typed) return;
+    // Every name stands for exactly one trader, so there's nothing to search.
+    const nickname = nicknameOf(typed);
+    setMissing(nickname ? null : typed);
+    if (nickname) router.push(traderHref(nickname));
   };
   return (
     <Panel title="Find a trader">
@@ -66,8 +73,8 @@ function FindTrader({ d }: { d: Insights }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Nickname, e.g. quiet-falcon-bloom"
-          aria-label="Trader nickname"
+          placeholder="Name, e.g. Quiet Falcon"
+          aria-label="Trader name"
           className="flex-1 min-w-0 bg-transparent outline-none text-[16px] sm:text-[13px]"
           style={{ color: "var(--text)" }}
         />
@@ -75,12 +82,17 @@ function FindTrader({ d }: { d: Insights }) {
           Open
         </button>
       </form>
+      {missing && (
+        <p className="mt-2 text-[12px]" style={{ color: "var(--text-muted)" }}>
+          No trader called {missing}. Names are two words, like Quiet Falcon.
+        </p>
+      )}
       <div className="mono text-[11px] tracking-[0.14em] uppercase mt-5 mb-1" style={{ color: "var(--text-muted)" }}>Most active · 7D</div>
       <ol>
         {shown.map((t, i) => (
           <li key={t.name} className="flex items-center gap-3 py-1.5 text-[12.5px]" style={{ borderTop: i ? "1px solid var(--border-subtle)" : undefined }}>
             <span className="mono text-[11px] w-4 text-right" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
-            <Link href={`/analytics/trader/${t.name}`} className="flex-1 truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>{t.name}</Link>
+            <Link href={traderHref(t.name)} className="flex-1 truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>{traderName(t.name)}</Link>
             <span className="text-[11px] hidden sm:inline" style={{ color: "var(--text-faint)" }}>
               {t.markets} market{t.markets === 1 ? "" : "s"}
               {t.makerShare != null ? ` · ${pct(t.makerShare, 0)} maker` : ""}

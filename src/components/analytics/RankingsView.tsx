@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { RankEntry, RankingsResult } from "@/lib/rankingStore";
 import { count, usd } from "@/lib/analyticsFormat";
+import { traderHref, traderName } from "@/lib/traderNames";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton } from "@/components/analytics/ui";
 import { Panel, PillTabs, SizeScale } from "@/components/analytics/kit";
@@ -43,8 +44,8 @@ function Board({
             <li key={`${r.name}-${r.market ?? ""}-${i}`} className="flex items-center gap-3 px-4 sm:px-5 py-2" style={{ borderTop: i ? "1px solid var(--border-subtle)" : undefined }}>
               <span className="mono text-[11px] w-4 text-right shrink-0" style={{ color: "var(--text-faint)" }}>{i + 1}</span>
               <div className="min-w-0 flex-1">
-                <Link href={`/analytics/trader/${r.name}`} className="block text-[13px] font-medium truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>
-                  {r.name}
+                <Link href={traderHref(r.name)} className="block text-[13px] font-medium truncate hover:underline underline-offset-2" style={{ color: "var(--text)" }}>
+                  {traderName(r.name)}
                 </Link>
                 <span className="flex items-center gap-1.5 text-[11px] truncate" style={{ color: "var(--text-faint)" }}>
                   {r.market && (
@@ -96,8 +97,8 @@ export function RankingsView() {
   );
 
   const boards: { key: BoardKey; tab: string; node: React.ReactNode }[] = [
-    { key: "positions", tab: "Positions", node: <Board key="positions" title="Biggest positions" rows={data.biggestPositions} format={(n) => usd(n)} /> },
-    { key: "rich", tab: "Rich list", node: <Board key="rich" title="Rich list" rows={data.richList} format={(n) => usd(n)} /> },
+    { key: "positions", tab: "Positions", node: <Board key="positions" title="Open positions" rows={data.biggestPositions} format={(n) => usd(n)} /> },
+    { key: "rich", tab: "Balances", node: <Board key="rich" title="Account balances" rows={data.richList} format={(n) => usd(n)} /> },
     {
       key: "upnl",
       tab: "Unrealised PnL",
