@@ -15,9 +15,6 @@ import { wealthTvl } from "@/lib/wealthTvl";
 const WEALTH = "https://wealth.sodex.dev/api/v1/wealth";
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 
-// Wealth's /markets can take a while when its cache is cold; leave room for it.
-export const maxDuration = 30;
-
 async function get<T>(path: string, timeout = 10_000): Promise<T | null> {
   try {
     const res = await fetch(`${WEALTH}${path}`, { signal: AbortSignal.timeout(timeout), next: { revalidate: 60 } });
@@ -35,7 +32,7 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams;
 
   if (q.get("view") === "funds") {
-    const [funds, markets] = await Promise.all([get<unknown[]>("/funds"), get<{ quotes: unknown[] }>("/markets", 20_000)]);
+    const [funds, markets] = await Promise.all([get<unknown[]>("/funds"), get<{ quotes: unknown[] }>("/markets", 8_000)]);
     if (!funds) return NextResponse.json({ code: 1, message: "SoDEX Wealth didn't answer" }, { status: 502 });
     return NextResponse.json({ code: 0, data: { funds, quotes: markets?.quotes ?? [] } }, { headers });
   }

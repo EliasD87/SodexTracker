@@ -5,8 +5,8 @@
  * times the fund's price, which is what those shares are worth.
  *
  * The funds' prices come from Wealth's /markets, which can take several
- * seconds to answer when its own cache is cold. When it doesn't answer in
- * time, each fund is priced from its SoDEX spot market instead (vQQQ_vUSDC and
+ * seconds to answer when its own cache is cold. When it doesn't answer within
+ * 8 s (inside any serverless time limit), each fund is priced from its SoDEX spot market instead (vQQQ_vUSDC and
  * so on, the middle of the book), so a slow quote never drops products out.
  */
 
@@ -123,7 +123,7 @@ async function spotPrices(): Promise<Map<string, number>> {
 const KIND: Record<string, WealthKind> = { escrow_vault: "vault", bridged_vault: "earn", clob: "fund" };
 
 export async function wealthTvl(): Promise<WealthTvl | null> {
-  const [funds, markets, spot] = await Promise.all([wealth<Fund[]>("/funds"), wealth<{ quotes: Quote[] }>("/markets", 20_000), spotPrices()]);
+  const [funds, markets, spot] = await Promise.all([wealth<Fund[]>("/funds"), wealth<{ quotes: Quote[] }>("/markets", 8_000), spotPrices()]);
   if (!funds) return null;
   const quotes = new Map((markets?.quotes ?? []).map((q) => [q.fundId, q]));
   const products = await Promise.all(
