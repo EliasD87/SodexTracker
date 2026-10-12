@@ -15,9 +15,12 @@ import { wealthTvl } from "@/lib/wealthTvl";
 const WEALTH = "https://wealth.sodex.dev/api/v1/wealth";
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 
-async function get<T>(path: string): Promise<T | null> {
+// Wealth's /markets can take a while when its cache is cold; leave room for it.
+export const maxDuration = 30;
+
+async function get<T>(path: string, timeout = 10_000): Promise<T | null> {
   try {
-    const res = await fetch(`${WEALTH}${path}`, { signal: AbortSignal.timeout(10_000), next: { revalidate: 60 } });
+    const res = await fetch(`${WEALTH}${path}`, { signal: AbortSignal.timeout(timeout), next: { revalidate: 60 } });
     if (!res.ok) return null;
     const json = (await res.json()) as { code: number; data: T };
     return json.code === 0 ? json.data : null;
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams;
 
   if (q.get("view") === "funds") {
-    const [funds, markets] = await Promise.all([get<unknown[]>("/funds"), get<{ quotes: unknown[] }>("/markets")]);
+    const [funds, markets] = await Promise.all([get<unknown[]>("/funds"), get<{ quotes: unknown[] }>("/markets", 20_000)]);
     if (!funds) return NextResponse.json({ code: 1, message: "SoDEX Wealth didn't answer" }, { status: 502 });
     return NextResponse.json({ code: 0, data: { funds, quotes: markets?.quotes ?? [] } }, { headers });
   }
@@ -40,7 +43,10 @@ export async function GET(request: NextRequest) {
   if (q.get("view") === "tvl") {
     const tvl = await wealthTvl();
     if (!tvl) return NextResponse.json({ code: 1, message: "SoDEX Wealth didn't answer" }, { status: 502 });
-    return NextResponse.json({ code: 0, data: tvl }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900" } });
+    // A product without a figure means a source didn't answer: share that answer briefly, not for five minutes.
+    const complete = tvl.products.every((p) => p.tvl != null);
+    const cache = complete ? "public, s-maxage=300, stale-while-revalidate=900" : "public, s-maxage=30";
+    return NextResponse.json({ code: 0, data: tvl }, { headers: { "Cache-Control": cache } });
   }
 
   const address = q.get("address") ?? "";
