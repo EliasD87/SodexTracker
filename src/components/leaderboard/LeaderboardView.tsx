@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { count, pct, usd } from "@/lib/analyticsFormat";
+import { count, pct, timeAgo, usd } from "@/lib/analyticsFormat";
 import { LiveDot, Panel, PillTabs, CARD_STYLE } from "@/components/analytics/kit";
 import { useCompact } from "@/components/analytics/hooks";
 import { Identicon, LoadingDots } from "@/components/wallet/ui";
@@ -31,8 +31,6 @@ import { edgeText, short, signed, trackHref } from "@/components/leaderboard/par
  * the full list, page by page, with a way to find any wallet's place.
  */
 
-const snapshotTime = (ms: number) =>
-  `${new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 
 function WalletChip({ r }: { r: Row }) {
   return (
@@ -159,7 +157,7 @@ export function LeaderboardView() {
             <LiveDot />
             {board.data ? (
               <>
-                {count(total)} traders ranked · snapshot {snapshotTime(board.data.snapshot)}
+                {count(total)} traders ranked · updated {timeAgo(board.data.snapshot)}
               </>
             ) : (
               <LoadingDots />

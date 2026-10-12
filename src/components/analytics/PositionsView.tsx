@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { GroupStat, PositionsOverview, PositionsResult } from "@/lib/positionStore";
-import { count, pct, usd } from "@/lib/analyticsFormat";
+import { count, pct, timeAgo, usd } from "@/lib/analyticsFormat";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
 import { BiasTag, Kpi, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar, StatStrip } from "@/components/analytics/kit";
@@ -21,7 +21,6 @@ const LONG = "var(--green)";
 const SHORT = "var(--red)";
 
 const signedUsd = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${usd(Math.abs(n))}`;
-const clock = (ms: number) => new Date(ms).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 const price = (p: number) => (p >= 1000 ? p.toLocaleString("en-US", { maximumFractionDigits: 0 }) : p >= 1 ? p.toFixed(2) : p.toPrecision(4));
 
 function Coverage({ d }: { d: PositionsOverview }) {
@@ -33,7 +32,7 @@ function Coverage({ d }: { d: PositionsOverview }) {
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: complete ? "var(--green)" : "var(--tier-niche)" }} aria-hidden />
         {count(c.holders)} accounts holding {count(c.positions)} positions
         {c.oiShare != null && ` · ${pct(Math.min(1, c.oiShare), c.oiShare < 0.1 ? 1 : 0)} of SoDEX open interest`}
-        {c.lastSnapshot && ` · last read ${clock(c.lastSnapshot)}`}
+        {c.lastSnapshot && ` · last read ${timeAgo(c.lastSnapshot)}`}
         {` · valued at live prices`}
       </p>
       {!complete && (

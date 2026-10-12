@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { RiskData, RiskResult } from "@/lib/riskStore";
-import { count, pct, usd } from "@/lib/analyticsFormat";
+import { count, pct, span, timeAgo, usd } from "@/lib/analyticsFormat";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { Panel, PillTabs, SegmentMeter, SplitBar } from "@/components/analytics/kit";
@@ -225,7 +225,7 @@ function Basis({ d }: { d: RiskData["basis"] }) {
           <div className="-mx-4 sm:-mx-5">{toggle}</div>
           <p className="mt-3 text-[11px]" style={{ color: "var(--text-faint)" }}>
             The 12 perps with the most open interest. Mark is the price SoDEX uses for PnL and liquidations; index is the underlying across other venues. 1 bp =
-            0.01%. {d.from ? `Snapshots from ${when(d.from)} to ${when(d.to!)} UTC.` : ""}
+            0.01%. {d.from ? `Snapshots over the last ${span(d.to! - d.from)}, the latest ${timeAgo(d.to!)}.` : ""}
           </p>
         </>
       )}

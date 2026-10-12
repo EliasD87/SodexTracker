@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { MoneyBreakdown, MoneyFlow, MoneyResult, MoneySize } from "@/lib/moneyStore";
 import type { Cohort } from "@/lib/liveStore";
-import { count, growth, usd } from "@/lib/analyticsFormat";
+import { agoShort, count, growth, timeAgo, usd } from "@/lib/analyticsFormat";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
 import { Card, ChartCard, NoData, Section, Tile, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
@@ -36,8 +36,6 @@ const amt = (n: number) => (n ? usd(n) : "—");
 const signedUsd = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${usd(Math.abs(n))}`;
 const tone = (n: number) => (n > 0 ? "var(--green)" : n < 0 ? "var(--red)" : "var(--text-muted)");
 const vsPrior = (now: number, prev: number, win: string) => (prev > 0 ? `${growth(now / prev - 1)} vs prior ${win}` : `Prior ${win}: none`);
-const clock = (ms: number) =>
-  new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 
 function Coverage({ data, totalUsers }: { data: MoneyFlow; totalUsers: number | null }) {
   const c = data.coverage;
@@ -49,7 +47,7 @@ function Coverage({ data, totalUsers }: { data: MoneyFlow; totalUsers: number | 
       <p className="text-[12px] flex items-center gap-2 flex-wrap" style={{ color: "var(--text-muted)" }}>
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: complete ? "var(--green)" : "var(--tier-niche)" }} aria-hidden />
         Ledgers read for {count(c.read)} of {count(of)} accounts
-        {c.lastRead ? ` · last read ${clock(c.lastRead)} UTC` : ""}
+        {c.lastRead ? ` · last read ${timeAgo(c.lastRead)}` : ""}
       </p>
       {!complete && (
         <p className="text-[12.5px] px-3 py-2 rounded-lg" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>
@@ -172,7 +170,7 @@ function Largest({ rows }: { rows: MoneyFlow["largest"] }) {
       <table className="w-full text-[12.5px]">
         <thead>
           <tr style={{ color: "var(--text-faint)" }}>
-            <th className="text-left font-normal px-3 sm:px-4 py-2.5">Hour (UTC)</th>
+            <th className="text-left font-normal px-3 sm:px-4 py-2.5">When</th>
             <th className="text-left font-normal px-2 py-2.5">Direction</th>
             <th className="text-right font-normal pl-2 pr-3 sm:px-2 py-2.5">About</th>
             <th className="text-left font-normal px-2 py-2.5 hidden sm:table-cell">Asset</th>
@@ -183,7 +181,7 @@ function Largest({ rows }: { rows: MoneyFlow["largest"] }) {
         <tbody className="mono" style={{ fontVariantNumeric: "tabular-nums" }}>
           {shown.map((r, i) => (
             <tr key={`${r.hour}-${i}`} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-              <td className="px-3 sm:px-4 py-2" style={{ color: "var(--text-muted)" }}>{clock(r.hour)}</td>
+              <td className="px-3 sm:px-4 py-2" style={{ color: "var(--text-muted)" }}>{agoShort(r.hour)}</td>
               <td className="px-2 py-2 font-sans" style={{ color: r.direction === "in" ? "var(--green)" : "var(--red)" }}>
                 {r.direction === "in" ? "Deposit" : "Withdrawal"}
               </td>

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
+import { span, timeAgo } from "@/lib/analyticsFormat";
 import path from "node:path";
 import { nickname } from "@/lib/nickname";
 
@@ -442,35 +443,35 @@ const SERVICE: Record<string, string> = {
   "alpha-biz.sodex.dev": "transfer history",
   "sodex.dev": "account lookup",
 };
-const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
-const dayHhmm = (ms: number) =>
-  new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
 
 /** Whether the live figures are current, and a plain sentence when they aren't. */
 export function healthStatus(h: CollectorHealth, now = Date.now()): HealthStatus {
   const MIN = 60_000;
-  const when = (ms: number) => (now - ms > 20 * 60 * MIN ? dayHhmm(ms) : hhmm(ms));
+  // Plain words and how long, not clock times.
   // Ten minutes of silence, not less: the heartbeat lands once a minute and is
   // published every 30 seconds, so anything shorter can flag a pause that isn't.
   if (!h.heartbeat || now - h.heartbeat > 10 * MIN) {
     return {
       state: "offline",
       since: h.heartbeat,
-      message: `Live data paused${h.heartbeat ? ` since ${when(h.heartbeat)} UTC` : ""}: the collector isn't reporting. Live figures below are from before the pause.`,
+      message: h.heartbeat
+        ? `Live data is paused: our collector hasn't reported for ${span(now - h.heartbeat)}. Live figures below are from ${timeAgo(h.heartbeat, now)}.`
+        : "Live data is paused: our collector isn't reporting.",
     };
   }
   if (!h.lastTrade || now - h.lastTrade > 5 * MIN) {
     return {
       state: "paused",
       since: h.lastTrade,
-      message: `No trades from SoDEX${h.lastTrade ? ` since ${when(h.lastTrade)} UTC` : ""}; SoDEX may be under maintenance. Live figures resume on their own.`,
+      message: `No trades from SoDEX${h.lastTrade ? ` for ${span(now - h.lastTrade)}` : ""}, most likely maintenance. Live figures resume on their own.`,
     };
   }
-  const down = h.upstream.filter((u) => u.retryAt > now - 15 * MIN);
+  // A SoDEX service has to be failing for ten minutes before it's worth a notice; short blips pass unseen.
+  const down = h.upstream.filter((u) => u.retryAt > now - 15 * MIN && now - u.since >= 10 * MIN);
   if (down.length) {
     const names = [...new Set(down.map((u) => SERVICE[u.host] ?? u.host))].join(" and ");
     const since = Math.min(...down.map((u) => u.since));
-    return { state: "degraded", since, message: `SoDEX's ${names} hasn't answered since ${when(since)} UTC. Some live figures may be a little behind.` };
+    return { state: "degraded", since, message: `SoDEX's ${names} hasn't answered for ${span(now - since)}. Some live figures may be a little behind.` };
   }
   return { state: "ok", since: null, message: null };
 }

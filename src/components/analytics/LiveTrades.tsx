@@ -1,7 +1,7 @@
 "use client";
 
 import type { Cohort, LiveFlow } from "@/lib/liveStore";
-import { pct, usd } from "@/lib/analyticsFormat";
+import { agoShort, pct, usd } from "@/lib/analyticsFormat";
 import { Card, useRowLimit } from "@/components/analytics/ui";
 import { GroupKey, TRADER_GROUP_RULES } from "@/components/analytics/kit";
 
@@ -19,7 +19,6 @@ const LABEL: Record<Cohort, string> = {
   unattributed: "Unattributed",
 };
 
-const clock = (ms: number) => new Date(ms).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 const signedUsd = (n: number) => `${n >= 0 ? "+" : "−"}${usd(Math.abs(n))}`;
 
 export function GroupTable({ data }: { data: LiveFlow }) {
@@ -76,7 +75,7 @@ export function Tape({ data }: { data: LiveFlow }) {
         <tbody className="mono" style={{ fontVariantNumeric: "tabular-nums" }}>
           {shown.map((t, i) => (
             <tr key={`${t.market}-${t.ts}-${i}`} style={{ borderTop: "1px solid var(--border-subtle)" }}>
-              <td className="px-3 sm:px-4 py-2" style={{ color: "var(--text-muted)" }}>{clock(t.ts)}</td>
+              <td className="px-3 sm:px-4 py-2" style={{ color: "var(--text-muted)" }}>{agoShort(t.ts)}</td>
               <td className="px-2 py-2 font-semibold hidden md:table-cell" style={{ color: "var(--text)" }}>{t.market}</td>
               <td className="px-2 py-2">
                 <span className="inline-flex items-center gap-1.5 font-sans text-[11.5px]" style={{ color: "var(--text-muted)" }}>

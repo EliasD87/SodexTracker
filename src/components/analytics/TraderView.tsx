@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Bell } from "lucide-react";
 import type { TraderProfile, TraderResult } from "@/lib/traderStore";
-import { count, pct, usd } from "@/lib/analyticsFormat";
+import { count, pct, timeAgo, usd } from "@/lib/analyticsFormat";
 import { useApi } from "@/components/analytics/hooks";
 import { TileSkeleton } from "@/components/analytics/ui";
 import { BiasTag, groupRule, Kpi, Panel, SegmentMeter, SplitBar, StatStrip } from "@/components/analytics/kit";
@@ -44,7 +44,7 @@ function Positions({ t }: { t: TraderProfile }) {
   if (!t.positions.length)
     return (
       <p className="text-[13px]" style={{ color: "var(--text-faint)" }}>
-        No open positions{t.positionsAt ? ` as of ${when(t.positionsAt)} UTC` : ""}.
+        No open positions{t.positionsAt ? ` as of ${timeAgo(t.positionsAt)}` : ""}.
       </p>
     );
   return (
@@ -294,7 +294,7 @@ export function TraderView({ name }: { name: string }) {
         <AlertButton name={t.name} />
       </div>
       <p className="mt-2 text-[12px]" style={{ color: "var(--text-faint)" }}>
-        {t.positionsAt ? `Positions read ${when(t.positionsAt)} UTC, valued at live prices.` : "Positions not read yet."}
+        {t.positionsAt ? `Positions read ${timeAgo(t.positionsAt)}, valued at live prices.` : "Positions not read yet."}
       </p>
 
       <StatStrip className="mt-6 grid-cols-2 lg:grid-cols-4">
