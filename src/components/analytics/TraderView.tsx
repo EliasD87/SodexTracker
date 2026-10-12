@@ -6,7 +6,7 @@ import type { TraderProfile, TraderResult } from "@/lib/traderStore";
 import { count, pct, usd } from "@/lib/analyticsFormat";
 import { useApi } from "@/components/analytics/hooks";
 import { TileSkeleton } from "@/components/analytics/ui";
-import { BiasTag, groupRule, Kpi, Panel, SegmentMeter, SplitBar } from "@/components/analytics/kit";
+import { BiasTag, groupRule, Kpi, Panel, SegmentMeter, SplitBar, StatStrip } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
 /**
@@ -297,7 +297,7 @@ export function TraderView({ name }: { name: string }) {
         {t.positionsAt ? `Positions read ${when(t.positionsAt)} UTC, valued at live prices.` : "Positions not read yet."}
       </p>
 
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatStrip className="mt-6 grid-cols-2 lg:grid-cols-4">
         <Kpi
           label="Equity"
           value={t.equity == null ? "—" : usd(t.equity)}
@@ -320,7 +320,7 @@ export function TraderView({ name }: { name: string }) {
           value={t.alltimePnl == null ? "—" : signedUsd(t.alltimePnl)}
           caption={t.alltimeVolume ? `${usd(t.alltimeVolume)} traded` : "From SoDEX's leaderboard"}
         />
-      </div>
+      </StatStrip>
 
       <div className="mt-4">
         <Panel title="Open positions">

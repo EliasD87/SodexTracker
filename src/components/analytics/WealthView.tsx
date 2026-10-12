@@ -3,8 +3,8 @@
 import { pct, signedPct, usd } from "@/lib/analyticsFormat";
 import type { WealthProduct, WealthTvl } from "@/lib/wealthTvl";
 import { useApi, useCompact } from "@/components/analytics/hooks";
-import { DeltaPill, Panel } from "@/components/analytics/kit";
-import { NoData, Tile, TileSkeleton } from "@/components/analytics/ui";
+import { CARD_STYLE, DeltaPill, Panel } from "@/components/analytics/kit";
+import { NoData, TileSkeleton } from "@/components/analytics/ui";
 import { GROUP, GROUPS, GroupTag, groupOf, metaOf, ProductMark, productName, type WealthGroup } from "@/components/analytics/wealthMeta";
 import { squarify } from "@/components/deep/MarketHeatmap";
 import { useWidth } from "@/components/deep/shared";
@@ -127,27 +127,64 @@ export function WealthView() {
   const share = (g: WealthGroup) => pct(sum(g) / (data.total || 1), 0);
   const usdcEarn = data.products.find((p) => p.fundId === "Morpho-Earn");
   const top = data.products[0];
+  const stats: { label: string; value: string; sub: string; dot?: string }[] = [
+    {
+      label: "Total value locked",
+      value: usd(data.total),
+      sub: `Across ${data.products.length} products${top ? ` · ${productName(top)} is the biggest` : ""}`,
+    },
+    {
+      label: "Specialty",
+      value: usd(sum("specialty")),
+      sub: `${inGroup("specialty").length} products · ${share("specialty")} of Wealth`,
+      dot: GROUP.specialty.color,
+    },
+    { label: "Curated ETF", value: usd(sum("etf")), sub: `${inGroup("etf").length} products · ${share("etf")} of Wealth`, dot: GROUP.etf.color },
+    {
+      label: "Stable Earn",
+      value: usd(sum("stable")),
+      sub:
+        usdcEarn?.yield != null
+          ? `USDC Earn at ${pct(usdcEarn.yield, 2)} APY over 7 days`
+          : `${inGroup("stable").length} products · ${share("stable")} of Wealth`,
+      dot: GROUP.stable.color,
+    },
+  ];
 
   return (
     <div>
-      <div className="mt-4 sm:mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Tile
-          label="Total value locked"
-          value={usd(data.total)}
-          sub={`Across ${data.products.length} products${top ? ` · ${productName(top)} is the biggest` : ""}`}
-        />
-        <Tile label="Specialty" value={usd(sum("specialty"))} sub={`${inGroup("specialty").length} products · ${share("specialty")} of Wealth`} />
-        <Tile label="Curated ETF" value={usd(sum("etf"))} sub={`${inGroup("etf").length} products · ${share("etf")} of Wealth`} />
-        <Tile
-          label="Stable Earn"
-          value={usd(sum("stable"))}
-          sub={
-            usdcEarn?.yield != null
-              ? `USDC Earn at ${pct(usdcEarn.yield, 2)} APY over 7 days`
-              : `${inGroup("stable").length} products · ${share("stable")} of Wealth`
-          }
-        />
-      </div>
+      {/* One card: the total and each group side by side, and how the total splits along the bottom. */}
+      <section className="mt-4 sm:mt-6 overflow-hidden" style={CARD_STYLE} aria-label="Wealth totals">
+        <div className="grid grid-cols-2 lg:grid-cols-4">
+          {stats.map((x, i) => (
+            <div
+              key={x.label}
+              // Dividers: between columns in the 2×2 on a phone, between all four in one row on a desktop.
+              className={`px-4 sm:px-5 py-4 sm:py-5 min-w-0 border-[var(--border)] ${i % 2 === 1 ? "border-l" : i === 2 ? "lg:border-l" : ""} ${i >= 2 ? "border-t lg:border-t-0" : ""}`}
+            >
+              <div className="flex items-center gap-2 text-[12.5px] font-medium" style={{ color: "var(--text-muted)" }}>
+                {x.dot && <span className="w-2 h-2 rounded-[2px]" style={{ background: x.dot }} aria-hidden />}
+                {x.label}
+              </div>
+              <div
+                className={`mt-2 font-semibold leading-none tabular-nums ${i === 0 ? "text-[26px] sm:text-[30px]" : "text-[22px] sm:text-[24px]"}`}
+                style={{ color: "var(--text)", letterSpacing: "-0.025em" }}
+              >
+                {x.value}
+              </div>
+              <div className="mt-2 text-[11.5px] truncate" style={{ color: "var(--text-faint)" }}>
+                {x.sub}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* The split, edge to edge. */}
+        <div className="flex h-[5px] gap-[2px]" aria-hidden>
+          {GROUPS.map((g) =>
+            sum(g.key) > 0 ? <span key={g.key} style={{ width: `${(sum(g.key) / (data.total || 1)) * 100}%`, background: g.color }} /> : null,
+          )}
+        </div>
+      </section>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
         <Panel title="Where the money sits" sub="Every Wealth product, sized by the money in it">

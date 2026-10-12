@@ -11,11 +11,13 @@
  *   SegmentMeter a row of ticks filled to a share
  *   SplitBar     one bar split into parts, with a legend
  *   BiasTag      a long/short lean as a word and an arrow
+ *   StatStrip    a row of headline figures in one card, divided by hairlines
  *
  * Colour stays quiet: neutral surfaces, with green and red only where
  * something is up/long or down/short.
  */
 
+import { createContext, useContext } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 
@@ -26,6 +28,23 @@ export const CARD_STYLE = {
   borderRadius: "var(--card-radius)",
   boxShadow: "var(--card-shadow)",
 } as const;
+
+/** Set inside a StatStrip: figures drop their own card and become its cells. */
+export const StripContext = createContext(false);
+
+/**
+ * Headline figures in one card rather than a row of separate tiles. The
+ * grid's 1px gaps show the card's border colour through, so every layout
+ * (two to a row on a phone, four on a desktop, two rows of four) gets its
+ * dividers without counting columns. `className` sets the columns.
+ */
+export function StatStrip({ children, className = "grid-cols-2 lg:grid-cols-4" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`grid gap-px overflow-hidden ${className}`} style={{ ...CARD_STYLE, background: "var(--border)" }}>
+      <StripContext.Provider value={true}>{children}</StripContext.Provider>
+    </section>
+  );
+}
 
 /** A quiet outlined button in a card's corner, leading to the full view. */
 export function DetailsLink({ href, children = "Details" }: { href: string; children?: React.ReactNode }) {
@@ -142,8 +161,9 @@ export function Kpi({
   children?: React.ReactNode;
 }) {
   const max = bars?.length ? Math.max(...bars, 1e-9) : 1;
+  const inStrip = useContext(StripContext);
   return (
-    <div className="flex flex-col h-full min-w-0 px-4 sm:px-5 pt-4 sm:pt-[18px] pb-4" style={CARD_STYLE}>
+    <div className="flex flex-col h-full min-w-0 px-4 sm:px-5 pt-4 sm:pt-[18px] pb-4" style={inStrip ? { background: "var(--bg-surface)" } : CARD_STYLE}>
       <div className="flex items-start justify-between gap-3">
         <span className="text-[13px] font-medium" style={{ color: "var(--text-muted)" }}>
           {label}

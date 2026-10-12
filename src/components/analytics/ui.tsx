@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, Radio } from "lucide-react";
 import type { Tier } from "@/lib/exchangeAnalytics";
 import { signedPct } from "@/lib/analyticsFormat";
-import { CARD_STYLE } from "@/components/analytics/kit";
+import { CARD_STYLE, StripContext } from "@/components/analytics/kit";
 import { useCompact } from "@/components/analytics/hooks";
 
 /** Building blocks shared by every analytics tab. */
@@ -21,9 +21,10 @@ export const TIER_COLOR: Record<Tier, string> = {
   thin: "var(--tier-thin)",
 };
 
-export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+/** `plain` drops the card's frame, for a cell inside a StatStrip. */
+export function Card({ children, className = "", plain = false }: { children: React.ReactNode; className?: string; plain?: boolean }) {
   return (
-    <div className={`min-w-0 ${className}`} style={CARD_STYLE}>
+    <div className={`min-w-0 ${className}`} style={plain ? { background: "var(--bg-surface)" } : CARD_STYLE}>
       {children}
     </div>
   );
@@ -57,8 +58,10 @@ export function Tile({
   /** For signed headline figures: green or red. */
   valueColor?: string;
 }) {
+  const inStrip = useContext(StripContext);
+  const cls = "px-4 sm:px-5 pt-4 sm:pt-[18px] pb-4 flex flex-col gap-2";
   return (
-    <Card className="px-4 sm:px-5 pt-4 sm:pt-[18px] pb-4 flex flex-col gap-2">
+    <Card className={cls} plain={inStrip}>
       <span className="text-[13px] font-medium" style={{ color: "var(--text-muted)" }}>
         {label}
       </span>

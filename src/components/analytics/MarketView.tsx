@@ -11,7 +11,7 @@ import { bps, count, growth, pct, signedPct, smallSignedPct, usd } from "@/lib/a
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { useAnalyticsWindow, useApi, useCompact } from "@/components/analytics/hooks";
 import { Card, ChartCard, KindBadge, Section, Tile, TierBadge, TileSkeleton } from "@/components/analytics/ui";
-import { PillTabs } from "@/components/analytics/kit";
+import { PillTabs, StatStrip } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { MarketPositioning } from "@/components/analytics/MarketPositioning";
 
@@ -262,7 +262,7 @@ export function MarketView({ slug }: { slug: string }) {
 
       {live.data && <LiveStrip live={live.data} />}
 
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatStrip className="mt-6 grid-cols-2 lg:grid-cols-4">
         <Tile
           label={`Volume · ${win}`}
           value={usd(r.volume)}
@@ -287,7 +287,7 @@ export function MarketView({ slug }: { slug: string }) {
             <Tile label="Days longs paid" value={r.fundingPositiveDays == null ? "—" : pct(r.fundingPositiveDays, 0)} sub={`Share of days in ${win} with positive funding`} />
           </>
         )}
-      </div>
+      </StatStrip>
 
       {r.tier === "thin" && (
         <p className="mt-4 text-[12.5px] px-3 py-2 rounded-lg" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>

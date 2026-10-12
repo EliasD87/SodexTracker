@@ -8,7 +8,7 @@ import type { LiveTraders } from "@/lib/liveStore";
 import { TraderInsights } from "@/components/analytics/TraderInsights";
 import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
 import { Card, ChartCard, DeltaLine, Section, Tile, TileSkeleton } from "@/components/analytics/ui";
-import { PillTabs } from "@/components/analytics/kit";
+import { PillTabs, StatStrip } from "@/components/analytics/kit";
 
 type LiveTradersResult = LiveTraders | { available: false; reason: string };
 type GrowthChart = "new" | "total" | "markets";
@@ -130,7 +130,7 @@ export function TradersView() {
 
   return (
     <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.2s" }} aria-busy={loading}>
-      <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatStrip className="mt-6 sm:mt-8 grid-cols-2 lg:grid-cols-4">
         <Tile label="Users in total" value={h.totalUsers != null ? h.totalUsers.toLocaleString("en-US") : "—"} sub="Accounts ever created on SoDEX" />
         <Tile
           label={`New users · ${win}`}
@@ -143,7 +143,7 @@ export function TradersView() {
           value={count(h.traderMarketsPerDay)}
           sub="Traders per market, added together"
         />
-      </div>
+      </StatStrip>
 
       <Section title="Growth">
         {compact ? (

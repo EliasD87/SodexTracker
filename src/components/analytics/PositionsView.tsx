@@ -6,7 +6,7 @@ import type { GroupStat, PositionsOverview, PositionsResult } from "@/lib/positi
 import { count, pct, usd } from "@/lib/analyticsFormat";
 import { useApi, useCompact } from "@/components/analytics/hooks";
 import { NoData, Section, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
-import { BiasTag, Kpi, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar } from "@/components/analytics/kit";
+import { BiasTag, Kpi, Panel, PillTabs, SegmentMeter, SizeScale, SplitBar, StatStrip } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 import { LiqLadder } from "@/components/analytics/LiqLadder";
 
@@ -296,7 +296,7 @@ export function PositionsView() {
     <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.2s" }} aria-busy={loading}>
       <Coverage d={data} />
 
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatStrip className="mt-6 grid-cols-2 lg:grid-cols-4">
         <Kpi label="Open positions" value={count(data.coverage.positions)} caption={`${count(data.coverage.holders)} accounts · ${usd(tracked)} notional`} />
         <Kpi label="Long vs short" value={tracked ? `${pct(t.longUsd / tracked, 0)} long` : "—"} caption={t.bias == null ? "" : <BiasTag bias={t.bias} />}>
           <SplitBar
@@ -315,7 +315,7 @@ export function PositionsView() {
           value={t.exposure == null ? "—" : `${t.exposure.toFixed(1)}×`}
           caption={t.leverage == null ? "Positions ÷ equity of holders" : `Positions ÷ equity · avg leverage ${t.leverage.toFixed(1)}×`}
         />
-      </div>
+      </StatStrip>
 
       <div className="mt-6 sm:mt-8">
         <Panel

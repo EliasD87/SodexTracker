@@ -7,7 +7,7 @@ import { count, growth, usd } from "@/lib/analyticsFormat";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
 import { Card, ChartCard, NoData, Section, Tile, TileSkeleton, useRowLimit } from "@/components/analytics/ui";
-import { GroupKey, PillTabs, TRADER_GROUP_RULES } from "@/components/analytics/kit";
+import { GroupKey, PillTabs, StatStrip, TRADER_GROUP_RULES } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
 
 /**
@@ -298,7 +298,7 @@ export function MoneyFlowView() {
     <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.2s" }} aria-busy={loading}>
       <Coverage data={data} totalUsers={totalUsers} />
 
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatStrip className="mt-6 grid-cols-2 lg:grid-cols-4">
         <Tile label={`Money in · ${win}`} value={usd(t.in)} sub={vsPrior(t.in, p.in, win)} />
         <Tile label={`Money out · ${win}`} value={usd(t.out)} sub={vsPrior(t.out, p.out, win)} />
         <Tile label="Net flow" value={signedUsd(t.net)} valueColor={tone(t.net)} sub={`Prior ${win}: ${signedUsd(p.net)}`} />
@@ -317,7 +317,7 @@ export function MoneyFlowView() {
         <Tile label="Withdrawers" value={count(t.withdrawers)} sub={`${count(t.withdrawals)} withdrawals`} />
         <Tile label="First-time depositors" value={count(data.firstTimeDepositors)} sub="First deposit ever, in this window" />
         <Tile label="Median deposit" value={data.medianDeposit == null ? "—" : usd(data.medianDeposit)} sub="Half of deposits are smaller" />
-      </div>
+      </StatStrip>
       {(data.today.in > 0 || data.today.out > 0) && (
         <p className="mt-3 text-[12px]" style={{ color: "var(--text-faint)" }}>
           Today so far (UTC, not in the figures above): {usd(data.today.in)} in, {usd(data.today.out)} out.

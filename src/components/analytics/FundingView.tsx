@@ -7,7 +7,7 @@ import { FundingBars } from "@/components/analytics/FundingBars";
 import { MarketTable } from "@/components/analytics/MarketTable";
 import { useAnalyticsWindow, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
 import { ChartCard, Section, Tile, TileSkeleton } from "@/components/analytics/ui";
-import { PillTabs } from "@/components/analytics/kit";
+import { PillTabs, StatStrip } from "@/components/analytics/kit";
 import { RiskPanels } from "@/components/analytics/RiskPanels";
 
 /** Plot height on a phone. */
@@ -50,7 +50,7 @@ export function FundingView() {
 
   return (
     <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.2s" }} aria-busy={loading}>
-      <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatStrip className="mt-6 sm:mt-8 grid-cols-2 lg:grid-cols-4">
         <Tile
           label="Funding, annualised"
           value={h.fundingAnnual != null ? signedPct(h.fundingAnnual) : "—"}
@@ -63,7 +63,7 @@ export function FundingView() {
         />
         <Tile label="Daily OI turnover" value={h.turnover != null ? `${h.turnover.toFixed(2)}×` : "—"} sub="Perps volume per day ÷ average open interest" />
         <Tile label="Open interest now" value={h.oiNow != null ? usd(h.oiNow) : "—"} sub={h.oiAvg ? `Averaged ${usd(h.oiAvg.value)} over ${win}` : undefined} />
-      </div>
+      </StatStrip>
 
       <Section title="Trend">
         {compact ? (
