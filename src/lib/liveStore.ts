@@ -450,7 +450,9 @@ const dayHhmm = (ms: number) =>
 export function healthStatus(h: CollectorHealth, now = Date.now()): HealthStatus {
   const MIN = 60_000;
   const when = (ms: number) => (now - ms > 20 * 60 * MIN ? dayHhmm(ms) : hhmm(ms));
-  if (!h.heartbeat || now - h.heartbeat > 3 * MIN) {
+  // Ten minutes of silence, not less: the heartbeat lands once a minute and is
+  // published every 30 seconds, so anything shorter can flag a pause that isn't.
+  if (!h.heartbeat || now - h.heartbeat > 10 * MIN) {
     return {
       state: "offline",
       since: h.heartbeat,

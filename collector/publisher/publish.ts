@@ -39,6 +39,35 @@ const ONCE = process.argv.includes("--once");
 const MIN = 60_000;
 const log = (msg: string) => console.log(`${new Date().toISOString().slice(11, 19)} publish  ${msg}`);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Let timers (the health beat) and pending I/O run between heavy synchronous steps. */
+const tick = () => new Promise<void>((r) => setImmediate(r));
+
+/**
+ * Each step's time this round, logged after the round's summary, so a slow
+ * round says where its time went.
+ */
+const steps: string[] = [];
+async function part<T>(label: string, fn: () => T | Promise<T>): Promise<T> {
+  const t = performance.now();
+  const out = await fn();
+  steps.push(`${label} ${((performance.now() - t) / 1000).toFixed(1)}s`);
+  await tick();
+  return out;
+}
+
+/** Trader pages built a few at a time, yielding between, so a long list never blocks the beat. */
+async function traderRows(names: string[]) {
+  const rows: { key: string; data: unknown }[] = [];
+  for (let i = 0; i < names.length; i++) {
+    rows.push({ key: snapshotKey.trader(names[i]), data: await traderProfile(names[i]) });
+    if (i % 20 === 19) await tick();
+  }
+  return rows;
+}
+
+/** At most this many moved traders per fast round; the rest wait in a queue for the next. */
+const MOVED_PER_ROUND = 150;
+const movedQueue = new Set<string>();
 
 if (!DRY && (!URL || !KEY)) {
   console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or PUBLISH_DRY_RUN=<dir> to test).");
@@ -179,8 +208,9 @@ async function round() {
   const now = Date.now();
   const t0 = performance.now();
   const before = { ...stats };
-  // Health first and on its own: it's what tells the site the data has paused.
-  await upsert([{ key: snapshotKey.health, data: collectorHealth() }]).catch((e: Error) => log(`health failed: ${e.message}`));
+  // Health first: it's what tells the site the data has paused. It also goes
+  // out on its own timer (see main), so a long round never leaves it stale.
+  await publishHealth();
 
   // Each group on its own, so one failing view (SoDEX down mid-build, say)
   // never holds back the others; the failed group is retried next round.
@@ -207,63 +237,94 @@ async function round() {
         `${took.length ? ` (${took.join(", ")})` : ""} · total ${stats.written} written, ${(stats.bytes / 1e6).toFixed(1)} MB, ${stats.failures} failure(s)`,
     );
   }
+  if (steps.length) log(`  steps: ${steps.join(", ")}`);
+  steps.length = 0;
 }
 
 async function fast() {
   const now = Date.now();
-  {
-    lastFast = now;
-    const positions = await positionsOverview();
-    const ranks = await Promise.all([1, 7, 30].map((d) => rankings(d)));
-    await upsert([
+  lastFast = now;
+  const positions = await part("positions", () => positionsOverview());
+  const ranks = await part("rankings", () => Promise.all([1, 7, 30].map((d) => rankings(d))));
+  const risk = await part("risk", () => riskData(48));
+  const flows = await part("flows", async () => {
+    const out: { key: string; data: unknown }[] = [];
+    for (const m of liveMarkets().slice(0, BUSY_MARKETS)) {
+      out.push({ key: snapshotKey.marketFlow(m), data: liveFlow(24, m) });
+      await tick();
+    }
+    out.push({ key: snapshotKey.flowAll, data: liveFlow(24, null) });
+    return out;
+  });
+  await part("write", () =>
+    upsert([
       { key: snapshotKey.positions, data: positions },
       { key: snapshotKey.positionsMarkets, data: positions.available ? { available: true, coverage: positions.coverage, markets: positions.markets } : positions },
       ...[1, 7, 30].map((d, i) => ({ key: snapshotKey.rankings(d), data: ranks[i] })),
-      { key: snapshotKey.risk, data: riskData(48) },
-      ...liveMarkets()
-        .slice(0, BUSY_MARKETS)
-        .map((m) => ({ key: snapshotKey.marketFlow(m), data: liveFlow(24, m) })),
-      { key: snapshotKey.flowAll, data: liveFlow(24, null) },
-    ]);
-    // Traders whose positions or money moved since the last round.
-    const moved = featuredTraders([], lastEventsCheck);
-    lastEventsCheck = now;
-    await upsert(await Promise.all(moved.map(async (n) => ({ key: snapshotKey.trader(n), data: await traderProfile(n) }))));
-  }
+      { key: snapshotKey.risk, data: risk },
+      ...flows,
+    ]),
+  );
+  // Traders whose positions or money moved since the last round, a capped
+  // number at a time: a sweep can move thousands at once.
+  for (const n of featuredTraders([], lastEventsCheck)) movedQueue.add(n);
+  lastEventsCheck = now;
+  const batch = [...movedQueue].slice(0, MOVED_PER_ROUND);
+  for (const n of batch) movedQueue.delete(n);
+  if (batch.length) await part(`moved ${batch.length}${movedQueue.size ? ` (+${movedQueue.size} queued)` : ""}`, async () => upsert(await traderRows(batch)));
 }
 
 async function medium() {
-  const now = Date.now();
-  {
-    lastMedium = now;
-    const markets = liveMarkets();
-    await upsert([
-      ...[7, 30, 90, 365].map((d) => ({ key: snapshotKey.money(d), data: moneyFlow(d) })),
-      { key: snapshotKey.traders, data: liveTraders() },
-      // The quieter markets' trade views; the busiest go every minute in fast().
-      ...markets.slice(BUSY_MARKETS).map((m) => ({ key: snapshotKey.marketFlow(m), data: liveFlow(24, m) })),
-      ...(await Promise.all(markets.map(async (m) => ({ key: snapshotKey.market(m), data: await marketView(m) })))),
-    ]);
-  }
+  lastMedium = Date.now();
+  const markets = liveMarkets();
+  const money = await part("money", () => [7, 30, 90, 365].map((d) => ({ key: snapshotKey.money(d), data: moneyFlow(d) })));
+  const traders = await part("traders", () => liveTraders());
+  const quiet = await part("quiet flows", async () => {
+    const out: { key: string; data: unknown }[] = [];
+    for (const m of markets.slice(BUSY_MARKETS)) {
+      out.push({ key: snapshotKey.marketFlow(m), data: liveFlow(24, m) });
+      await tick();
+    }
+    return out;
+  });
+  const views = await part("market views", async () => {
+    const out: { key: string; data: unknown }[] = [];
+    for (const m of markets) {
+      out.push({ key: snapshotKey.market(m), data: await marketView(m) });
+      await tick();
+    }
+    return out;
+  });
+  await part("write", () => upsert([...money, { key: snapshotKey.traders, data: traders }, ...quiet, ...views]));
 }
 
 async function slow() {
   const now = Date.now();
-  {
-    lastSlow = now;
-    const insights = traderInsights();
-    await upsert([{ key: snapshotKey.insights, data: insights }]);
-    // Every trader the site links to, refreshed in full.
-    const positions = await positionsOverview();
-    const ranks = await Promise.all([1, 7, 30].map((d) => rankings(d)));
-    const marketViews = await Promise.all(liveMarkets().map((m) => marketView(m)));
-    const names = featuredTraders([positions, ...ranks, insights, ...marketViews], now - 24 * 60 * MIN);
-    for (let i = 0; i < names.length; i += 200) {
-      await upsert(await Promise.all(names.slice(i, i + 200).map(async (n) => ({ key: snapshotKey.trader(n), data: await traderProfile(n) }))));
+  lastSlow = now;
+  const insights = await part("insights", () => traderInsights());
+  await upsert([{ key: snapshotKey.insights, data: insights }]);
+  // Every trader the site links to, refreshed in full.
+  const positions = await part("positions", () => positionsOverview());
+  const ranks = await part("rankings", () => Promise.all([1, 7, 30].map((d) => rankings(d))));
+  const marketViews = await part("market views", async () => {
+    const out: unknown[] = [];
+    for (const m of liveMarkets()) {
+      out.push(await marketView(m));
+      await tick();
     }
-    await deleteStaleTraders();
-  }
+    return out;
+  });
+  const names = featuredTraders([positions, ...ranks, insights, ...marketViews], now - 24 * 60 * MIN);
+  // Their pages are rebuilt here anyway, so drop them from the moved queue.
+  for (const n of names) movedQueue.delete(n);
+  await part(`trader pages ${names.length}`, async () => {
+    for (let i = 0; i < names.length; i += 200) await upsert(await traderRows(names.slice(i, i + 200)));
+  });
+  await deleteStaleTraders();
 }
+
+/** The collector's health, written whatever else is going on. */
+const publishHealth = () => upsert([{ key: snapshotKey.health, data: collectorHealth() }]).catch((e: Error) => log(`health failed: ${e.message}`));
 
 async function main() {
   log(DRY ? `dry run: writing JSON to ${DRY}` : `publishing to ${URL}`);
@@ -271,6 +332,9 @@ async function main() {
     await round();
     return;
   }
+  // A round with every trader page in it can run for minutes; health keeps
+  // its own 30-second beat so the site never mistakes a long round for a stall.
+  setInterval(() => void publishHealth(), 30_000);
   for (;;) {
     try {
       await round();

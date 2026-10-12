@@ -441,16 +441,19 @@ export interface ChainWallet {
   native: number;
   /** ERC-20 tokens on ValueChain (NFTs left out). */
   tokens: { symbol: string; name: string; contract: string; amount: number }[];
+  /** False when the explorer that lists tokens didn't answer: native SOSO only. */
+  tokensRead: boolean;
 }
 
 /**
  * What the address holds on ValueChain itself, outside SoDEX's spot and perps
  * ledgers: native SOSO plus every ERC-20, from the chain's own explorer. Some
  * of these are already counted elsewhere (Wealth fund shares, staked SOSO);
- * derive.ts sorts that out.
+ * derive.ts sorts that out. The explorer sits behind Cloudflare and is
+ * sometimes blocked; then native SOSO, from the chain's own RPC, still counts.
  */
 export async function fetchChainWallet(address: string): Promise<ChainWallet> {
-  const [native, tokens] = await Promise.all([
+  const [nativeRes, tokensRes] = await Promise.allSettled([
     cachedFetchJson<{ result?: string }>(
       VC_RPC,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getBalance", params: [address, "latest"] }) },
@@ -462,9 +465,13 @@ export async function fetchChainWallet(address: string): Promise<ChainWallet> {
       60_000,
     ),
   ]);
+  if (nativeRes.status === "rejected") throw nativeRes.reason;
+  const native = nativeRes.value;
+  const tokens = tokensRes.status === "fulfilled" ? tokensRes.value : null;
   const wei = (hex: string | undefined) => (hex ? Number(BigInt(hex)) / 1e18 : 0);
   return {
     native: wei(native?.result),
+    tokensRead: tokens != null,
     tokens: (Array.isArray(tokens) ? tokens : [])
       .filter((t) => t.token?.type === "ERC-20")
       .map((t) => ({

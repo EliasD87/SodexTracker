@@ -42,6 +42,7 @@ export function NetWorthCard({ w }: { w: WalletData }) {
     // If ValueChain's explorer is down, the rest still adds up.
     chain: chain ?? (w.chain.error ? 0 : null),
   });
+  const collateral = (wh?.holdings ?? []).filter((h) => h.inPerps >= 0.01);
   const failed: Record<string, boolean> = {
     chain: !!w.chain.error && chain == null,
     spot: !!w.balances.error && spot == null,
@@ -68,9 +69,17 @@ export function NetWorthCard({ w }: { w: WalletData }) {
           <ul className="mt-4 flex flex-col">
             {nw.parts.map((p) => (
               <li key={p.key} className="flex items-center justify-between gap-3 py-2 text-[13px]" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                <span className="inline-flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: PART_COLOR[p.key] }} />
-                  {p.label}
+                <span className="min-w-0" style={{ color: "var(--text-muted)" }}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ background: PART_COLOR[p.key] }} />
+                    {p.label}
+                  </span>
+                  {/* Fund shares can back perps trades as collateral; their value sits under Wealth, not here. */}
+                  {p.key === "perps" && collateral.length > 0 && (
+                    <span className="block pl-4 mt-0.5 text-[11px] leading-snug" style={{ color: "var(--text-faint)" }}>
+                      Plus {collateral.map((c) => `${fmtUsd(c.inPerps)} of ${c.name}`).join(", ")} held here as collateral, counted under Wealth
+                    </span>
+                  )}
                 </span>
                 <span className="flex items-center gap-3">
                   <span className="mono tabular-nums" style={{ color: "var(--text)" }}>

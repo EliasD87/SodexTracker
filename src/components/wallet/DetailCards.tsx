@@ -258,16 +258,23 @@ export function HoldingsCard({ w }: { w: WalletData }) {
   const staked = useMemo(() => (w.staked.data != null && m ? holdingRows([], w.staked.data, m) : null), [w.staked.data, m]);
   const chain = useMemo(() => (w.chain.data && m ? chainRows(w.chain.data, m) : null), [w.chain.data, m]);
   const sum = (rows: HoldingRow[] | null) => (rows ?? []).reduce((a, r) => a + (r.value ?? 0), 0);
-  const groups: { key: string; title: string; note?: string; rows: HoldingRow[] | null; failed: boolean }[] = [
+  const groups: { key: string; title: string; note?: string; rows: HoldingRow[] | null; failed: boolean; partial?: string }[] = [
     { key: "spot", title: "Spot account", note: "Wealth fund shares are under Wealth", rows: spot, failed: !!w.balances.error },
     { key: "staked", title: "Staked SOSO", rows: staked, failed: false },
-    { key: "chain", title: "ValueChain wallet", note: "Native SOSO and tokens held on ValueChain itself", rows: chain, failed: !!w.chain.error },
+    {
+      key: "chain",
+      title: "ValueChain wallet",
+      note: "Native SOSO and tokens held on ValueChain itself",
+      rows: chain,
+      failed: !!w.chain.error,
+      partial: w.chain.data && !w.chain.data.tokensRead ? "ValueChain's explorer didn't answer, so tokens aren't listed: native SOSO only. Refresh to try again." : undefined,
+    },
   ];
   const total = sum(spot) + sum(staked) + sum(chain);
   return (
     <Panel title="Holdings" sub="Coins, wherever on SoDEX they sit" right={spot ? <span className="text-[13px] mono font-semibold" style={{ color: "var(--text)" }}>{fmtUsd(total)}</span> : undefined} className="lg:col-span-5" pad={false}>
       {groups.map((g) =>
-        g.rows && !g.rows.length && g.key !== "spot" ? null : (
+        g.rows && !g.rows.length && g.key !== "spot" && !g.partial ? null : (
           <div key={g.key} className="mt-1">
             <div className="flex items-baseline justify-between gap-3 px-4 sm:px-5 pt-2 pb-1.5">
               <span>
@@ -290,12 +297,19 @@ export function HoldingsCard({ w }: { w: WalletData }) {
                   Couldn&apos;t load this part.
                 </p>
               ) : null
-            ) : !g.rows.length ? (
+            ) : !g.rows.length && !g.partial ? (
               <p className="px-4 sm:px-5 pb-3 text-[12px]" style={{ color: "var(--text-faint)" }}>
                 Nothing here.
               </p>
             ) : (
-              <HoldingList rows={g.rows} total={total} />
+              <>
+                {g.rows.length > 0 && <HoldingList rows={g.rows} total={total} />}
+                {g.partial && (
+                  <p className="px-4 sm:px-5 pb-3 pt-1 text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                    {g.partial}
+                  </p>
+                )}
+              </>
             )}
           </div>
         ),
