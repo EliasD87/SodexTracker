@@ -60,16 +60,12 @@ export function DeepAnalysisView() {
               Test phase
             </span>
           </div>
-          <p className="mt-2 text-[13px]" style={{ color: "var(--text-muted)" }}>
-            SoDEX as pictures: where the money trades, who is pushing, where it would break.
-          </p>
         </div>
       </div>
 
       <div className="mt-5 sm:mt-6 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
         <Panel
           title="Market heatmap"
-          sub={`Every market, sized by volume over ${win}, coloured by how it grew against the ${win} before`}
           right={
             <PillTabs
               label="Window"
@@ -83,14 +79,13 @@ export function DeepAnalysisView() {
           {exchange ? <MarketHeatmap markets={exchange.markets} win={win} /> : <Waiting height={520} />}
         </Panel>
 
-        <Panel title="Pressure clock" live sub="Who won each hour of the last day, buyers or sellers, market by market" className="lg:col-span-6">
+        <Panel title="Pressure clock" live className="lg:col-span-6">
           {!flow ? <Waiting height={460} /> : flow.available && flow.heatmap ? <PressureClock flow={flow} /> : <Waiting height={460} reason={flow.available ? "Not enough trading yet." : flow.reason} />}
         </Panel>
 
         <Panel
           title="Whales vs everyone"
           live
-          sub={`How much of each group's money is long, across the ${radarBy === "volume" ? "most-traded markets of the last day" : "markets with the most money in positions"}`}
           right={
             <span className="flex flex-wrap items-center justify-end gap-1.5">
               {rankPills(radarBy, setRadarBy, "Rank markets by")}
@@ -111,7 +106,6 @@ export function DeepAnalysisView() {
         <Panel
           title="Liquidation zones"
           live
-          sub={`Where liquidation prices are stacked, 12.5% either side of the price, for the ${liqBy === "volume" ? "six most-traded markets" : "six markets with the most money in positions"}`}
           right={
             <span className="flex flex-wrap items-center justify-end gap-1.5">
               {rankPills(liqBy, setLiqBy, "Rank markets by")}
@@ -129,7 +123,7 @@ export function DeepAnalysisView() {
           )}
         </Panel>
 
-        <Panel title="Money river" live sub="Deposits and withdrawals over 30 days: which chains, and which trader groups" className="lg:col-span-12">
+        <Panel title="Money river" live className="lg:col-span-12">
           {!money ? (
             <Waiting height={380} />
           ) : money.available ? (

@@ -187,7 +187,7 @@ export function WealthView() {
       </section>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
-        <Panel title="Where the money sits" sub="Every Wealth product, sized by the money in it">
+        <Panel title="Where the money sits">
           <Mosaic products={data.products} total={data.total} />
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px]" style={{ color: "var(--text-muted)" }}>
             {GROUPS.map((g) => (
@@ -201,7 +201,6 @@ export function WealthView() {
 
         <Panel
           title="Every product"
-          sub="Biggest first. Returns follow the product's price; yield is the dividend yield for an ETF, the 7-day APY for USDC Earn."
           pad={false}
         >
           <div className="overflow-x-auto">

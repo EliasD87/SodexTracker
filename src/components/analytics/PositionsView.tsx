@@ -282,7 +282,7 @@ export function PositionsView() {
 
   if (!data.available) {
     return (
-      <Section title="Positions" kicker="Every open position on SoDEX, grouped by trader size and track record.">
+      <Section title="Positions">
         <NoData title="Open positions" reason={data.reason} />
       </Section>
     );

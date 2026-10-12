@@ -78,17 +78,12 @@ export function Tile({
   );
 }
 
-export function Section({ title, kicker, children }: { title: string; kicker?: React.ReactNode; children: React.ReactNode }) {
+export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-9 sm:mt-12 first:mt-6 sm:first:mt-8">
       <h2 className="text-[19px] sm:text-[22px] font-bold tracking-tight" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
         {title}
       </h2>
-      {kicker && (
-        <p className="text-[13px] mt-1.5 max-w-2xl" style={{ color: "var(--text-muted)" }}>
-          {kicker}
-        </p>
-      )}
       <div className="mt-5">{children}</div>
     </section>
   );

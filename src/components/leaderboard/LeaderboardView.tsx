@@ -215,7 +215,6 @@ export function LeaderboardView() {
       <section className="hidden sm:block mt-4">
         <Panel
           title="The field"
-          sub={`The top ${top.length || 100} by ${sort === "pnl" ? "PnL" : "volume"}: volume across, PnL up and down. Bigger dots rank higher.`}
         >
           {top.length ? (
             <Field key={`${win}|${sort}`} rows={top} focus={focus} />

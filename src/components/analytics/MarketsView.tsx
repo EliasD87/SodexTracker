@@ -47,13 +47,11 @@ export function MarketsView() {
   if (error && !data) return <p className="mt-10 text-[13px]" style={{ color: "var(--red)" }}>{error}</p>;
   if (!data) return <TileSkeleton count={4} />;
 
-  const h = data.headline;
   const c = positioning?.coverage;
   return (
     <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.2s" }} aria-busy={loading}>
       <Section
         title="Every market"
-        kicker={`${h.marketsTraded} markets traded in the last ${win}. The top five carry ${pct(h.top5Share)} of all volume. Open any market for its full profile, live liquidity included.`}
       >
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <PillTabs

@@ -217,7 +217,7 @@ export function MoneyFlowView() {
 
   if (!data.available) {
     return (
-      <Section title="Money in and out" kicker="Every deposit and withdrawal on SoDEX, by day, chain, asset, size and trader group.">
+      <Section title="Money in and out">
         <NoData title="Deposits and withdrawals" reason={data.reason} />
       </Section>
     );
@@ -324,7 +324,7 @@ export function MoneyFlowView() {
         </p>
       )}
 
-      <Section title="Day by day" kicker="Deposits and withdrawals share one scale. Net flow is green on days more came in than went out.">
+      <Section title="Day by day">
         {compact ? (
           // One chart at a time on a phone, picked from a sideways row.
           <div className="flex flex-col gap-3">
@@ -338,7 +338,7 @@ export function MoneyFlowView() {
         )}
       </Section>
 
-      <Section title="Where it comes from" kicker="The chain money arrived on or left to, and the asset it moved in.">
+      <Section title="Where it comes from">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <BreakdownTable rows={data.byChain} label="Chain" />
           <BreakdownTable rows={data.byCoin} label="Asset" icon />
@@ -350,14 +350,14 @@ export function MoneyFlowView() {
         )}
       </Section>
 
-      <Section title="Who moves it" kicker="By size of movement, and by trader group. Groups are today's labels.">
+      <Section title="Who moves it">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <SizeTable rows={data.bySize} />
           <GroupTable rows={data.byGroup} />
         </div>
       </Section>
 
-      <Section title="Largest movements" kicker="The twenty biggest in the window, rounded to the hour and to two figures.">
+      <Section title="Largest movements">
         <Largest rows={data.largest} />
       </Section>
 

@@ -92,14 +92,12 @@ export function FundingView() {
 
       <Section
         title="Who is paying to hold"
-        kicker="Where funding is persistently one-sided, the crowd is leaning that way and paying for it. Read +10.9% as neutral: it is SoDEX's fixed interest component (0.01% every 8 hours) with no pressure either way on top."
       >
         <FundingBars markets={data.markets} />
       </Section>
 
       <Section
         title="Every perp, by funding"
-        kicker="The extremes are often thin markets with little open interest, where a single position moves the rate. The OI column shows how much is behind each rate."
       >
         <MarketTable
           markets={data.markets}
@@ -111,7 +109,7 @@ export function FundingView() {
         />
       </Section>
 
-      <Section title="Live risk" kicker="From our own collector: positions that were likely liquidated, and how far each perp's mark price strays from its index.">
+      <Section title="Live risk">
         <RiskPanels />
       </Section>
     </div>

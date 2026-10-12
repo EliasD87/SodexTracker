@@ -3,7 +3,7 @@
 /**
  * The dashboard kit: the building blocks for the deeper tools.
  *
- *   Panel        a card with a title, an optional control slot and a live dot
+ *   Panel        a card with a title, an optional control slot and a live dot (no subtitle: titles stand alone)
  *   Kpi          label, big figure with a change pill, optional mini bars
  *   DetailsLink  the outlined button in a card's corner
  *   DeltaPill    a change as a tinted pill
@@ -108,7 +108,6 @@ export function Panel({
   className = "",
   pad = true,
   live = false,
-  sub,
 }: {
   title: string;
   right?: React.ReactNode;
@@ -117,8 +116,6 @@ export function Panel({
   pad?: boolean;
   /** Marks the card as fed live by our collector. */
   live?: boolean;
-  /** One quiet line under the title. */
-  sub?: React.ReactNode;
 }) {
   return (
     <section className={`flex flex-col overflow-hidden min-w-0 ${className}`} style={CARD_STYLE}>
@@ -128,11 +125,6 @@ export function Panel({
             {title}
             {live && <LiveDot />}
           </h3>
-          {sub && (
-            <p className="text-[12px] mt-0.5" style={{ color: "var(--text-faint)" }}>
-              {sub}
-            </p>
-          )}
         </div>
         {right && <div className="max-w-full min-w-0">{right}</div>}
       </header>

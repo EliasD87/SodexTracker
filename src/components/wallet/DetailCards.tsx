@@ -14,19 +14,11 @@ import { ago, duration, Empty, Failed, fmtAmount, fmtPrice, fmtUsd, LoadingDots,
 
 /* ── Trading record ─────────────────────────────────────────────────────── */
 
-/** "the last 200 closed positions, since Sep 28": these cards only see recent history. */
-function recentSpan(closed: { closedAt: number }[] | undefined): string {
-  if (!closed?.length) return "recent closed positions";
-  const since = Math.min(...closed.map((p) => p.closedAt));
-  const date = new Date(since).toLocaleDateString("en-US", { month: "short", day: "numeric", year: since < Date.now() - 300 * 86_400_000 ? "numeric" : undefined });
-  return `the last ${closed.length} closed positions, since ${date}`;
-}
-
 export function RecordCard({ w }: { w: WalletData }) {
   const closed = w.activity.data?.closed;
   const r = useMemo(() => (closed ? tradingRecord(closed) : null), [closed]);
   return (
-    <Panel title="Recent trading record" sub={`From ${recentSpan(closed)}`} className="lg:col-span-7">
+    <Panel title="Recent trading record" className="lg:col-span-7">
       {!w.activity.data ? (
         w.activity.error ? <Failed message={w.activity.error} /> : <Skeleton height={260} />
       ) : !r ? (
@@ -83,7 +75,7 @@ export function MarketPnlCard({ w }: { w: WalletData }) {
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.pnl)));
   const { shown, toggle } = useRowLimit(rows, 8, 5);
   return (
-    <Panel title="Recent wins and losses by market" sub={`Realised PnL from ${recentSpan(closed)}`} className="lg:col-span-5">
+    <Panel title="Recent wins and losses by market" className="lg:col-span-5">
       {!w.activity.data ? (
         <Skeleton height={260} />
       ) : !rows.length ? (
@@ -149,7 +141,6 @@ export function CalendarCard({ chart }: { chart: ChartPoint[] | null }) {
   return (
     <Panel
       title="Day by day"
-      sub="Daily change in PnL, last 12 months"
       right={
         <span className="inline-flex items-center gap-1">
           <button type="button" aria-label="Previous month" disabled={idx <= 0} onClick={() => setPick(months[idx - 1])} className="w-7 h-7 inline-flex items-center justify-center rounded-[8px] disabled:opacity-30 hover:bg-[var(--bg-elevated)]" style={{ color: "var(--text)" }}>
@@ -272,7 +263,7 @@ export function HoldingsCard({ w }: { w: WalletData }) {
   ];
   const total = sum(spot) + sum(staked) + sum(chain);
   return (
-    <Panel title="Holdings" sub="Coins, wherever on SoDEX they sit" right={spot ? <span className="text-[13px] mono font-semibold" style={{ color: "var(--text)" }}>{fmtUsd(total)}</span> : undefined} className="lg:col-span-5" pad={false}>
+    <Panel title="Holdings" right={spot ? <span className="text-[13px] mono font-semibold" style={{ color: "var(--text)" }}>{fmtUsd(total)}</span> : undefined} className="lg:col-span-5" pad={false}>
       {groups.map((g) =>
         g.rows && !g.rows.length && g.key !== "spot" && !g.partial ? null : (
           <div key={g.key} className="mt-1">
@@ -327,7 +318,6 @@ export function WealthCard({ w }: { w: WalletData }) {
   return (
     <Panel
       title="Wealth"
-      sub="SoDEX's funds, vaults and Earn"
       right={
         <a href="https://sodex.com/wealth" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
           SoDEX Wealth <ExternalLink size={12} />
@@ -401,7 +391,6 @@ export function TransfersCard({ w }: { w: WalletData }) {
   return (
     <Panel
       title="Money in and out"
-      sub="Deposits and withdrawals, stablecoins in dollars"
       right={
         <PillTabs
           label="Direction"
@@ -472,7 +461,6 @@ export function ActivityCard({ w }: { w: WalletData }) {
   return (
     <Panel
       title="Activity"
-      sub={a ? `Latest ${a.trades.length} trades and ${a.closed.length} closed positions` : undefined}
       right={
         <PillTabs
           label="Activity"

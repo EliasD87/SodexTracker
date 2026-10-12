@@ -50,7 +50,7 @@ export function NetWorthCard({ w }: { w: WalletData }) {
     perps: !!w.account.error && !w.account.data,
   };
   return (
-    <Panel title="Net worth on SoDEX" sub="Everything this wallet holds on SoDEX and ValueChain, each dollar counted once" className="lg:col-span-5">
+    <Panel title="Net worth on SoDEX" className="lg:col-span-5">
       {!w.account.data && !w.account.error ? (
         <Skeleton height={230} />
       ) : (
@@ -205,15 +205,12 @@ export function PositionsCard({ w }: { w: WalletData }) {
   });
   rows.sort((a, b) => b.notional - a.notional);
   const total = rows.reduce((a, r) => a + r.p.upnl, 0);
-  const margin = rows.reduce((a, r) => a + r.p.margin, 0);
-  const nearest = rows.reduce<number | null>((a, r) => (r.dist == null ? a : a == null ? r.dist : Math.min(a, r.dist)), null);
   // Every position on a wide screen; the biggest four on a phone, the rest a tap away.
   const { shown, toggle } = useRowLimit(rows, Infinity, 4);
 
   return (
     <Panel
       title="Open positions"
-      sub={acc && rows.length ? `${rows.length} open · ${fmtUsd(margin)} margin${nearest != null ? ` · nearest liquidation ${pct(Math.max(0, nearest), 1)} away` : ""}` : undefined}
       right={
         acc && rows.length ? (
           <span className="text-[13px] mono font-semibold" style={{ color: tone(total) }}>

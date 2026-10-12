@@ -310,7 +310,7 @@ export function MarketView({ slug }: { slug: string }) {
         )}
       </Section>
 
-      <Section title="Liquidity" kicker="What it costs to trade here right now, from the live order book.">
+      <Section title="Liquidity">
         {live.data ? (
           <Liquidity live={live.data} />
         ) : live.error ? (
@@ -322,16 +322,16 @@ export function MarketView({ slug }: { slug: string }) {
 
       {flow.data?.available && flow.data.totalVolume > 0 && (
         <>
-          <Section title={`Who is trading ${r.symbol}`} kicker="Last 24 hours from the live collector, or since it started.">
+          <Section title={`Who is trading ${r.symbol}`}>
             <GroupTable data={flow.data} />
           </Section>
-          <Section title="Large trades" kicker={`Every ${r.symbol} trade of $50,000 or more.`}>
+          <Section title="Large trades">
             <Tape data={flow.data} />
           </Section>
         </>
       )}
 
-      <Section title="Positions and concentration" kicker="From our own collector: everyone holding this market, and how much of its trading comes from its busiest accounts.">
+      <Section title="Positions and concentration">
         <MarketPositioning symbol={r.symbol} />
       </Section>
     </div>

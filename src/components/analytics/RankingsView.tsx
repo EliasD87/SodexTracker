@@ -85,7 +85,7 @@ export function RankingsView() {
   if (!data) return <TileSkeleton count={6} />;
   if (!data.available) {
     return (
-      <Section title="Rankings" kicker="The biggest positions, richest accounts, best and worst trades right now, and who is moving money.">
+      <Section title="Rankings">
         <NoData title="Rankings" reason={data.reason} />
       </Section>
     );

@@ -261,7 +261,7 @@ function TrendCard({ data, win }: { data: ExchangeAnalytics; win: WindowKey }) {
   const m = spec[metric];
   const label = METRICS.find((x) => x.value === metric)!.label;
   return (
-    <Panel title="Trend" sub={`${label} · ${m.figure}`} right={<PillTabs label="Measure" value={metric} onChange={setMetric} options={METRICS} />} className="md:col-span-2 lg:col-span-8">
+    <Panel title="Trend" right={<PillTabs label="Measure" value={metric} onChange={setMetric} options={METRICS} />} className="md:col-span-2 lg:col-span-8">
       <MiniChart
         key={metric}
         label={label}
@@ -569,7 +569,7 @@ function CalendarCard() {
   for (let k = 0; k < cells.length; k += 7) weeks.push(cells.slice(k, k + 7));
   const best = days.reduce((a, d) => (d.volume > a.volume ? d : a), days[0]);
   return (
-    <Panel title="Volume by day" sub="Last 90 days, one column a week" right={<DetailsLink href="/analytics/markets?w=90D" />} className="md:col-span-2 lg:col-span-4">
+    <Panel title="Volume by day" right={<DetailsLink href="/analytics/markets?w=90D" />} className="md:col-span-2 lg:col-span-4">
       <div className="flex gap-2">
         <div className="flex flex-col gap-[3px] text-[9.5px] mono pt-[1px]" style={{ color: "var(--text-faint)" }} aria-hidden>
           {["M", "", "W", "", "F", "", "S"].map((d, k) => (
@@ -627,7 +627,7 @@ function WealthCard() {
   const { shown, toggle } = useRowLimit(data?.products ?? [], 99, 5);
   if (!data) {
     return (
-      <Panel title="Wealth" sub="Money in SoDEX's Specialty vaults, Curated ETFs and Stable Earn" className="lg:col-span-12">
+      <Panel title="Wealth" className="lg:col-span-12">
         <Pending reason={error ? "SoDEX Wealth didn't answer. Try again in a moment." : undefined} height={180} />
       </Panel>
     );
@@ -637,7 +637,6 @@ function WealthCard() {
   return (
     <Panel
       title="Wealth"
-      sub="Money in SoDEX's Specialty vaults, Curated ETFs and Stable Earn"
       right={<DetailsLink href="/analytics/wealth" />}
       className="lg:col-span-12"
     >
@@ -701,14 +700,12 @@ function WealthCard() {
 
 function MoversCard({ data, win }: { data: ExchangeAnalytics; win: WindowKey }) {
   const [dir, setDir] = useState<"up" | "down">("up");
-  const floor = moverFloor(data);
   const rows = movers(data)
     .sort((a, b) => (dir === "up" ? b.volumeChange - a.volumeChange : a.volumeChange - b.volumeChange))
     .slice(0, 6);
   return (
     <Panel
       title="Biggest movers"
-      sub={`Volume vs the prior ${win}, markets over ${usd(floor)}`}
       right={
         <PillTabs
           label="Direction"
@@ -801,7 +798,7 @@ export function OverviewView() {
         <CalendarCard />
 
         <MoversCard data={data} win={win} />
-        <Panel title="Where the activity is" sub="Markets, trades and volume by how busy each market is" right={<DetailsLink href={`/analytics/markets?w=${win}`} />} className="lg:col-span-6">
+        <Panel title="Where the activity is" right={<DetailsLink href={`/analytics/markets?w=${win}`} />} className="lg:col-span-6">
           <TierBars data={data} bare />
         </Panel>
 
