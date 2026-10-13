@@ -414,7 +414,8 @@ export async function positionsOverview(): Promise<PositionsResult> {
       traders: meta.traders,
       lastSnapshot: meta.last,
       // Each position is one side of the market; SoDEX's open interest counts one side.
-      oiShare: oiUsd > 0 ? tracked / 2 / oiUsd : null,
+      // SoDEX's open interest counts both sides of every position, as `tracked` does.
+      oiShare: oiUsd > 0 ? tracked / oiUsd : null,
     },
     totals: {
       longUsd: total.long,
@@ -530,6 +531,6 @@ export async function marketPositions(market: string): Promise<MarketPositions |
     byRecord: groups(RECORD_GROUPS, record),
     liquidation: mark ? bucketsAround(rows, mark) : [],
     largest: largest.sort((a, b) => b.notional - a.notional).slice(0, 5),
-    oiShare: oiUsd ? (long + short) / 2 / oiUsd : null,
+    oiShare: oiUsd ? (long + short) / oiUsd : null,
   };
 }

@@ -391,7 +391,8 @@ export function traderInsights(): TraderInsights | { available: false; reason: s
     lastDay: span.b,
     retention,
     groups: gRows.map((r) => ({ cohort: r.cohort, label: COHORT_LABEL[r.cohort] ?? r.cohort, share: r.v / gTotal, accounts: r.n })),
-    mostActive: active.map((r) => ({ name: nickname(r.id), volume: r.v / 2, markets: r.m, makerShare: r.mk + r.tk > 0 ? r.mk / (r.mk + r.tk) : null })),
+    // An account's volume is everything it bought plus everything it sold, as SoDEX counts it.
+    mostActive: active.map((r) => ({ name: nickname(r.id), volume: r.v, markets: r.m, makerShare: r.mk + r.tk > 0 ? r.mk / (r.mk + r.tk) : null })),
   };
 }
 

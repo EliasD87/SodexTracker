@@ -54,7 +54,15 @@ const dataPace = pacer(config.positions.dataPerSecond);
 const q = {
   address: db.prepare("SELECT address FROM fund_accounts WHERE account_id = ?"),
   ensure: db.prepare("INSERT OR IGNORE INTO pos_accounts (account_id) VALUES (?)"),
-  due: db.prepare("SELECT account_id FROM pos_accounts WHERE next_at IS NOT NULL AND next_at <= ? ORDER BY next_at LIMIT 100"),
+  // Overdue refreshes, biggest positions first: when the lane falls behind,
+  // the accounts that move the figures most are read first, and the small
+  // ones catch up with what's left. Oldest first let a backlog of small
+  // accounts hold $136M positions unread for most of a day.
+  due: db.prepare(`
+    SELECT a.account_id FROM pos_accounts a
+    LEFT JOIN (SELECT account_id, SUM(ABS(size) * entry) n FROM open_positions GROUP BY account_id) p ON p.account_id = a.account_id
+    WHERE a.next_at IS NOT NULL AND a.next_at <= ?
+    ORDER BY COALESCE(p.n, 0) DESC, a.next_at LIMIT 1`),
   snapshotAt: db.prepare("SELECT snapshot_at FROM pos_accounts WHERE account_id = ?"),
   previous: db.prepare("SELECT market, pos_side, size, entry, leverage, liq_price FROM open_positions WHERE account_id = ?"),
   clear: db.prepare("DELETE FROM open_positions WHERE account_id = ?"),
@@ -72,7 +80,10 @@ const q = {
     ORDER BY COALESCE(p.alltime_volume, 0) DESC, COALESCE(f.net_usd, 0) DESC LIMIT 200`),
   // Every account SoDEX has: the leaderboard only lists the top 1,000.
   seedAll: db.prepare("INSERT OR IGNORE INTO pos_accounts (account_id) SELECT account_id FROM fund_accounts"),
-  swept: db.prepare("UPDATE pos_accounts SET equity = ?, swept_at = ? WHERE account_id = ?"),
+  // The overview's account value only stands in until the account's first
+  // snapshot: SoDEX reports $0 there for some of its biggest accounts, and it
+  // once turned two $10M accounts into "Shrimp" by overwriting their snapshot.
+  swept: db.prepare("UPDATE pos_accounts SET equity = CASE WHEN snapshot_at IS NULL THEN ? ELSE equity END, swept_at = ? WHERE account_id = ?"),
   leader: db.prepare(`
     INSERT INTO pos_accounts (account_id, alltime_pnl, alltime_volume) VALUES (?, ?, ?)
     ON CONFLICT (account_id) DO UPDATE SET alltime_pnl = excluded.alltime_pnl, alltime_volume = excluded.alltime_volume`),
@@ -89,16 +100,33 @@ export function markDirty(accountId) {
   positionStats.dirtyQueued++;
 }
 
-/** The next account to snapshot: settled fills first, then scheduled refreshes. */
-function nextAccount() {
+let lastWasFill = false;
+
+/**
+ * The next account to snapshot. Settled fills and scheduled refreshes take
+ * turns, the most overdue refresh first. Fills alone never run out (hundreds
+ * of accounts trade every minute), so serving them first starved the
+ * schedule: accounts holding big positions without trading went unread for
+ * most of a day. Exported for the tests.
+ */
+export function nextAccount() {
   const now = Date.now();
+  if (lastWasFill) {
+    const due = q.due.get(now)?.account_id;
+    if (due != null) {
+      lastWasFill = false;
+      return due;
+    }
+  }
   for (const [id, since] of dirty) {
     if (now - since < config.positions.settleMs) continue;
     const last = q.snapshotAt.get(id)?.snapshot_at ?? 0;
     if (now - last < config.positions.minGapMs) continue;
     dirty.delete(id);
+    lastWasFill = true;
     return id;
   }
+  lastWasFill = false;
   return q.due.get(now)?.account_id ?? null;
 }
 
@@ -229,8 +257,8 @@ export async function refreshTrackRecords({ maxPages = Infinity } = {}) {
 
 /**
  * Sweep trader overviews, busiest first. Any account with unrealised PnL
- * holds a position and is queued for a snapshot; every overview also gives
- * the account's equity, for grouping by size.
+ * holds a position and is queued for a snapshot; the overview's account value
+ * stands in for equity until that first snapshot replaces it.
  */
 export async function sweepOnce({ limit = Infinity } = {}) {
   let done = 0;
