@@ -49,17 +49,9 @@ export function DeepAnalysisView() {
     <main className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-[76px] sm:pt-[96px] pb-20">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-[26px] sm:text-[34px] font-semibold leading-none" style={{ color: "var(--text)", letterSpacing: "-0.03em" }}>
-              Deep analysis
-            </h1>
-            <span
-              className="text-[10.5px] font-semibold uppercase tracking-wide px-1.5 py-[3px] rounded-[6px]"
-              style={{ background: "var(--text)", color: "var(--bg)" }}
-            >
-              Test phase
-            </span>
-          </div>
+          <h1 className="text-[26px] sm:text-[34px] font-semibold leading-none" style={{ color: "var(--text)", letterSpacing: "-0.03em" }}>
+            Deep analysis
+          </h1>
         </div>
       </div>
 

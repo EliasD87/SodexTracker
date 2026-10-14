@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "@/components/ThemeProvider";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Sun, Moon, X, ChevronDown, Menu, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -67,45 +67,6 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
 ];
-
-/** When the public test of the new analytics ends: 48 hours from launch. */
-const TEST_PHASE_ENDS = Date.parse("2026-10-13T16:00:00Z");
-
-const everySecond = (tick: () => void) => {
-  const id = setInterval(tick, 1000);
-  return () => clearInterval(id);
-};
-
-/**
- * "Test phase" and the time left in it, ticking. The countdown appears once
- * the page is running in the browser (the server can't know the time the
- * page is read), and drops away when the test is over.
- */
-function TestPhaseBadge() {
-  const now = useSyncExternalStore(everySecond, () => Math.floor(Date.now() / 1000), () => 0);
-  const left = now ? Math.max(0, Math.floor(TEST_PHASE_ENDS / 1000) - now) : 0;
-  const h = Math.floor(left / 3600);
-  const m = Math.floor((left % 3600) / 60);
-  const sec = left % 60;
-  const two = (n: number) => String(n).padStart(2, "0");
-  return (
-    <span
-      className="inline-flex items-center gap-1 px-1 sm:px-1.5 py-[3px] rounded-[5px] sm:rounded-[6px] text-[9px] sm:text-[10px] font-semibold uppercase sm:tracking-wide leading-none whitespace-nowrap"
-      style={{ background: "var(--text)", color: "var(--bg)" }}
-      title="New features are in a test phase: figures may change while we check them"
-    >
-      Test<span className="hidden sm:inline"> phase</span>
-      {left > 0 && (
-        <span className="mono tabular-nums normal-case tracking-normal" style={{ opacity: 0.7 }} aria-label={`${h} hours ${m} minutes left`}>
-          <span className="sm:hidden">{h > 0 ? `${h}h` : `${m}m`}</span>
-          <span className="hidden sm:inline">
-            {two(h)}:{two(m)}:{two(sec)}
-          </span>
-        </span>
-      )}
-    </span>
-  );
-}
 
 function NavDropdownMenu({
   item,
@@ -376,7 +337,6 @@ export function Navbar() {
             <span className="font-semibold tracking-tight text-[15px]" style={{ color: "var(--text)" }}>
               SoDEX <span style={{ color: "var(--text-muted)" }}>Tracker</span>
             </span>
-            <TestPhaseBadge />
           </Link>
           </div>
 
