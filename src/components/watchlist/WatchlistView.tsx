@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ArrowRight, Check, ChevronRight, Copy, FolderInput, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, Copy, FolderInput, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { defaultName, parseAddresses } from "@/lib/watchlistAddress";
 import { fetchAccount, fetchOverview } from "@/lib/wallet/api";
 import { CARD_STYLE } from "@/components/analytics/kit";
@@ -102,6 +102,9 @@ function Row({ e, wl, onTrack, showGroup }: { e: WatchlistEntry; wl: Watchlist; 
 
   const menuItems = (
     <>
+      <button type="button" className={item} style={{ color: "var(--text)" }} onClick={() => (setMenu(false), onTrack(e.address))}>
+        <ArrowRight size={14} /> Track wallet
+      </button>
       <button
         type="button"
         className={item}
@@ -131,9 +134,10 @@ function Row({ e, wl, onTrack, showGroup }: { e: WatchlistEntry; wl: Watchlist; 
   );
 
   return (
-    <li ref={ref} className="relative flex items-center gap-3 px-4 sm:px-5 py-2.5 sm:py-3 transition-colors hover:bg-[var(--bg-elevated)]" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+    <li ref={ref} className="group relative flex items-center gap-3 px-4 sm:px-5 py-2.5 sm:py-3 transition-colors hover:bg-[var(--bg-elevated)]" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      {/* The whole row opens the wallet too; the Track button is the visible, labelled way in. */}
       {mode === "idle" && (
-        <button type="button" className="absolute inset-0" aria-label={`Track ${e.name}`} onClick={() => onTrack(e.address)} />
+        <button type="button" tabIndex={-1} aria-hidden className="absolute inset-0 cursor-pointer" onClick={() => onTrack(e.address)} />
       )}
       <span className="relative pointer-events-none">
         <Identicon address={e.address} size={34} />
@@ -190,7 +194,7 @@ function Row({ e, wl, onTrack, showGroup }: { e: WatchlistEntry; wl: Watchlist; 
         ) : (
           <span className="pointer-events-none">
             {/* An unnamed wallet's name is its short address: show it once. */}
-            <span className={`block text-[13.5px] font-medium truncate ${e.name === defaultName(e.address) ? "mono" : ""}`} style={{ color: "var(--text)" }}>
+            <span className={`block text-[13.5px] font-medium truncate underline-offset-2 group-hover:underline ${e.name === defaultName(e.address) ? "mono" : ""}`} style={{ color: "var(--text)" }}>
               {e.name}
             </span>
             <span className="flex items-center gap-2 text-[11.5px] min-h-[16px] min-w-0 overflow-hidden" style={{ color: "var(--text-faint)" }}>
@@ -224,13 +228,22 @@ function Row({ e, wl, onTrack, showGroup }: { e: WatchlistEntry; wl: Watchlist; 
               </>
             )}
           </span>
+          <button
+            type="button"
+            onClick={() => onTrack(e.address)}
+            aria-label={`Track ${e.name}`}
+            className="relative shrink-0 h-8 w-8 sm:w-[84px] inline-flex items-center justify-center gap-1.5 rounded-[9px] text-[12.5px] font-semibold cursor-pointer transition-colors border border-[var(--border)] text-[var(--text)] group-hover:border-[var(--text)] hover:bg-[var(--text)] hover:text-[var(--bg)]"
+          >
+            <span className="hidden sm:inline">Track</span>
+            <ArrowRight size={14} />
+          </button>
           <div ref={menuRef} className="relative">
             <button
               type="button"
               aria-label="More"
               aria-expanded={menu}
               onClick={() => setMenu((x) => !x)}
-              className="relative h-8 w-8 inline-flex items-center justify-center rounded-[9px] hover:bg-[var(--bg-surface)]"
+              className="relative h-8 w-8 inline-flex items-center justify-center rounded-[9px] cursor-pointer hover:bg-[var(--bg-surface)]"
               style={{ color: "var(--text-muted)" }}
             >
               <MoreHorizontal size={16} />
@@ -246,7 +259,6 @@ function Row({ e, wl, onTrack, showGroup }: { e: WatchlistEntry; wl: Watchlist; 
                 </div>
               ))}
           </div>
-          <ChevronRight size={15} className="hidden sm:block pointer-events-none" style={{ color: "var(--text-faint)" }} />
         </>
       )}
     </li>
@@ -350,7 +362,8 @@ export function WatchlistView({ onTrack, compact = false }: { onTrack: (address:
   const phone = useCompact();
   const LIMIT = phone ? 4 : 6;
   const shown = compact ? list.slice(0, LIMIT) : list;
-  const finding = !compact && wl.entries.length > 5;
+  // A find box once the list is longer than a glance, on the Tracker's short list too (it searches all saved wallets).
+  const finding = wl.entries.length > 5;
   const count = (id: string) => wl.entries.filter((e) => e.groupId === id).length;
 
   const flash = (m: string) => {
@@ -518,7 +531,8 @@ export function WatchlistView({ onTrack, compact = false }: { onTrack: (address:
       ) : (
         <>
           <div className="hidden sm:flex justify-end px-5 pb-1.5 text-[11px]" style={{ color: "var(--text-faint)" }}>
-            <span className="mr-[72px]">All-time PnL</span>
+            {/* Over the figures: clear of the Track button (84px) and the menu (32px), with their 12px gaps. */}
+            <span className="mr-[140px]">All-time PnL</span>
           </div>
           <ul>
             {shown.map((e) => (
