@@ -8,6 +8,7 @@ import { NoData, TileSkeleton } from "@/components/analytics/ui";
 import { GROUP, GROUPS, GroupTag, groupOf, metaOf, ProductMark, productName, type WealthGroup } from "@/components/analytics/wealthMeta";
 import { squarify } from "@/components/deep/MarketHeatmap";
 import { useWidth } from "@/components/deep/shared";
+import { useTheme } from "@/components/ThemeProvider";
 
 /**
  * SoDEX Wealth: how much money sits in each product, where the bulk of it
@@ -28,11 +29,13 @@ const ret = (v: number | null) =>
 
 /**
  * Every product as a tile, sized by the money in it. Each carries a picture
- * of what it holds, darkened from the top left so its name and size read
- * cleanly, and a thin border in its group's colour.
+ * of what it holds, veiled from the top left so its name and size read
+ * cleanly: dark pictures and light type in dark mode, bright pictures and
+ * ink type in light mode.
  */
 function Mosaic({ products, total }: { products: WealthProduct[]; total: number }) {
   const compact = useCompact();
+  const light = useTheme().theme === "light";
   const [ref, width] = useWidth<HTMLDivElement>();
   const H = compact ? 300 : 380;
   const sized = products.filter((p) => (p.tvl ?? 0) > 0);
@@ -53,9 +56,12 @@ function Mosaic({ products, total }: { products: WealthProduct[]; total: number 
         const color = GROUP[m.group].color;
         const big = r.w > 130 && r.h > 80;
         const share = (p.tvl ?? 0) / (total || 1);
-        // The pictures are dark, whatever the theme, so the type on them is always light.
-        const ink = "#F4F4F2";
-        const soft = "rgba(244,244,242,0.68)";
+        const image = m.image && (light ? m.image.replace("/wealth/", "/wealth/light/") : m.image);
+        const ink = light ? "#1A1A19" : "#F4F4F2";
+        const soft = light ? "rgba(26,26,25,0.62)" : "rgba(244,244,242,0.68)";
+        // The veil is the picture's own tone: dark over the dark art, white over the bright art.
+        const veil = light ? "255,255,255" : "6,6,6";
+        const halo = light ? "0 1px 6px rgba(255,255,255,0.75)" : "0 1px 6px rgba(0,0,0,0.6)";
         return (
           <div
             key={p.fundId}
@@ -67,32 +73,35 @@ function Mosaic({ products, total }: { products: WealthProduct[]; total: number 
               className="lb-rise relative h-full w-full rounded-[12px] p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden"
               style={{
                 animationDelay: `${i * 40}ms`,
-                backgroundColor: "#0E0E0E",
-                backgroundImage: m.image
-                  ? // A dim over the whole picture, deeper behind the name (top left) and the figures (bottom).
+                backgroundColor: light ? "#F4F4F2" : "#0E0E0E",
+                backgroundImage: image
+                  ? // A veil over the whole picture, deeper behind the name (top left) and the figures (bottom).
                     [
-                      "linear-gradient(to top, rgba(6,6,6,0.78) 0%, rgba(6,6,6,0) 48%)",
-                      "linear-gradient(135deg, rgba(6,6,6,0.85) 0%, rgba(6,6,6,0.45) 50%, rgba(6,6,6,0.25) 100%)",
-                      `url(${m.image})`,
+                      // The bright art already leaves its corners clear, so it needs far less veil than the dark.
+                      `linear-gradient(to top, rgba(${veil},${light ? 0.62 : 0.78}) 0%, rgba(${veil},0) ${light ? 38 : 48}%)`,
+                      `linear-gradient(135deg, rgba(${veil},${light ? 0.6 : 0.85}) 0%, rgba(${veil},${light ? 0.08 : 0.45}) 50%, rgba(${veil},${light ? 0 : 0.25}) 100%)`,
+                      `url(${image})`,
                     ].join(", ")
-                  : `linear-gradient(150deg, color-mix(in srgb, ${color} 28%, #121212), #121212)`,
+                  : light
+                    ? `linear-gradient(150deg, color-mix(in srgb, ${color} 14%, #F4F4F2), #F4F4F2)`
+                    : `linear-gradient(150deg, color-mix(in srgb, ${color} 28%, #121212), #121212)`,
                 backgroundSize: "cover",
                 // Subjects sit low and to the right; tall, narrow tiles still keep them in frame.
                 backgroundPosition: r.w / r.h < 0.8 ? "68% 70%" : "85% 75%",
-                boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)",
+                boxShadow: light ? "inset 0 0 0 1px rgba(0,0,0,0.07)" : "inset 0 0 0 1px rgba(255,255,255,0.08)",
               }}
             >
               <div className="relative flex items-center gap-1.5 min-w-0">
                 {big && m.logo && <ProductMark p={p} size={18} />}
                 <span
                   className={`font-semibold truncate ${big ? "text-[14px]" : "text-[11px]"}`}
-                  style={{ color: ink, textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}
+                  style={{ color: ink, textShadow: halo }}
                 >
                   {m.name}
                 </span>
               </div>
               {r.h > 46 && (
-                <div className="relative min-w-0" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.6)" }}>
+                <div className="relative min-w-0" style={{ textShadow: halo }}>
                   <div className={`mono font-semibold leading-none truncate ${big ? "text-[20px]" : "text-[11.5px]"}`} style={{ color: ink }}>
                     {usd(p.tvl ?? 0)}
                   </div>

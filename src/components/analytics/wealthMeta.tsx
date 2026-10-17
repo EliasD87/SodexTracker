@@ -20,7 +20,10 @@ export const GROUPS: { key: WealthGroup; label: string; color: string }[] = [
 ];
 export const GROUP = Object.fromEntries(GROUPS.map((g) => [g.key, g])) as Record<WealthGroup, (typeof GROUPS)[number]>;
 
-/** `image` is a background picture in public/wealth: dark, its subject low and to the right. */
+/**
+ * `image` is a background picture in public/wealth: dark, its subject low and to the right.
+ * Light mode uses the bright version of the same name in public/wealth/light.
+ */
 type Meta = { name: string; group: WealthGroup; ticker?: string; Icon: LucideIcon; logo?: string; image?: string };
 
 /** By fund id, as SoDEX's Wealth page names and groups them. */
