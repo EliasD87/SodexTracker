@@ -28,20 +28,42 @@ const ret = (v: number | null) =>
   );
 
 /**
- * Every product as a tile, sized by the money in it. Each carries a picture
- * of what it holds, veiled from the top left so its name and size read
- * cleanly: dark pictures and light type in dark mode, bright pictures and
- * ink type in light mode.
+ * Where a tile's object goes, as the larger of two spots that keep it off the
+ * type: beside the figures on the right, or in the band between the name and
+ * the figures. Sizes are estimated from the text (mono digits run ~0.6em wide).
+ */
+function placeObject(w: number, h: number, name: string, figures: [string, string] | null, fs: number[]) {
+  const pad = 12;
+  const nameLines = name.length * fs[0] * 0.56 > w - pad * 2 ? 2 : 1;
+  const top = pad + nameLines * fs[0] * 1.25 + 6;
+  const bottom = figures ? pad + fs[1] + 4 + fs[2] * 1.3 + 6 : pad;
+  const textW = figures ? pad + Math.max(figures[0].length * fs[1], figures[1].length * fs[2]) * 0.6 + 8 : 0;
+  // Beside the figures: as tall as the tile allows below the name, as wide as the room right of the figures.
+  const beside = Math.min(h - top - pad, h * 0.74, w * 0.7, w - pad - textW);
+  // Between the name and the figures: as tall as that band, up to 80% of the width.
+  const between = Math.min(h - top - bottom, w * 0.8);
+  const side = Math.max(beside, between);
+  if (side < 28) return null;
+  const band = side === beside ? [top, h - pad] : [top, h - bottom];
+  return { width: side, height: side, right: pad * 0.75, top: band[0] + (band[1] - band[0] - side) / 2 };
+}
+
+/**
+ * Every product as a tile, sized by the money in it. Each carries a cut-out
+ * object for what it holds, on the right of a tile in the page's own tone, so
+ * one set of pictures serves both themes and the type never sits on the art.
  */
 function Mosaic({ products, total }: { products: WealthProduct[]; total: number }) {
   const compact = useCompact();
   const light = useTheme().theme === "light";
   const [ref, width] = useWidth<HTMLDivElement>();
-  const H = compact ? 300 : 380;
+  const H = compact ? 440 : 380;
   const sized = products.filter((p) => (p.tvl ?? 0) > 0);
+  // Area grows with the square root of the money: USDC Earn still leads, but the
+  // small products get tiles big enough to read. Every tile prints its share.
   const rects = width
     ? squarify(
-        sized.map((p) => p.tvl!),
+        sized.map((p) => Math.sqrt(p.tvl!)),
         0,
         0,
         width,
@@ -54,18 +76,22 @@ function Mosaic({ products, total }: { products: WealthProduct[]; total: number 
         const p = sized[i];
         const m = metaOf(p);
         const color = GROUP[m.group].color;
-        const big = r.w > 130 && r.h > 80;
+        const big = r.w > 200 && r.h > 140;
+        const mid = !big && r.w > 110 && r.h > 90;
+        // A narrow tile names the product by its ticker, so the name never cuts off.
+        const name = r.w < 90 ? (m.ticker ?? m.name.replace(/ Vault$/, "")) : m.name;
         const share = (p.tvl ?? 0) / (total || 1);
-        const image = m.image && (light ? m.image.replace("/wealth/", "/wealth/light/") : m.image);
-        const ink = light ? "#1A1A19" : "#F4F4F2";
-        const soft = light ? "rgba(26,26,25,0.62)" : "rgba(244,244,242,0.68)";
-        // The veil is the picture's own tone: dark over the dark art, white over the bright art.
-        const veil = light ? "255,255,255" : "6,6,6";
-        const halo = light ? "0 1px 6px rgba(255,255,255,0.75)" : "0 1px 6px rgba(0,0,0,0.6)";
+        const value = usd(p.tvl ?? 0);
+        const note = big ? `${pct(share, 0)} of Wealth${m.ticker ? ` · ${m.ticker}` : ""}` : pct(share, share < 0.1 ? 1 : 0);
+        const fs = big ? [14, 20, 11] : mid ? [12.5, 15, 10.5] : [11.5, 12, 10.5];
+        const ink = "var(--text)";
+        const soft = "var(--text-muted)";
+        const halo = light ? "0 1px 8px rgba(255,255,255,0.9)" : "0 1px 8px rgba(0,0,0,0.7)";
+        const obj = m.image ? placeObject(r.w - 4, r.h - 4, name, r.h > 46 ? [value, note] : null, fs) : null;
         return (
           <div
             key={p.fundId}
-            className="absolute p-[2px]"
+            className="group absolute p-[2px]"
             style={{ left: r.x, top: r.y, width: r.w, height: r.h }}
             title={`${m.name} · ${GROUP[m.group].label}: ${usd(p.tvl ?? 0)} (${pct(share, 1)})`}
           >
@@ -73,43 +99,42 @@ function Mosaic({ products, total }: { products: WealthProduct[]; total: number 
               className="lb-rise relative h-full w-full rounded-[12px] p-2.5 sm:p-3 flex flex-col justify-between overflow-hidden"
               style={{
                 animationDelay: `${i * 40}ms`,
-                backgroundColor: light ? "#F4F4F2" : "#0E0E0E",
-                backgroundImage: image
-                  ? // A veil over the whole picture, deeper behind the name (top left) and the figures (bottom).
-                    [
-                      // The bright art already leaves its corners clear, so it needs far less veil than the dark.
-                      `linear-gradient(to top, rgba(${veil},${light ? 0.62 : 0.78}) 0%, rgba(${veil},0) ${light ? 38 : 48}%)`,
-                      `linear-gradient(135deg, rgba(${veil},${light ? 0.6 : 0.85}) 0%, rgba(${veil},${light ? 0.08 : 0.45}) 50%, rgba(${veil},${light ? 0 : 0.25}) 100%)`,
-                      `url(${image})`,
-                    ].join(", ")
+                // A soft spotlight behind the object, in the page's own tone.
+                background: m.image
+                  ? light
+                    ? "radial-gradient(110% 95% at 76% 58%, #FFFFFF 0%, #F3F3F1 55%, #EAEAE7 100%)"
+                    : "radial-gradient(110% 95% at 76% 58%, #232323 0%, #161616 55%, #0F0F0F 100%)"
                   : light
                     ? `linear-gradient(150deg, color-mix(in srgb, ${color} 14%, #F4F4F2), #F4F4F2)`
                     : `linear-gradient(150deg, color-mix(in srgb, ${color} 28%, #121212), #121212)`,
-                backgroundSize: "cover",
-                // Subjects sit low and to the right; tall, narrow tiles still keep them in frame.
-                backgroundPosition: r.w / r.h < 0.8 ? "68% 70%" : "85% 75%",
                 boxShadow: light ? "inset 0 0 0 1px rgba(0,0,0,0.07)" : "inset 0 0 0 1px rgba(255,255,255,0.08)",
               }}
             >
+              {obj && (
+                <div
+                  aria-hidden
+                  className="absolute transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                  style={{
+                    ...obj,
+                    background: `url(${m.image}) center / contain no-repeat`,
+                    filter: light ? "drop-shadow(0 14px 16px rgba(0,0,0,0.18))" : "drop-shadow(0 16px 20px rgba(0,0,0,0.65))",
+                  }}
+                />
+              )}
               <div className="relative flex items-center gap-1.5 min-w-0">
                 {big && m.logo && <ProductMark p={p} size={18} />}
-                <span
-                  className={`font-semibold truncate ${big ? "text-[14px]" : "text-[11px]"}`}
-                  style={{ color: ink, textShadow: halo }}
-                >
-                  {m.name}
+                <span className="font-semibold leading-tight line-clamp-2" style={{ fontSize: fs[0], color: ink, textShadow: halo }}>
+                  {name}
                 </span>
               </div>
               {r.h > 46 && (
                 <div className="relative min-w-0" style={{ textShadow: halo }}>
-                  <div className={`mono font-semibold leading-none truncate ${big ? "text-[20px]" : "text-[11.5px]"}`} style={{ color: ink }}>
-                    {usd(p.tvl ?? 0)}
+                  <div className="mono font-semibold leading-none truncate" style={{ fontSize: fs[1], color: ink }}>
+                    {value}
                   </div>
-                  {big && (
-                    <div className="mt-1 text-[11px] mono" style={{ color: soft }}>
-                      {pct(share, 0)} of Wealth{m.ticker ? ` · ${m.ticker}` : ""}
-                    </div>
-                  )}
+                  <div className="mt-1 mono truncate" style={{ fontSize: fs[2], color: soft }}>
+                    {note}
+                  </div>
                 </div>
               )}
             </div>
