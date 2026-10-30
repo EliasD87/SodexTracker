@@ -239,6 +239,61 @@ db.exec(`
   ) WITHOUT ROWID;
   CREATE INDEX IF NOT EXISTS alert_subs_account ON alert_subs (account_id);
 
+  -- Who invited each account, from SoDEX's public referral lookup. The
+  -- inviter is the captain of the squad the account joined; an account's own
+  -- squad is everyone it invited. Bindings don't change, so an account with an
+  -- inviter is read once; one without is re-read now and then, in case it
+  -- binds a code later. inviter_id stays null until the inviter's address is
+  -- in the address book.
+  CREATE TABLE IF NOT EXISTS squad_links (
+    account_id INTEGER PRIMARY KEY,
+    inviter_address TEXT,
+    inviter_id INTEGER,
+    code TEXT,
+    checked_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS squad_links_inviter ON squad_links (inviter_id);
+
+  -- The name each captain gave their squad (set once on sodex.com, may be empty).
+  CREATE TABLE IF NOT EXISTS squad_names (
+    account_id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    checked_at INTEGER NOT NULL
+  );
+
+  -- SoDEX's own 30-day volume for people in squads, read while the Energy
+  -- window still reaches back before our trade records. pre is the part of it
+  -- from before those records: SoDEX's 30 days ran from pre_from, our records
+  -- from pre_to.
+  CREATE TABLE IF NOT EXISTS squad_volume (
+    account_id INTEGER PRIMARY KEY,
+    volume REAL NOT NULL,
+    pre REAL NOT NULL,
+    pre_from INTEGER NOT NULL,
+    pre_to INTEGER NOT NULL,
+    checked_at INTEGER NOT NULL
+  );
+
+  -- The exact part: each squad person's volume from SoDEX's trade history for
+  -- the days the Energy window reaches before our records, in half-day
+  -- buckets (half = ms / 12 h), so a window starting Tuesday 12:00 UTC sums
+  -- exactly. squad_pre_read notes who has been read and over which span.
+  CREATE TABLE IF NOT EXISTS squad_pre (
+    account_id INTEGER NOT NULL,
+    half INTEGER NOT NULL,
+    usd REAL NOT NULL,
+    PRIMARY KEY (account_id, half)
+  ) WITHOUT ROWID;
+  CREATE TABLE IF NOT EXISTS squad_pre_read (
+    account_id INTEGER PRIMARY KEY,
+    from_ts INTEGER NOT NULL,
+    to_ts INTEGER NOT NULL,
+    read_at INTEGER NOT NULL
+  );
+
+  -- Inviters come back as addresses; this finds their account.
+  CREATE INDEX IF NOT EXISTS fund_accounts_address ON fund_accounts (address);
+
   CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT);
 
   CREATE TABLE IF NOT EXISTS cohorts (

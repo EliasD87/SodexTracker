@@ -222,10 +222,10 @@ export function PillTabs<T extends string>({
 }
 
 /** A row of ticks, the first `share` of them filled. */
-export function SegmentMeter({ share, segments = 32, color = "var(--text)" }: { share: number; segments?: number; color?: string }) {
+export function SegmentMeter({ share, segments = 32, color = "var(--text)", height = 24 }: { share: number; segments?: number; color?: string; height?: number }) {
   const filled = Math.round(Math.max(0, Math.min(1, share)) * segments);
   return (
-    <span className="flex gap-[3px] h-6" aria-hidden>
+    <span className="flex gap-[3px]" style={{ height }} aria-hidden>
       {Array.from({ length: segments }, (_, i) => (
         <span key={i} className="flex-1 rounded-[2px]" style={{ background: i < filled ? color : "var(--border)" }} />
       ))}

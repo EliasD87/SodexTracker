@@ -11,7 +11,7 @@ Hosts:
 |---|---|---|
 | `mainnet-gw.sodex.dev` (gateway) | Trading API: markets, accounts, WebSocket | **1200 weight/min per IP** (we cap at 240); WS 10 connections, 30 new/min, 1000 subs |
 | `mainnet-data.sodex.dev` (data) | Stats, leaderboard, overviews, history | Unpublished; we pace ourselves (2–4/s) |
-| `alpha-biz.sodex.dev` (website backend) | Deposit/withdrawal ledger | Unpublished, undocumented; paced 2/s |
+| `alpha-biz.sodex.dev` (website backend) | Deposit/withdrawal ledger; referral and SoPoints lookups | Unpublished, undocumented; ledger paced 2/s. **Referral lookups: 20/min per IP** (answers 400 "Rate limit exceeded" in plain text); we run 17/min |
 | `sodex.dev/mainnet` | Account ID → address lookup | Unpublished; 1,000 IDs per call |
 
 ## Collector (runs on the VPS)
@@ -32,6 +32,12 @@ Hosts:
 | C12 | `GET /wallet/portfolio/overview?window=1Y` | data | Weekly per trader (first pass: all, ~12 h) | **Positions**: find holders (unrealised PnL ≠ 0), equity | account_value, perps_unrealized_pnl | total_pnl, roi, **net_deposit**, spot/vault/closed PnL, volume |
 | C13 | `GET /perps/accounts/{addr}/state` | gw · 5 | On fill (settled 20 s, ≤ 1/min) + by size: $1M+ 10 min, $100K+ 1 h, else 6 h | **Positions**: open positions | av (equity), P[]: symbol, size, entry, leverage, liq price, margin mode, opened | **B[] balances (spot holdings, vault)**, **O/TO open orders & TP/SL**, S[] leverage settings, margin figures, ur (unrealised) |
 
+| C14 | `GET /biz/referral/referrer?wallet_address=` | alpha-biz · 20/min limit | Once per account that traded or deposited (last 4 weeks' traders first); unbound accounts weekly while trading, else monthly | **Squads**: who invited whom | referredBy.referrer, referredBy.code | — |
+| C15 | `GET /biz/referral/team/name?walletAddress=` | alpha-biz · same limit | Every 4th squad call, per captain until named (unnamed: weekly) | **Squads**: squad names | teamName | alreadySet, canSet, uplineTeamName |
+| C16 | `GET /biz/sopoints/v2/week/info`, `/biz/sopoints/v2/team/boost/config` | alpha-biz | Hourly | **Squads**: season week, snapshot time, boost tiers | weekNo, weekName, weekPoolPoints, nextWeekStartTime, distributionTime; windowRounds, maxTotalBonusPct, tiers | weekStatus, earlyBird* |
+| C18 | `GET /{perps,spot}/trades?account_id=&start_ts=&end_ts=&limit=1000` | data · 0.5/s, 15 min rest on 429 | Once per squad person who traded before our records (biggest first), from the window start to our records' start | **Squads**: exact volume before our records, in half-day buckets | price, quantity, ts_ms | side, fee, maker |
+| C17 | `GET /leaderboard/rank?window_type=30D&sort_by=volume&wallet_address=` | data · 1/s | Per captain and squad member, every 3 days, only while the Energy window starts before our trade records (until 4 weeks after they start) | **Squads**: volume from before our records (30-day volume less what we recorded) | item.volume_usd, snapshot_ts, found | pnl, rank |
+
 ## Site (Next.js server routes, cached)
 
 | # | Fetch | Host · cost | Cache | Used for |
@@ -45,6 +51,7 @@ Hosts:
 | S7 | `/wallet/portfolio/overview`, `/wallet/portfolio/chart`, `/perps/trades`, `/spot/trades`, `/perps/positions` | data | Per page view | Tracker / portfolio pages |
 | S8 | `/leaderboard`, `/leaderboard/rank` | data | Per page view | Leaderboard, reverse search |
 | S9 | `POST /biz/mirror/account_flow` | alpha-biz | Per page view | Tracker fund-flow card |
+| S10 | `GET /biz/referral/referrer?wallet_address=` | alpha-biz · 20/min per IP | 10 min per wallet | Squads lookup, only for wallets the collector hasn't asked about yet |
 
 ## Data we store (collector database → Supabase later)
 
@@ -103,4 +110,5 @@ Hosts:
 | Funding & risk: likely liquidations, mark vs index | account_events (from C13 diffs), ticker_minute/hour (C4); no extra fetch |
 | Market pages: who is positioned, who drives the volume | open_positions (C13), account_day (C1); no extra fetch |
 | Traders: group shares, retention, most active, find a trader | account_day + cohorts (C1, C7); no extra fetch |
+| Squads (who invited whom, Energy, tiers, biggest squads, wallet lookup) | C14, C15, C16; Energy from account_day (C1), "counts" from C9 + C11; S10 as lookup fallback |
 | Overview: positioning and money-flow panels | Same as Positions and Money flow; no extra fetch |

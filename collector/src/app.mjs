@@ -13,6 +13,7 @@ import { fundsSummary, processNextAccount, refreshAddresses, repriceMissing } fr
 import { markDirty, positionsSummary, refreshTrackRecords, runSnapshots, seedFromAddressBook, sweepOnce } from "./positions.mjs";
 import { fillListeners } from "./trades.mjs";
 import { startTelegram } from "./telegram.mjs";
+import { processNextPreTrades, processNextSquad, processNextVolume, refreshSeason, squadsSummary } from "./squads.mjs";
 
 /**
  * The collector itself. Loaded by index.mjs only once the database lock is
@@ -106,6 +107,43 @@ function startPositions(isStopped) {
   every(10 * 60_000, () => log.info("positions", positionsSummary()));
 }
 
+/**
+ * Squads: who invited whom, on a slow lane of its own against SoDEX's
+ * website API, plus the season's week and boost tiers.
+ */
+function startSquads(isStopped) {
+  const s = config.squads;
+  (async () => {
+    // The lookups go by address. Funds and positions fill the address book themselves.
+    if (!config.funds.enabled && !config.positions.enabled) await refreshAddresses();
+    await refreshSeason();
+    while (!isStopped()) {
+      try {
+        if (!(await processNextSquad())) await new Promise((r) => setTimeout(r, 60_000));
+      } catch (err) {
+        log.error("squads", err.stack ?? err.message);
+        await new Promise((r) => setTimeout(r, 5_000));
+      }
+    }
+  })();
+  // Volume from before our records, on the data host: the 30-day figures, then the exact trade
+  // history for whoever traded then. Each at its own pace, never held up by the lookups above.
+  for (const next of [processNextVolume, processNextPreTrades])
+    (async () => {
+      while (!isStopped()) {
+        try {
+          if (!(await next())) await new Promise((r) => setTimeout(r, 60_000));
+        } catch (err) {
+          log.error("squads", err.stack ?? err.message);
+          await new Promise((r) => setTimeout(r, 5_000));
+        }
+      }
+    })();
+  every(s.seasonMs, refreshSeason);
+  if (!config.funds.enabled && !config.positions.enabled) every(config.funds.newAccountsMs, () => refreshAddresses());
+  every(10 * 60_000, () => log.info("squads", squadsSummary()));
+}
+
 export async function main(releaseLock) {
   log.info("start", `database ${config.dbPath}`);
   const n = await refreshMarkets();
@@ -139,6 +177,7 @@ export async function main(releaseLock) {
   if (config.funds.enabled) startFunds(() => stopped);
   if (config.positions.enabled) startPositions(() => stopped);
   if (config.alerts.enabled) startTelegram(() => stopped);
+  if (config.squads.enabled) startSquads(() => stopped);
   every(config.intervals.tickersMs, snapshotTickers);
   every(config.intervals.verifyMs, checkCoverage);
   every(config.intervals.statsMs, recordStats);

@@ -30,6 +30,7 @@ import { traderProfile } from "@/lib/traderStore";
 import { nickname } from "@/lib/nickname";
 import { marketView } from "@/lib/views";
 import { snapshotKey } from "@/lib/snapshots";
+import { buildSquads, SHARD_PREFIXES, squadShard, squadWho } from "@/lib/squadStore";
 
 const URL = (process.env.SUPABASE_URL ?? "").replace(/\/$/, "");
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -95,11 +96,13 @@ function fingerprint(data: unknown): string {
   return createHash("sha1").update(json).digest("hex");
 }
 
-async function upsert(rows: { key: string; data: unknown }[]) {
+/** Writes the views that changed; returns how many failed (they're retried whenever next written). */
+async function upsert(rows: { key: string; data: unknown }[], maxAge = MAX_AGE): Promise<number> {
   const now = Date.now();
+  let failed = 0;
   const changed = rows.filter((r) => {
     const h = fingerprint(r.data);
-    if (lastHash.get(r.key) === h && now - (lastWrite.get(r.key) ?? 0) < MAX_AGE) {
+    if (lastHash.get(r.key) === h && now - (lastWrite.get(r.key) ?? 0) < maxAge) {
       stats.skipped++;
       return false;
     }
@@ -107,7 +110,7 @@ async function upsert(rows: { key: string; data: unknown }[]) {
     lastWrite.set(r.key, now);
     return true;
   });
-  if (!changed.length) return;
+  if (!changed.length) return 0;
 
   for (let i = 0; i < changed.length; i += 25) {
     const batch = changed.slice(i, i + 25).map((r) => ({ key: r.key, data: r.data, hash: lastHash.get(r.key), updated_at: new Date().toISOString() }));
@@ -134,6 +137,7 @@ async function upsert(rows: { key: string; data: unknown }[]) {
       stats.bytes += body.length;
     } catch (err) {
       stats.failures++;
+      failed += batch.length;
       // Forget the hashes so these views are retried next round.
       for (const r of batch) {
         lastHash.delete(r.key);
@@ -142,6 +146,7 @@ async function upsert(rows: { key: string; data: unknown }[]) {
       log(`write failed: ${(err as Error).message}`);
     }
   }
+  return failed;
 }
 
 async function deleteStaleTraders() {
@@ -202,6 +207,7 @@ function featuredTraders(views: unknown[], sinceMs: number): string[] {
 let lastFast = 0;
 let lastMedium = 0;
 let lastSlow = 0;
+let lastHourly = 0;
 let lastEventsCheck = Date.now() - 24 * 60 * MIN;
 
 async function round() {
@@ -229,6 +235,7 @@ async function round() {
   if (now - lastFast >= MIN) await step("fast", fast, () => (lastFast = 0));
   if (now - lastMedium >= 5 * MIN) await step("medium", medium, () => (lastMedium = 0));
   if (now - lastSlow >= 15 * MIN) await step("slow", slow, () => (lastSlow = 0));
+  if (now - lastHourly >= 60 * MIN) await step("hourly", hourly, () => (lastHourly = 0));
 
   const wrote = stats.written - before.written;
   if (wrote || ONCE) {
@@ -321,6 +328,37 @@ async function slow() {
     for (let i = 0; i < names.length; i += 200) await upsert(await traderRows(names.slice(i, i + 200)));
   });
   await deleteStaleTraders();
+}
+
+/**
+ * Squads: the overview; then, for lookups by wallet, 256 views of every squad
+ * with its members (by the first two hex digits of the captain's address)
+ * and 256 of who invited each wallet. Hourly: Energy is four weeks of volume,
+ * so an hour moves it little. The per-wallet views carry rounded figures and
+ * are only rewritten when those change (or once a day), which keeps this to
+ * a few MB a day at full size. A failed write is retried in 5 minutes.
+ */
+async function hourly() {
+  const started = Date.now();
+  lastHourly = started;
+  const built = await part("squads", () => buildSquads());
+  let failed = 0;
+  if (!("overview" in built)) {
+    failed += await upsert([{ key: snapshotKey.squads, data: built }]);
+  } else {
+    await part("write squads", async () => {
+      failed += await upsert([{ key: snapshotKey.squads, data: built.overview }]);
+      failed += await upsert(
+        SHARD_PREFIXES.map((p) => ({ key: snapshotKey.squadShard(p), data: squadShard(p) })),
+        24 * 60 * MIN,
+      );
+      failed += await upsert(
+        SHARD_PREFIXES.map((p) => ({ key: snapshotKey.squadWho(p), data: squadWho(p) })),
+        24 * 60 * MIN,
+      );
+    });
+  }
+  if (failed) lastHourly = started - 55 * MIN;
 }
 
 /** The collector's health, written whatever else is going on. */

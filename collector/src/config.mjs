@@ -135,6 +135,43 @@ export const config = {
   },
 
   /**
+   * SoPoints squads: who invited whom, from SoDEX's public referral lookup on
+   * its website API (the same host as the ledger, on a lane of its own), plus
+   * each captain's squad name and the season's rules. Off unless
+   * COLLECTOR_SQUADS=1. The first pass reads every account that has traded or
+   * deposited, the last 4 weeks' traders first: those take about a day, the
+   * rest a few more.
+   */
+  squads: {
+    enabled: process.env.COLLECTOR_SQUADS === "1",
+    base: "https://alpha-biz.sodex.dev/biz",
+    /** Lookups per minute. SoDEX allows 20 per IP on its referral lookups (measured 2026-10-24); stay under. */
+    requestsPerMinute: Math.max(1, Math.min(19, Number(process.env.COLLECTOR_SQUADS_PER_MIN) || 17)),
+    /** An account with no inviter that is still trading is asked again this often (it may bind a code later). */
+    unboundActiveRecheckMs: 7 * 24 * 60 * MIN,
+    /** Any other account with no inviter, as a safety net. */
+    unboundRecheckMs: 30 * 24 * 60 * MIN,
+    /** A captain whose squad has no name yet is asked again this often. */
+    nameRecheckMs: 7 * 24 * 60 * MIN,
+    /** Season week and boost tiers. */
+    seasonMs: 60 * MIN,
+    /**
+     * SoDEX's 30-day volume for each person in a squad, while the Energy window
+     * reaches back before our trade records (until 4 weeks after they start).
+     * Reads per second on the data host, alongside the positions lane's.
+     */
+    volumePerSecond: Math.max(0.2, Math.min(3, Number(process.env.COLLECTOR_SQUADS_VOLUME_PER_SEC) || 1)),
+    /** A person's SoDEX volume is read again this often while it's still needed. */
+    volumeRecheckMs: 3 * 24 * 60 * MIN,
+    /**
+     * Trade-history reads per second, for the exact volume before our records.
+     * SoDEX's trade history refuses bursts (a few a second got this host blocked
+     * for minutes), so this stays well under one a second.
+     */
+    tradesPerSecond: Math.max(0.1, Math.min(1, Number(process.env.COLLECTOR_SQUADS_TRADES_PER_SEC) || 0.5)),
+  },
+
+  /**
    * Telegram alerts for followed traders. Off unless TELEGRAM_BOT_TOKEN is set
    * (from @BotFather). Events come from the position engine and the deposits
    * job, so those should run too.

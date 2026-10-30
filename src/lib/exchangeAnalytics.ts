@@ -11,6 +11,8 @@
  * extra upstream calls.
  */
 
+import { marketNamesById, renameMarkets } from "@/lib/marketIds";
+
 const DATA = "https://mainnet-data.sodex.dev/api/v1";
 const HISTORY_START = "2025-01-01";
 /** Upstream data is daily; refreshing it more than every 15 minutes buys nothing. */
@@ -55,7 +57,12 @@ async function getDashboard<T>(path: string, params: Record<string, string>): Pr
     if (!res.ok) return [];
     const json = await res.json();
     const rows = json?.data?.data;
-    return Array.isArray(rows) ? (rows as T[]) : [];
+    if (!Array.isArray(rows)) return [];
+    // Markets keyed "ID_n" since late October 2026: back to names (see marketIds.ts).
+    const names = await marketNamesById();
+    return rows.map((r) =>
+      r && typeof r === "object" ? { ...r, markets: renameMarkets(r.markets, names), last_markets: renameMarkets(r.last_markets, names) } : r,
+    ) as T[];
   } catch {
     return [];
   }

@@ -3,12 +3,13 @@
 import { useTheme } from "@/components/ThemeProvider";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Sun, Moon, X, ChevronDown, Menu, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Sparkles } from "lucide-react";
+import { Sun, Moon, X, ChevronDown, Menu, MoreHorizontal, History, BookOpen, PlayCircle, Coins, SearchX, BarChart3, Search, Wallet, Trophy, UserRound, LogOut, Lock, Zap, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/LogoMark";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { SQUADS_LIVE } from "@/lib/features";
 
 type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNode;
   /** Rendered after the label — lets a word be replaced by a glyph. */
@@ -16,7 +17,21 @@ type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNo
   /** Spoken name, when the visible label is abbreviated. */
   ariaLabel?: string;
   /** Only on wide screens; narrower ones find it under More instead. */
-  wideOnly?: boolean };
+  wideOnly?: boolean;
+  /** New and still settling: marked BETA. */
+  beta?: boolean };
+
+/** The small outlined BETA mark beside a new page's name. */
+function BetaTag() {
+  return (
+    <span
+      className="text-[8px] font-bold px-1 py-[2px] leading-none shrink-0 rounded-[3px]"
+      style={{ color: "var(--accent)", border: "1px solid var(--accent)", letterSpacing: "0.05em" }}
+    >
+      BETA
+    </span>
+  );
+}
 type DropdownItem = { label: string; href: string; icon: React.ReactNode;
   /** Listed under More only where the top bar has no room for it. */
   narrowOnly?: boolean; comingSoon?: boolean; beta?: boolean };
@@ -30,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
   { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} />, wideOnly: true },
+  ...(SQUADS_LIVE ? [{ kind: "link", label: "Squads", href: "/squads", wideOnly: true, beta: true } as NavItem] : []),
   // "Search" becomes the glyph so the item stays on one line.
   { kind: "link", label: "Reverse", href: "/reverse-search", ariaLabel: "Reverse Search", iconAfter: <SearchX size={13} />, wideOnly: true },
   {
@@ -38,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <MoreHorizontal size={13} />,
     items: [
       { label: "SoPoints", href: "/sopoints", icon: <Zap size={14} style={{ color: "var(--green)" }} />, narrowOnly: true },
+      ...(SQUADS_LIVE ? [{ label: "Squads", href: "/squads", icon: <Users size={14} />, narrowOnly: true, beta: true }] : []),
       { label: "Reverse Search", href: "/reverse-search", icon: <SearchX size={14} />, narrowOnly: true },
       {
         label: "Deep Analysis",
@@ -191,6 +208,7 @@ function NavDropdownMenu({
                 >
                   <span className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[8px]" style={{ color: "var(--accent)", background: "var(--bg-elevated)" }}>{child.icon}</span>
                   <span className="flex-1 min-w-0 text-[12.5px] font-medium" style={{ color: "var(--text)" }}>{child.label}</span>
+                  {child.beta && <BetaTag />}
                 </Link>
               );
             })}
@@ -239,6 +257,7 @@ const SHEET_PAGES: SheetPage[] = [
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap, iconColor: "var(--green)" },
+  ...(SQUADS_LIVE ? [{ label: "Squads", href: "/squads", icon: Users, beta: true }] : []),
   { label: "Trade History", href: "/trade-history", icon: History },
   { label: "Journal", href: "/journal", icon: BookOpen },
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
@@ -477,6 +496,7 @@ export function Navbar() {
                     {item.icon}
                     {item.label}
                     {item.iconAfter}
+                    {item.beta && <BetaTag />}
                   </Link>
                 );
               }
@@ -658,6 +678,7 @@ export function Navbar() {
                     style={page.iconColor ? { color: page.iconColor } : undefined}
                   />
                   <span className="text-[13.5px] font-medium">{page.label}</span>
+                  {page.beta && <BetaTag />}
                 </Link>
               );
             })}

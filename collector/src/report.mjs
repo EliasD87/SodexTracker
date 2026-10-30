@@ -91,3 +91,35 @@ else {
   console.log(`traders     ${fmt(pa.n)} known, ${fmt(pa.w)} checked for positions`);
   console.log(`holders     ${fmt(pa.h)} holding ${fmt(pp.n)} positions in ${fmt(pp.m)} markets${pa.last ? `, last read ${time(pa.last)} UTC` : ""}`);
 }
+
+h("Squads");
+const hasSquads = one("SELECT 1 x FROM sqlite_schema WHERE type = 'table' AND name = 'squad_links'");
+if (!hasSquads) console.log("not started (COLLECTOR_SQUADS=1 turns it on)");
+else {
+  // The same groups the squads lane works through: last 4 weeks' traders first, then everyone who ever traded or deposited.
+  const since = new Date(Date.now() - 27 * 86_400_000).toISOString().slice(0, 10);
+  const asked = "SUM(s.account_id IS NOT NULL AND s.code IS NOT '!refused')";
+  const win = one(
+    `SELECT COUNT(*) n, ${asked} a FROM (SELECT DISTINCT account_id FROM account_day WHERE day >= ?) w
+     JOIN fund_accounts f ON f.account_id = w.account_id LEFT JOIN squad_links s ON s.account_id = w.account_id`,
+    since,
+  );
+  const ever = one(
+    `SELECT COUNT(*) n, ${asked} a FROM fund_accounts f LEFT JOIN squad_links s ON s.account_id = f.account_id
+     WHERE f.newest_ts IS NOT NULL OR f.account_id IN (SELECT account_id FROM account_day WHERE day >= ?)
+     ${hasPos ? "OR f.account_id IN (SELECT account_id FROM pos_accounts WHERE alltime_volume > 0)" : ""}`,
+    since,
+  );
+  const perHour = one("SELECT COUNT(*) n FROM squad_links WHERE checked_at >= ?", Date.now() - 3_600_000).n;
+  const left = ever.n - (ever.a ?? 0);
+  const eta = left && perHour ? left / perHour : null;
+  const pct = (r) => (r.n ? `${(((r.a ?? 0) / r.n) * 100).toFixed(1)}%` : "—");
+  const links = one(`SELECT SUM(code = '!refused') r, COUNT(inviter_address) j, COUNT(DISTINCT inviter_address) c FROM squad_links`);
+  const named = one("SELECT COUNT(*) n, SUM(name != '') k FROM squad_names");
+  console.log(`last 4 wks  ${fmt(win.a)} of ${fmt(win.n)} traders asked (${pct(win)})`);
+  console.log(
+    `everyone    ${fmt(ever.a)} of ${fmt(ever.n)} asked (${pct(ever)}) · ${left ? `${fmt(left)} left` : "all asked, rechecks continue"}` +
+      (eta == null ? "" : ` · about ${eta >= 24 ? `${Math.floor(eta / 24)}d ${Math.round(eta % 24)}h` : `${Math.ceil(eta)}h`} at ${fmt(perHour)}/h`),
+  );
+  console.log(`squads      ${fmt(links.j)} joined through a code · ${fmt(links.c)} captains · ${fmt(named.k)}/${fmt(named.n)} named · ${fmt(links.r)} refused, retried daily`);
+}

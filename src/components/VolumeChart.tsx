@@ -6,6 +6,7 @@ import { TokenIcon } from "@/components/TokenIcon";
 import { Flame, ChevronDown } from "lucide-react";
 import { useLandingData } from "@/components/LandingDataProvider";
 import { cachedFetchJson } from "@/lib/fetchCache";
+import { nameOf } from "@/lib/marketIds";
 
 type RangeKey = "7D" | "30D" | "90D" | "ALL";
 type SeriesKey = "total" | "perps" | "spot";
@@ -143,6 +144,13 @@ export function VolumeChart() {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<DayPoint | null>(null);
   const [dayPairs, setDayPairs] = useState<DayPair[]>([]);
+  // SoDEX's feed keys markets "ID_n" since late October 2026; this names them again.
+  const [names, setNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    cachedFetchJson<Record<string, string>>("/api/sodex/market-names")
+      .then((m) => setNames(m ?? {}))
+      .catch(() => {});
+  }, []);
   const [dayPairsLoading, setDayPairsLoading] = useState(false);
   const lastTapRef = useRef<number>(0);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -167,7 +175,7 @@ export function VolumeChart() {
         const val = parseFloat(v);
         if (val > max) { max = val; sym = k; }
       }
-      return sym;
+      return sym && nameOf(sym, names);
     };
     const merged: DayPoint[] = allDays.map(
       (d: { day_date: string; timestamp: number; total: string; cumulative: string; markets?: Record<string, string> }) => ({
@@ -186,7 +194,7 @@ export function VolumeChart() {
     const days = RANGES.find((r) => r.key === range)!.days;
     const sliced = days === 0 ? merged : merged.slice(-days);
     return { points: sliced, loading: false, error: false };
-  }, [volumeAllRaw, volumeSpotRaw, volumeFutRaw, loadingVolume, range]);
+  }, [volumeAllRaw, volumeSpotRaw, volumeFutRaw, loadingVolume, range, names]);
 
   const n = points.length;
 
@@ -322,12 +330,12 @@ export function VolumeChart() {
   const fetchDayPairs = useCallback(async (date: string) => {
     setDayPairsLoading(true);
     try {
-      const json = await cachedFetchJson<any>(
+      const json = await cachedFetchJson<{ data?: { data?: { markets?: Record<string, string> }[] } }>(
         `https://mainnet-data.sodex.dev/api/v1/dashboard/volume?start_date=${date}&end_date=${date}&market_type=all`
       );
       const markets = json?.data?.data?.[0]?.markets ?? {};
       const pairs: DayPair[] = Object.entries(markets)
-        .map(([symbol, vol]) => ({ symbol, volume: parseFloat(vol as string) }))
+        .map(([symbol, vol]) => ({ symbol: nameOf(symbol, names), volume: parseFloat(vol as string) }))
         .filter((p) => p.volume > 0)
         .sort((a, b) => b.volume - a.volume)
         .slice(0, 10);
@@ -337,7 +345,7 @@ export function VolumeChart() {
     } finally {
       setDayPairsLoading(false);
     }
-  }, []);
+  }, [names]);
 
   const onDoubleClick = useCallback(() => {
     if (hoverIdx == null || !points[hoverIdx]) return;

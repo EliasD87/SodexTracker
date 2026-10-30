@@ -44,12 +44,20 @@ export async function guard(host) {
   if (s && s.openUntil > Date.now()) await sleep(s.openUntil - Date.now());
 }
 
+/**
+ * A key like "host#lane" is a breaker of a lane's own (the squads lane uses
+ * one), so its failures never pause the other lanes on that host. Those stay
+ * out of the stored upstream list too: the site's notice is for SoDEX
+ * services being down, not one lookup misbehaving.
+ */
+const ownLane = (host) => host.includes("#");
+
 export function ok(host) {
   const s = state.get(host);
   if (!s) return;
   if (s.since) log.info("upstream", `${host} is answering again (down since ${clock(s.since)} UTC)`);
   state.delete(host);
-  kvDel.run(`upstream:${host}`);
+  if (!ownLane(host)) kvDel.run(`upstream:${host}`);
 }
 
 export function fail(host, err) {
@@ -64,7 +72,7 @@ export function fail(host, err) {
     s.openUntil = now + pause;
     s.step++;
     log.warn("upstream", `${host} not answering (${err.message}); pausing calls until ${clock(s.openUntil)} UTC`);
-    kvSet.run(`upstream:${host}`, JSON.stringify({ since: s.since, retryAt: s.openUntil, error: err.message }));
+    if (!ownLane(host)) kvSet.run(`upstream:${host}`, JSON.stringify({ since: s.since, retryAt: s.openUntil, error: err.message }));
   }
   state.set(host, s);
 }

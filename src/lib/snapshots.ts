@@ -28,6 +28,12 @@ export const snapshotKey = {
   flowAll: "flow:24:all",
   market: (market: string) => `market:${market}`,
   trader: (name: string) => `trader:${name.toLowerCase()}`,
+  /** Season, totals and the biggest squads. */
+  squads: "squads",
+  /** Every squad whose captain's address starts with these two hex digits, members included. */
+  squadShard: (prefix: string) => `squads:${prefix}`,
+  /** Who invited each wallet starting with these two hex digits, and whether it counts. */
+  squadWho: (prefix: string) => `squads:who:${prefix}`,
 };
 
 /** How long the site reuses a view before asking Supabase again, in seconds. */
@@ -42,6 +48,10 @@ export const SNAPSHOT_TTL = {
   marketFlow: 60,
   market: 120,
   trader: 60,
+  // Published hourly.
+  squads: 600,
+  squadShard: 600,
+  squadWho: 600,
 };
 
 type Unavailable = { available: false; reason: string };
@@ -81,10 +91,22 @@ async function readSnapshot<T>(key: string, ttlSeconds: number): Promise<T | nul
 }
 
 /**
+ * Views still computed from the local collector database while everything
+ * else reads Supabase: for trying a new view against the live site before the
+ * VPS publishes it. LIVE_LOCAL=squads (key prefixes, comma-separated) in
+ * .env.local; never set on the live site.
+ */
+const LOCAL_KEYS = (process.env.LIVE_LOCAL ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const computedHere = (key: string) => LOCAL_KEYS.some((p) => key === p || key.startsWith(`${p}:`));
+
+/**
  * A live view: from Supabase in production, computed locally otherwise. A
  * view not published yet reads as unavailable, with a plain reason.
  */
 export async function liveView<T>(key: string, revalidate: number, compute: () => T | Promise<T>): Promise<T | Unavailable> {
-  if (!SNAPSHOTS) return await compute();
+  if (!SNAPSHOTS || computedHere(key)) return await compute();
   return (await readSnapshot<T>(key, revalidate)) ?? { available: false, reason: "Not published yet; live data refreshes every few minutes." };
 }

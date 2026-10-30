@@ -109,6 +109,52 @@ positioning, liquidation maps and positions at risk. Fetches as little as it can
 `node collector/src/positions-sample.mjs 1000` sweeps the 1,000 busiest traders
 and snapshots the ones holding positions, to check the numbers locally.
 
+## SoPoints squads
+
+Off unless `COLLECTOR_SQUADS=1`. On SoDEX every account can be in two squads:
+the one it joined (its inviter, the captain, plus the captain's other
+invitees) and the one it built (itself plus its own invitees). SoDEX shows a
+squad's members only to the squad, but who invited an account is public, one
+account at a time, so the collector asks for every account that has traded or
+deposited and the squads follow.
+
+- **Rate:** SoDEX allows 20 of these lookups a minute per IP; the lane runs at
+  17 (`COLLECTOR_SQUADS_PER_MIN`). Its plain-text "rate limit" answer pauses
+  only this lane, never the ledger lane on the same host.
+- **Order:** the last 4 weeks' traders first, busiest first (what squad Energy
+  counts): about a day. Then everyone else who ever traded or deposited: a few
+  more days. Every fourth call reads a captain's squad name instead.
+- **Then:** bindings don't change, so an account with an inviter is never
+  asked again. One without is asked weekly while it trades (it can bind a code
+  later) and monthly otherwise.
+- **Season:** the current week and the boost tiers, hourly.
+- **Volume from before our records:** for the first 4 weeks after the
+  collector starts, the Energy window reaches back past our trade records. A
+  second lane reads each captain's and member's 30-day volume from SoDEX's
+  leaderboard (data host, 1 a second, `COLLECTOR_SQUADS_VOLUME_PER_SEC`), less
+  what we recorded; the publisher adds the window's share of it. A third lane
+  then reads the actual trades of everyone that shows trading before our
+  records (0.5 a second, `COLLECTOR_SQUADS_TRADES_PER_SEC`, resting 15 minutes
+  on any rate limit), so their figure is exact. Both stop by themselves once
+  the window lies inside our records.
+- **The window** is SoDEX's: the current week and the 3 before it, from the
+  Tuesday 12:00 UTC that began them (checked to the dollar against SoDEX's own
+  figures). A wallet's volume counts in one squad only: the one it built, once
+  anyone has joined it, otherwise the one it joined.
+- **The site's figures are estimates:** Energy is the captain's and counting
+  members' volume over the last 4 weeks from `account_day`; a member counts
+  once it has deposited $5 (ledger) and traded. The publisher writes them
+  hourly: an overview, 256 views of squads by captain (`squads:00`…`squads:ff`)
+  and 256 of who invited each wallet (`squads:who:00`…). The per-wallet views
+  carry rounded figures and are rewritten only when those change, or daily.
+- **Refusals** are saved as `!refused` (not as "no inviter") and asked again a
+  day later; a lookup that fails as an outage waits 5 minutes, doubling up to a
+  day, so one bad account can't hold up the queue. The lane has its own outage
+  breaker, so trouble here never pauses the ledger lane.
+
+`node collector/src/squads-sample.mjs 150` asks about the busiest recent
+traders, to check the views locally.
+
 ## Telegram alerts
 
 Off unless `TELEGRAM_BOT_TOKEN` is set (create a bot with @BotFather). People
@@ -146,6 +192,10 @@ without it, trader pages show "Alerts coming soon".
 | `COLLECTOR_FUNDS_RPS` | `2` | Ledger reads per second |
 | `COLLECTOR_POSITIONS` | off | `1` to track open positions |
 | `COLLECTOR_POSITIONS_WEIGHT` | `120` | REST weight per minute for snapshots |
+| `COLLECTOR_SQUADS` | off | `1` to map SoPoints squads |
+| `COLLECTOR_SQUADS_PER_MIN` | `17` | Squad lookups per minute (SoDEX allows 20; capped at 19) |
+| `COLLECTOR_SQUADS_VOLUME_PER_SEC` | `1` | SoDEX 30-day volume reads per second for squad members, while needed (0.2–3) |
+| `COLLECTOR_SQUADS_TRADES_PER_SEC` | `0.5` | Trade-history reads per second for the exact volume before our records (0.1–1) |
 | `TELEGRAM_BOT_TOKEN` | unset (off) | Bot token for alerts |
 | `SITE_URL` | unset | Site address, for links in alerts |
 | `NICKNAME_MUL` / `NICKNAME_ADD` | built in | Nickname scramble; set the same on site and collector, keep secret |
