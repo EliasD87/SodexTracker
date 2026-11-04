@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { count } from "@/lib/analyticsFormat";
 import { useCompact } from "@/components/analytics/hooks";
 import { CARD_STYLE } from "@/components/analytics/kit";
 import { useWidth } from "@/components/deep/shared";
 import { shortAddr } from "@/components/wallet/ui";
 import type { Squad, SquadsOverview, SquadTier } from "@/lib/squadStore";
-import { Avatar } from "./Avatar";
 import { TierPill } from "./Tag";
 import { BASE, boostColor, layoutDots, members, nodeX, plus, shortEnergy, stepOf, tierColor, trackX, zoneFill, zoneMid, type Lookup } from "./track";
 
@@ -31,32 +30,22 @@ export interface TrackProps {
   input: string;
   setInput: (s: string) => void;
   bad: boolean;
-  go: (raw: string, from: "form" | "pick") => void;
-  savedAddress: string | null;
+  go: (raw: string, as?: "wallet" | "squad") => void;
 }
 
 export function EnergyTrack(p: TrackProps) {
   const top = p.data.top;
-  const leader = top[0];
-  // The biggest crew other than the leader.
-  const crew = top
-    .slice(1)
-    .reduce<Squad | undefined>((best, q) => (!best || q.members > best.members || (q.members === best.members && q.energy > best.energy) ? q : best), undefined);
 
   return (
     <section id="track" aria-labelledby="sq-track-title" className="relative overflow-hidden min-w-0 px-4 sm:px-6 pt-5 sm:pt-6 pb-4 sm:pb-5" style={CARD_STYLE}>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_440px] gap-4 lg:gap-10 lg:items-center">
         <div className="min-w-0">
           <h2 id="sq-track-title" className="text-[20px] sm:text-[24px] font-semibold leading-tight" style={{ color: "var(--text)", letterSpacing: "-0.025em" }}>
-            Energy track
+            Top {count(top.length)} squads
           </h2>
-          <p className="mt-1 text-[12.5px] sm:text-[13px]" style={{ color: "var(--text-muted)" }}>
-            Top {count(top.length)} squads, one dot each. Cross a line, the whole squad gets the boost.
-          </p>
         </div>
         <div className="min-w-0">
           <SearchBox {...p} />
-          <TryChips {...p} leader={leader} crew={crew} />
         </div>
       </div>
 
@@ -72,7 +61,7 @@ function SearchBox({ input, setInput, bad, go, loading }: TrackProps) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          go(input, "form");
+          go(input);
         }}
         className={`flex items-center gap-2 h-12 pl-3.5 pr-1.5 rounded-[14px] border transition-shadow focus-within:shadow-[0_0_0_4px_var(--accent-dim)] ${
           bad ? "border-[var(--red)]" : "border-[var(--border)] focus-within:border-[var(--text-muted)]"
@@ -87,7 +76,7 @@ function SearchBox({ input, setInput, bad, go, loading }: TrackProps) {
             const t = e.clipboardData.getData("text").trim();
             if (/^0x[0-9a-fA-F]{40}$/.test(t)) {
               e.preventDefault();
-              go(t, "form");
+              go(t);
             }
           }}
           placeholder={compact ? "Paste a wallet (0x…)" : "Paste a wallet address (0x…)"}
@@ -126,7 +115,7 @@ function SearchBox({ input, setInput, bad, go, loading }: TrackProps) {
             </span>
           ) : (
             <>
-              {compact ? "Find" : "Find squads"} <ArrowRight size={14} />
+              {compact ? "Find" : "Find squads"}
             </>
           )}
         </button>
@@ -136,34 +125,6 @@ function SearchBox({ input, setInput, bad, go, loading }: TrackProps) {
           Not a wallet: 0x + 40 characters
         </p>
       )}
-    </div>
-  );
-}
-
-function TryChips({ go, savedAddress, query, leader, crew }: TrackProps & { leader?: Squad; crew?: Squad }) {
-  const chips = [
-    savedAddress ? { address: savedAddress.toLowerCase(), label: "Your wallet" } : null,
-    leader ? { address: leader.captain, label: `#1 ${leader.name || shortAddr(leader.captain)}` } : null,
-    crew ? { address: crew.captain, label: crew.name || shortAddr(crew.captain) } : null,
-  ].filter((c): c is { address: string; label: string } => !!c && c.address !== query);
-  if (!chips.length) return null;
-  return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-      <span className="text-[11.5px]" style={{ color: "var(--text-faint)" }}>
-        Try
-      </span>
-      {chips.map((c) => (
-        <button
-          key={c.address + c.label}
-          type="button"
-          onClick={() => go(c.address, "pick")}
-          className="h-7 pl-1 pr-2.5 inline-flex items-center gap-1.5 text-[11.5px] font-medium whitespace-nowrap max-w-[180px] transition-colors hover:bg-[var(--bg-elevated)] border border-[var(--border)] cursor-pointer"
-          style={{ borderRadius: 9999, background: "var(--bg-surface)", color: "var(--text)" }}
-        >
-          <Avatar address={c.address} size={20} />
-          <span className="truncate">{c.label}</span>
-        </button>
-      ))}
     </div>
   );
 }
@@ -277,7 +238,7 @@ function TrackMap({ data, tiers, cap, found, loading, query, go, energyOf, rough
                     style={{ animationDelay: `${Math.min(i, 60) * 8}ms`, cursor: compact ? undefined : "pointer" }}
                     onMouseEnter={() => setFocus({ q, cx: p.cx, cy: p.cy })}
                     onMouseLeave={() => setFocus(null)}
-                    onClick={() => go(q.captain, "pick")}
+                    onClick={() => go(q.captain, "squad")}
                   />
                 );
               })}

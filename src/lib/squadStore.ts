@@ -11,8 +11,8 @@ import { DEFAULT_TIERS, tierOf } from "@/lib/squadTiers";
  * everyone who joined through their code.
  *
  * A squad's Energy is its members' trading volume over the last 4 weeks, $1
- * = 1 Energy, captain included; each tier of Energy adds a SoPoints boost. A
- * member who has a squad of its own adds its volume there instead.
+ * = 1 Energy, captain included; each tier of Energy adds a SoPoints boost.
+ * Only invitees who joined through the captain's current code are members.
  * An invitee only counts once they've deposited at least $5 and traded.
  * SoDEX shows the official figures only to a squad's own members, so these
  * are estimates from the collector's own trade and deposit records:
@@ -61,8 +61,6 @@ export interface SquadMember {
   /** Deposited at least $5 and traded: counts towards the squad. */
   active: boolean;
   captain?: true;
-  /** Has a squad of its own: its volume counts there, not in this one. */
-  own?: true;
 }
 
 export interface Squad {
@@ -264,10 +262,10 @@ function compute(): Built | Unavailable {
   // Every wallet we have an answer for (refusals aren't answers), with what decides whether it counts.
   const rows = d
     .prepare(`
-      SELECT ${STATUS}, s.inviter_address cap, s.inviter_id capId
+      SELECT ${STATUS}, s.inviter_address cap, s.inviter_id capId, s.code
       FROM squad_links s JOIN fund_accounts f ON f.account_id = s.account_id
       WHERE s.code IS NOT '${REFUSED}'`)
-    .all() as (Status & { cap: string | null; capId: number | null })[];
+    .all() as (Status & { cap: string | null; capId: number | null; code: string | null })[];
   // And every captain, asked about or not.
   const captainStatus = new Map<number, Status>();
   for (const r of d
@@ -277,6 +275,26 @@ function compute(): Built | Unavailable {
 
   const names = new Map<number, string>();
   if (has("squad_names")) for (const r of d.prepare("SELECT account_id id, name FROM squad_names").all() as { id: number; name: string }[]) names.set(r.id, r.name);
+
+  // A squad is built through its captain's current invite code. Someone who joined through an older code
+  // (a captain who later set a custom code: RICHMAN's LNDKGXPY before RICH) still gets the squad's boost
+  // but isn't listed and adds no Energy (SoDEX's own figures for RICHMAN, 2026-11-04). Where a captain's
+  // invitees used more than one code, the current one is the custom-looking one, else the most used.
+  const codesBy = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    if (!r.cap || !r.code) continue;
+    const m = codesBy.get(r.cap) ?? new Map<string, number>();
+    m.set(r.code, (m.get(r.code) ?? 0) + 1);
+    codesBy.set(r.cap, m);
+  }
+  const AUTO = /^[A-Z]{8}$/;
+  const currentCode = new Map<string, string>();
+  for (const [cap, m] of codesBy) {
+    if (m.size < 2) continue;
+    const ranked = [...m].sort((a, b) => Number(AUTO.test(a[0])) - Number(AUTO.test(b[0])) || b[1] - a[1]);
+    currentCode.set(cap, ranked[0][0]);
+  }
+  const inSquad = (cap: string, code: string | null) => !currentCode.has(cap) || code === currentCode.get(cap);
 
   // One squad per captain; and every wallet's own answer, filed by its address.
   const byCaptain = new Map<string, { capId: number | null; people: SquadMember[] }>();
@@ -288,23 +306,19 @@ function compute(): Built | Unavailable {
     const idx = who.get(k) ?? {};
     idx[r.address] = [r.cap ?? "", active ? 1 : 0];
     who.set(k, idx);
-    if (!r.cap) continue;
+    if (!r.cap || !inSquad(r.cap, r.code)) continue;
     const sq = byCaptain.get(r.cap) ?? { capId: r.capId, people: [] };
     sq.capId ??= r.capId;
     sq.people.push({ address: r.address, volume: v, active });
     byCaptain.set(r.cap, sq);
   }
 
-  // A wallet's volume counts in one squad only: the one it built, once anyone has joined it, otherwise the
-  // one it joined (SoDEX's own figures for a member's two squads show this).
-  for (const sq of byCaptain.values()) for (const p of sq.people) if (byCaptain.has(p.address)) p.own = true;
-
   const squads: Squad[] = [];
   for (const [cap, sq] of byCaptain) {
     const capVolume = sq.capId != null ? energyVolume(sq.capId) : 0;
     const capStatus = sq.capId != null ? captainStatus.get(sq.capId) : undefined;
     const members = sq.people.filter((p) => p.active);
-    const energy = capVolume + members.reduce((a, p) => a + (p.own ? 0 : p.volume), 0);
+    const energy = capVolume + members.reduce((a, p) => a + p.volume, 0);
     const t = tierOf(energy, tiers);
     const people = [...sq.people].sort((a, b) => Number(b.active) - Number(a.active) || b.volume - a.volume);
     squads.push({

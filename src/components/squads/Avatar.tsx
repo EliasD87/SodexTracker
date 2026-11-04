@@ -1,18 +1,20 @@
 import { count } from "@/lib/analyticsFormat";
 
 /**
- * A wallet's mark, drawn from its address in shades of the text colour only:
- * a two-tone wedge under an offset dot. Inverts with the theme, carries no
- * hue (colour would mean nothing here). Always decorative: the address is
- * written next to it.
+ * A wallet's mark, drawn from its address: a two-colour wedge under an offset
+ * dot. The hues come from the address, so a wallet always looks the same and
+ * neighbours tell apart at a glance. Always decorative: the address is written
+ * next to it.
  */
 export function Avatar({ address, size = 24, captain, you, dim }: { address: string; size?: number; captain?: boolean; you?: boolean; dim?: boolean }) {
   const h = address.toLowerCase().replace(/^0x/, "").padEnd(40, "0");
   const b = (i: number) => parseInt(h.slice(i, i + 2), 16) / 255;
-  const ink = (t: number) => `color-mix(in srgb, var(--text) ${Math.round(16 + t * 70)}%, var(--bg-surface))`;
-  const t1 = b(10);
-  // The second shade is always well apart from the first.
-  const t2 = (t1 + 0.35 + b(12) * 0.3) % 1;
+  const hue = Math.round(b(10) * 360);
+  // The second hue sits well apart from the first; the dot is a lighter third.
+  const hue2 = Math.round(hue + 110 + b(12) * 140) % 360;
+  const ink = (t: number) => (t < 0.33 ? `hsl(${hue} 62% 56%)` : t < 0.66 ? `hsl(${hue2} 58% 50%)` : `hsl(${(hue + 40) % 360} 70% 74%)`);
+  const t1 = 0.1;
+  const t2 = 0.5;
   const split = Math.round(28 + b(2) * 44);
   const dx = Math.round(28 + b(4) * 44);
   const dy = Math.round(28 + b(6) * 44);
@@ -25,7 +27,7 @@ export function Avatar({ address, size = 24, captain, you, dim }: { address: str
         width: size,
         height: size,
         opacity: dim ? 0.45 : 1,
-        background: `radial-gradient(circle at ${dx}% ${dy}%, ${ink(b(8))} 0 22%, transparent calc(22% + 0.6px)), conic-gradient(from ${Math.round(b(0) * 360)}deg, ${ink(t1)} 0 ${split}%, ${ink(t2)} 0)`,
+        background: `radial-gradient(circle at ${dx}% ${dy}%, ${ink(0.9)} 0 22%, transparent calc(22% + 0.6px)), conic-gradient(from ${Math.round(b(0) * 360)}deg, ${ink(t1)} 0 ${split}%, ${ink(t2)} 0)`,
         boxShadow: `0 0 0 2px var(--bg-surface)${ring}`,
         ...(dim ? { outline: "1px dashed var(--text-faint)", outlineOffset: 1 } : null),
       }}

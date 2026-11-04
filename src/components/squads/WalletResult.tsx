@@ -9,7 +9,7 @@ import { CopyButton, shortAddr } from "@/components/wallet/ui";
 import type { Squad, SquadsOverview, SquadTier } from "@/lib/squadStore";
 import { Avatar, AvatarStack } from "./Avatar";
 import { SquadTag, TierPill } from "./Tag";
-import { BASE, boostColor, gapOf, ghostFill, nextStep, nodeX, plus, shortEnergy, stepOf, stepShare, tierColor, trackX, zoneFill, type Lookup } from "./track";
+import { BASE, boostColor, gapOf, ghostFill, nodeX, plus, shortEnergy, stepOf, stepShare, tierColor, trackX, zoneFill, type Lookup } from "./track";
 
 /**
  * A looked-up wallet: its estimated SoPoints boost and where it comes from,
@@ -25,8 +25,21 @@ interface Props {
   energyOf: (q: Squad) => number;
   roughly: (q: Squad) => boolean;
   rankBy: Map<string, number>;
-  go: (raw: string, from: "form" | "pick") => void;
+  go: (raw: string, as?: "wallet" | "squad") => void;
   retry: () => void;
+}
+
+/** How a squad card is shown: as the wallet's joined or built squad, or on its own. */
+type Kind = "joined" | "built" | "squad";
+
+/** One squad on its own, for a squad picked from the board or the track (looked up by its captain). */
+export function SquadOnly(p: Props) {
+  const q = p.r.built;
+  return (
+    <section id="result" aria-label="Squad" className="grid">
+      {q ? <SquadCard kind="squad" q={q} delay={0} {...p} /> : <EmptyCard kind="built" title="No squad found" tiers={p.tiers} />}
+    </section>
+  );
 }
 
 export function WalletResult(p: Props) {
@@ -49,7 +62,7 @@ export function WalletResult(p: Props) {
         ) : r.inviter ? (
           <EmptyCard kind="joined" title={`Invited by ${shortAddr(r.inviter)}`} tiers={p.tiers}>
             Not in our data yet.
-            <OutlineButton onClick={() => p.go(r.inviter!, "pick")}>See {shortAddr(r.inviter)}&apos;s squads</OutlineButton>
+            <OutlineButton onClick={() => p.go(r.inviter!, "squad")}>See {shortAddr(r.inviter)}&apos;s squad</OutlineButton>
           </EmptyCard>
         ) : (
           <EmptyCard kind="joined" title="No joined squad" tiers={p.tiers} />
@@ -75,23 +88,7 @@ function Readout({ r, tiers }: Props) {
   const counts = r.self.counts;
   const jb = r.joined?.boost ?? 0;
   const bb = r.built?.boost ?? 0;
-  const would = Math.min(r.boost.max, jb + bb);
-  const step = nextStep(r);
   const asOf = new Date(r.asOf).toISOString().slice(11, 16);
-
-  let power: React.ReactNode = null;
-  if (counts === false) power = would || r.inviter ? `Deposit $5 + trade to unlock ${plus(would)}${r.inviter ? " +5% code" : ""}` : null;
-  else if (jb + bb >= r.boost.max) power = `Maxed at ${plus(r.boost.max)}`;
-  else if (step)
-    power = (
-      <>
-        {step.q.name || "Its squad"}: {shortEnergy(step.gap)} more → this wallet{" "}
-        <span className="font-semibold" style={{ color: boostColor(step.q.next!.boost, tiers) }}>
-          {plus(step.after + r.boost.invited)}
-        </span>
-      </>
-    );
-  else if (!r.joined && !r.built && !r.inviter) power = `Join with a code: +5% now, more at ${shortEnergy(tiers[0].energy)}`;
 
   return (
     <div className="dash-in relative overflow-hidden grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)]" style={CARD_STYLE}>
@@ -147,11 +144,13 @@ function Readout({ r, tiers }: Props) {
               {counts === false ? "for now" : "est."}
             </span>
           </div>
-          {!jb && !bb && !r.boost.invited && (
-            <div className="mt-2 text-[12px]" style={{ color: "var(--text-muted)" }}>
-              No boost yet
-            </div>
-          )}
+          {/* The sum, so the big number adds up at a glance. */}
+          <div className="mt-2 text-[12.5px] mono" style={{ color: "var(--text-muted)" }}>
+            {!jb && !bb
+              ? "No boost yet"
+              : [jb ? `${pc(jb)} joined` : "", bb ? `${pc(bb)} built` : ""].filter(Boolean).join(" + ")}
+            {jb + bb > r.boost.max ? ` (squads capped at ${plus(r.boost.max)})` : ""}
+          </div>
         </div>
       </div>
 
@@ -161,35 +160,27 @@ function Readout({ r, tiers }: Props) {
           bb={bb}
           jc={boostColor(jb, tiers)}
           bc={boostColor(bb, tiers)}
-          invited={r.boost.invited || (counts === false && r.inviter ? 0.05 : 0)}
           max={r.boost.max}
           ghost={counts === false}
         />
         <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px]" style={{ color: "var(--text-muted)" }}>
           <Swatch color={jb ? boostColor(jb, tiers) : "var(--border)"}>Joined {plus(jb)}</Swatch>
           <Swatch color={bb ? boostColor(bb, tiers) : "var(--border)"}>Built {plus(bb)}</Swatch>
-          <Swatch hatch>{r.inviter ? "Code +5%" : "No code"}</Swatch>
           {jb + bb > r.boost.max && <span>Capped at {plus(r.boost.max)}</span>}
         </div>
-        {power && (
-          <div className="mt-4 pt-3 flex items-start gap-2 text-[12.5px] leading-relaxed" style={{ borderTop: "1px solid var(--border-subtle)", color: "var(--text)" }}>
-            <Zap size={14} className="shrink-0 mt-[3px]" style={{ color: "var(--sq-you)" }} />
-            <span>{power}</span>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-/** Cells of 5% up to the cap: joined, then built, each in its squad's tier colour; the code's +5% sits apart, outside the cap. */
-function BoostMeter({ jb, bb, jc, bc, invited, max, ghost }: { jb: number; bb: number; jc: string; bc: string; invited: number; max: number; ghost: boolean }) {
+/** Cells of 5% up to the cap: joined, then built, each in its squad's tier colour. */
+function BoostMeter({ jb, bb, jc, bc, max, ghost }: { jb: number; bb: number; jc: string; bc: string; max: number; ghost: boolean }) {
   const cells = Math.round(max / 0.05);
   const j = Math.round(Math.min(jb, max) / 0.05);
   const b = Math.round(Math.max(0, Math.min(bb, max - jb)) / 0.05);
   return (
     <div>
-      <span className="flex items-center gap-[10px]" role="img" aria-label={`Joined ${plus(jb)}, built ${plus(bb)}, code ${invited ? "+5%" : "none"}, of a ${plus(max)} cap`}>
+      <span className="flex items-center" role="img" aria-label={`Joined ${plus(jb)}, built ${plus(bb)}, of a ${plus(max)} cap`}>
         <span className="flex flex-1 gap-[3px] h-3 sm:h-[14px]">
           {Array.from({ length: cells }, (_, i) => {
             const on = i < j + b;
@@ -209,17 +200,10 @@ function BoostMeter({ jb, bb, jc, bc, invited, max, ghost }: { jb: number; bb: n
             );
           })}
         </span>
-        <span
-          className={`w-[22px] h-3 sm:h-[14px] ${invited > 0 && !ghost ? "sq-hatch" : ""}`}
-          style={{ borderRadius: 3, background: invited > 0 && !ghost ? undefined : "var(--border)", boxShadow: invited > 0 && ghost ? "inset 0 0 0 1px var(--text-faint)" : undefined }}
-        />
       </span>
-      <div className="mt-1.5 flex items-center gap-[10px] mono text-[10px]" style={{ color: "var(--text-faint)" }}>
-        <span className="flex-1 flex justify-between">
-          <span>0</span>
-          <span>{plus(max)} cap</span>
-        </span>
-        <span className="w-[22px] text-center">+5%</span>
+      <div className="mt-1.5 flex justify-between mono text-[10px]" style={{ color: "var(--text-faint)" }}>
+        <span>0</span>
+        <span>{plus(max)} cap</span>
       </div>
     </div>
   );
@@ -228,8 +212,10 @@ function BoostMeter({ jb, bb, jc, bc, invited, max, ghost }: { jb: number; bb: n
 /* ── Squad card ─────────────────────────────────────────────────────────── */
 
 const overline = "text-[10.5px] font-semibold uppercase tracking-[0.08em]";
+/** A boost without its sign, for sums: "10%". */
+const pc = (f: number) => `${Math.round(f * 100)}%`;
 
-function SquadCard({ kind, q, delay, r, tiers, cap, energyOf, roughly, rankBy, go }: Props & { kind: "joined" | "built"; q: Squad; delay: number }) {
+function SquadCard({ kind, q, delay, r, tiers, cap, energyOf, roughly, rankBy, go }: Props & { kind: Kind; q: Squad; delay: number }) {
   const rank = rankBy.get(q.captain);
   const e = energyOf(q);
   const gap = gapOf(q);
@@ -239,7 +225,7 @@ function SquadCard({ kind, q, delay, r, tiers, cap, energyOf, roughly, rankBy, g
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <SquadTag kind={kind} />
+            {kind !== "squad" && <SquadTag kind={kind} />}
             {rank ? (
               <span className="mono text-[11.5px] font-semibold" style={{ color: "var(--text-muted)" }}>
                 #{rank}
@@ -392,7 +378,7 @@ function MiniTrack({ q, e, tiers, cap }: { q: Squad; e: number; tiers: SquadTier
 
 const SHOWN = 8;
 
-function Roster({ q, e, r, kind, go }: { q: Squad; e: number; r: Lookup; kind: "joined" | "built"; go: Props["go"] }) {
+function Roster({ q, e, r, kind, go }: { q: Squad; e: number; r: Lookup; kind: Kind; go: Props["go"] }) {
   const [all, setAll] = useState(false);
   const people = q.people ?? [];
   // The searched wallet right after the captain when it would otherwise be folded away.
@@ -415,8 +401,8 @@ function Roster({ q, e, r, kind, go }: { q: Squad; e: number; r: Lookup; kind: "
       </div>
       <ul className="mt-2">
         {shown.map((m) => {
-          const me = m.address === r.address;
-          const share = e > 0 && (m.captain || (m.active && !m.own)) ? Math.min(1, m.volume / e) : 0;
+          const me = kind !== "squad" && m.address === r.address;
+          const share = e > 0 && (m.captain || m.active) ? Math.min(1, m.volume / e) : 0;
           return (
             <li
               key={m.address}
@@ -439,11 +425,6 @@ function Roster({ q, e, r, kind, go }: { q: Squad; e: number; r: Lookup; kind: "
                     Waiting
                   </span>
                 ) : null}
-                {m.own && !m.captain && (
-                  <span className="text-[10px] shrink-0" style={{ color: "var(--text-faint)" }} title="Its volume counts in the squad it built">
-                    Own squad
-                  </span>
-                )}
               </span>
               <span className="hidden sm:block h-[4px] rounded-full overflow-hidden" style={{ background: "var(--bg-elevated)" }} title={share ? `${pct(share, 0)} of this squad's Energy` : undefined}>
                 <span
@@ -451,7 +432,7 @@ function Roster({ q, e, r, kind, go }: { q: Squad; e: number; r: Lookup; kind: "
                   style={{ width: `${share * 100}%`, background: me ? "var(--sq-you)" : m.captain ? "var(--text)" : "color-mix(in srgb, var(--text) 55%, var(--bg-elevated))" }}
                 />
               </span>
-              <span className="mono text-right" style={{ color: (m.active && !m.own) || m.captain ? "var(--text)" : "var(--text-faint)" }}>
+              <span className="mono text-right" style={{ color: m.active || m.captain ? "var(--text)" : "var(--text-faint)" }}>
                 {m.volume > 0 ? usd(m.volume) : "—"}
               </span>
             </li>
@@ -478,7 +459,7 @@ function Roster({ q, e, r, kind, go }: { q: Squad; e: number; r: Lookup; kind: "
 
 function AddrButton({ a, go }: { a: string; go: Props["go"] }) {
   return (
-    <button type="button" onClick={() => go(a, "pick")} className="mono truncate hover:underline cursor-pointer" style={{ color: "var(--text)", borderRadius: 0 }} title="See this wallet's squads">
+    <button type="button" onClick={() => go(a)} className="mono truncate hover:underline cursor-pointer" style={{ color: "var(--text)", borderRadius: 0 }} title="See this wallet's squads">
       {shortAddr(a)}
     </button>
   );

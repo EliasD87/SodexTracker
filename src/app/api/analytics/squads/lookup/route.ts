@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
           boost: {
             // A wallet that doesn't count gets no boost, whatever its squads reach.
             squads: counts === false ? 0 : Math.min(own.maxBoost, (joined?.boost ?? 0) + (built?.boost ?? 0)),
-            invited: inviter && counts !== false ? 0.05 : 0,
+            // No extra boost for joining through a code: SoDEX's own total for a member is its two squads' boosts.
+            invited: 0,
             max: own.maxBoost,
           },
           asOf: own.asOf,

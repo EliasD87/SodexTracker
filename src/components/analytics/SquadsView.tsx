@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Flag, Sparkles, Timer, Users } from "lucide-react";
 import { count, pct } from "@/lib/analyticsFormat";
-import { useApi, useCompact } from "@/components/analytics/hooks";
+import { useApi } from "@/components/analytics/hooks";
 import { LiveDot, SegmentMeter, StatStrip } from "@/components/analytics/kit";
 import { NoData } from "@/components/analytics/ui";
-import { usePortfolio } from "@/components/PortfolioProvider";
 import type { Squad, SquadsOverview } from "@/lib/squadStore";
 import { DEFAULT_TIERS } from "@/lib/squadTiers";
 import { EnergyTrack } from "@/components/squads/EnergyTrack";
 import { Standings } from "@/components/squads/Standings";
-import { WalletResult } from "@/components/squads/WalletResult";
+import { SquadOnly, WalletResult } from "@/components/squads/WalletResult";
+import { Popup } from "@/components/squads/Popup";
 import { ADDRESS, capOf, clock, plus, SEASON_WEEKS, utc, type Lookup, type Unavailable } from "@/components/squads/track";
 
 /**
@@ -22,11 +22,17 @@ import { ADDRESS, capOf, clock, plus, SEASON_WEEKS, utc, type Lookup, type Unava
 
 const WEEK = 7 * 86_400_000;
 
-/** The wallet in the page's link, if any. */
-function linkedAddress(): string | null {
+type View = { address: string; n: number; as: "wallet" | "squad" };
+
+/** The wallet (?address=) or squad (?squad=, by captain) in the page's link, if any. */
+function linkedView(): View | null {
   if (typeof window === "undefined") return null;
-  const a = new URLSearchParams(window.location.search).get("address");
-  return a && ADDRESS.test(a) ? a.toLowerCase() : null;
+  const q = new URLSearchParams(window.location.search);
+  const a = q.get("address");
+  if (a && ADDRESS.test(a)) return { address: a.toLowerCase(), n: 0, as: "wallet" };
+  const c = q.get("squad");
+  if (c && ADDRESS.test(c)) return { address: c.toLowerCase(), n: 0, as: "squad" };
+  return null;
 }
 
 /** Time left until a moment, ticking each minute. */
@@ -40,18 +46,13 @@ function useCountdown(at: number | null) {
 }
 
 export function SquadsView() {
-  const compact = useCompact();
-  const { savedAddress } = usePortfolio();
   const { data, error } = useApi<SquadsOverview | Unavailable>("/api/analytics/squads", 300_000, 600_000);
-  // A shared link (/squads?address=0x…) opens that wallet's squads. Read once, in the browser; the
+  // A shared link (/squads?address=0x… or ?squad=0x…) opens that popup. Read once, in the browser; the
   // server renders only the skeleton (no data yet), so the two never disagree.
-  const [input, setInput] = useState(() => linkedAddress() ?? "");
+  const [input, setInput] = useState("");
   const [bad, setBad] = useState(false);
   // `n` changes on every search, so searching the same wallet again asks again.
-  const [query, setQuery] = useState<{ address: string; n: number } | null>(() => {
-    const a = linkedAddress();
-    return a ? { address: a, n: 0 } : null;
-  });
+  const [query, setQuery] = useState<View | null>(linkedView);
   const lookup = useApi<Lookup | Unavailable>(query ? `/api/analytics/squads/lookup?address=${query.address}${query.n ? `&n=${query.n}` : ""}` : null, 300_000);
   // While a new search loads, the previous wallet's answer isn't shown as if it were this one's.
   const current = lookup.data && (!lookup.data.available || lookup.data.address === query?.address) && !lookup.loading ? lookup.data : null;
@@ -82,22 +83,29 @@ export function SquadsView() {
     };
   }, [overview]);
 
-  /** The one way into a lookup: the search, a pasted address, a chip, a dot, a board row, an address in a roster. */
-  const go = (raw: string, from: "form" | "pick") => {
+  /**
+   * The one way into a popup. A wallet (the search, a pasted address, an address in a roster) shows its
+   * boost and both its squads; a squad (a board row, a dot) shows just that squad, looked up by its captain.
+   */
+  const go = (raw: string, as: "wallet" | "squad" = "wallet") => {
     const a = raw.trim().toLowerCase();
     if (!ADDRESS.test(a)) return setBad(true);
     setBad(false);
-    setInput(a);
-    setQuery((q) => ({ address: a, n: (q?.n ?? 0) + 1 }));
+    setQuery((q) => ({ address: a, n: (q?.n ?? 0) + 1, as }));
     try {
-      history.replaceState(null, "", `/squads?address=${a}`);
+      history.replaceState(null, "", `/squads?${as === "squad" ? "squad" : "address"}=${a}`);
     } catch {}
-    requestAnimationFrame(() => {
-      const el = document.getElementById(from === "pick" && !compact ? "track-map" : "result");
-      if (el && (from === "pick" || el.getBoundingClientRect().top > window.innerHeight * 0.8)) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   };
   const retry = () => setQuery((q) => (q ? { ...q, n: q.n + 1 } : q));
+  /** Closing leaves the page as it was: no pins, no search, the plain link. */
+  const close = () => {
+    setQuery(null);
+    setInput("");
+    try {
+      history.replaceState(null, "", "/squads");
+    } catch {}
+  };
+  const wallet = query?.as === "wallet" ? found : null;
 
   if (!data) {
     return error ? (
@@ -143,6 +151,7 @@ export function SquadsView() {
       <StatStrip className="grid-cols-2 md:grid-cols-4">
         <SeasonCell
           icon={<Flag size={13} />}
+          green="icon"
           label="Season"
           value={
             s?.weekName ? (
@@ -159,7 +168,7 @@ export function SquadsView() {
               "—"
             )
           }
-          meter={inSeason ? <SegmentMeter segments={SEASON_WEEKS} share={s!.week! / SEASON_WEEKS} height={6} /> : null}
+          meter={inSeason ? <SegmentMeter segments={SEASON_WEEKS} share={s!.week! / SEASON_WEEKS} height={6} color="var(--green)" /> : null}
           caption={s ? "Layer 1" : "Not in yet"}
         />
         <SeasonCell
@@ -186,9 +195,10 @@ export function SquadsView() {
         />
         <SeasonCell
           icon={<Sparkles size={13} />}
+          green="value"
           label="SoPoints this week"
-          value={s?.pool ? (s.pool >= 1e6 ? `${+(s.pool / 1e6).toFixed(2)}M` : count(s.pool)) : "—"}
-          caption={s?.distributionAt ? `Paid ${day(s.distributionAt)}` : s ? "Shared pool" : "Not in yet"}
+          value={s?.pool ? points(s.pool * TRADERS_SHARE) : "—"}
+          caption={s?.distributionAt ? `Distributed ${day(s.distributionAt)}` : s ? "Shared pool" : "Not in yet"}
         />
         <SeasonCell
           icon={<Users size={13} />}
@@ -204,9 +214,9 @@ export function SquadsView() {
         cap={derived.cap}
         energyOf={derived.energyOf}
         roughly={derived.roughly}
-        found={found}
-        loading={lookup.loading}
-        query={query?.address ?? null}
+        found={wallet}
+        loading={query?.as === "wallet" && lookup.loading}
+        query={query?.as === "wallet" ? query.address : null}
         input={input}
         setInput={(v) => {
           setInput(v);
@@ -214,52 +224,59 @@ export function SquadsView() {
         }}
         bad={bad}
         go={go}
-        savedAddress={savedAddress}
       />
 
-      {query &&
-        (!current ? (
-          lookup.error && !lookup.loading ? (
-            <div className="flex flex-wrap items-center gap-3 text-[13px]" style={{ color: "var(--text-faint)" }}>
-              {lookup.error}
-              <button
-                type="button"
-                onClick={retry}
-                className="h-8 px-3 text-[12px] font-medium border border-[var(--border)] hover:bg-[var(--bg-elevated)] cursor-pointer"
-                style={{ borderRadius: 9, color: "var(--text)" }}
-              >
-                Try again
-              </button>
+      {query && (
+        <Popup title={query.as === "squad" ? "Squad" : "Wallet"} narrow={query.as === "squad"} onClose={close}>
+          {!current ? (
+            lookup.error && !lookup.loading ? (
+              <div className="flex flex-wrap items-center gap-3 text-[13px]" style={{ color: "var(--text-faint)" }}>
+                {lookup.error}
+                <button
+                  type="button"
+                  onClick={retry}
+                  className="h-8 px-3 text-[12px] font-medium border border-[var(--border)] hover:bg-[var(--bg-elevated)] cursor-pointer"
+                  style={{ borderRadius: 9, color: "var(--text)" }}
+                >
+                  Try again
+                </button>
+              </div>
+            ) : query.as === "squad" ? (
+              <div aria-busy className="animate-pulse h-[460px]" style={{ background: "var(--bg-elevated)", borderRadius: "var(--card-radius)" }} />
+            ) : (
+              <div aria-busy className="grid gap-3 sm:gap-4">
+                <div className="animate-pulse h-[188px] lg:h-[164px]" style={{ background: "var(--bg-elevated)", borderRadius: "var(--card-radius)" }} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="animate-pulse h-[420px]" style={{ background: "var(--bg-elevated)", borderRadius: "var(--card-radius)" }} />
+                  ))}
+                </div>
+              </div>
+            )
+          ) : !current.available ? (
+            <div className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+              {current.reason}
             </div>
           ) : (
-            <section id="result" aria-busy className="grid gap-3 sm:gap-4 scroll-mt-[72px]">
-              <div className="animate-pulse h-[188px] lg:h-[164px]" style={{ background: "var(--bg-elevated)", borderRadius: "var(--card-radius)" }} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-                {[0, 1].map((i) => (
-                  <div key={i} className="animate-pulse h-[420px]" style={{ background: "var(--bg-elevated)", borderRadius: "var(--card-radius)" }} />
-                ))}
-              </div>
-            </section>
-          )
-        ) : !current.available ? (
-          <div id="result" className="text-[13px]" style={{ color: "var(--text-faint)" }}>
-            {current.reason}
-          </div>
-        ) : (
-          <WalletResult
-            r={current}
-            data={overview}
-            tiers={derived.tiers}
-            cap={derived.cap}
-            energyOf={derived.energyOf}
-            roughly={derived.roughly}
-            rankBy={derived.rankBy}
-            go={go}
-            retry={retry}
-          />
-        ))}
+            (() => {
+              const props = {
+                r: current,
+                data: overview,
+                tiers: derived.tiers,
+                cap: derived.cap,
+                energyOf: derived.energyOf,
+                roughly: derived.roughly,
+                rankBy: derived.rankBy,
+                go,
+                retry,
+              };
+              return query.as === "squad" ? <SquadOnly {...props} /> : <WalletResult {...props} />;
+            })()
+          )}
+        </Popup>
+      )}
 
-      <Standings data={overview} tiers={derived.tiers} cap={derived.cap} rankBy={derived.rankBy} found={found} go={go} />
+      <Standings data={overview} tiers={derived.tiers} rankBy={derived.rankBy} found={wallet} go={go} />
 
       <details id="method" className="sq-note scroll-mt-[72px] px-1" open={noteOpen} onToggle={(e) => setNoteOpen(e.currentTarget.open)}>
         <summary className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
@@ -269,11 +286,11 @@ export function SquadsView() {
           <li>From public data, updated hourly. SoDEX shows the official figures only to a squad&apos;s members.</li>
           <li>Squad: a captain and every wallet that joined with their code.</li>
           <li>
-            Energy: the captain&apos;s and active members&apos; trading volume this week and the 3 before it (from Tuesday 12:00 UTC), $1 = 1. A member with a
-            squad of its own adds to that one instead.
+            Energy: the captain&apos;s and active members&apos; trading volume this week and the 3 before it (from Tuesday 12:00 UTC), $1 = 1. Members are those who
+            joined through the captain&apos;s current invite code.
           </li>
           <li>Active member: deposited $5 and traded.</li>
-          <li>Boosts from the squad you joined and the one you built add up to {plus(s?.maxBoost ?? 0.5)}; joining with a code adds +5%.</li>
+          <li>Boosts from the squad you joined and the one you built add up to {plus(s?.maxBoost ?? 0.5)}.</li>
           {overview.window.dataFrom > overview.window.from && (
             <li>
               Our trade records start {overview.window.dataFrom}
@@ -287,22 +304,27 @@ export function SquadsView() {
   );
 }
 
+/** The part of SoDEX's weekly pool (week/info's weekPoolPoints, 1M) shown as this week's SoPoints: 900K. */
+const TRADERS_SHARE = 0.9;
+/** "900K", "1.2M". */
+const points = (n: number) => (n >= 1e6 ? `${+(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${+(n / 1e3).toFixed(1)}K` : count(n));
+
 /** "Fri 30 Oct". */
 const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
-function SeasonCell({ icon, label, value, meter, caption }: { icon: React.ReactNode; label: string; value: React.ReactNode; meter?: React.ReactNode; caption?: string }) {
+function SeasonCell({ icon, label, value, meter, caption, green }: { icon: React.ReactNode; label: string; value: React.ReactNode; meter?: React.ReactNode; caption?: string; green?: "icon" | "value" }) {
   return (
     <div className="flex flex-col h-full min-w-0 px-4 sm:px-5 py-3.5 sm:py-4" style={{ background: "var(--bg-surface)" }}>
       <div className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color: "var(--text-muted)" }}>
-        <span style={{ color: "var(--text-faint)" }}>{icon}</span>
+        <span style={{ color: green ? "var(--green)" : "var(--text-faint)" }}>{icon}</span>
         {label}
       </div>
-      <div className="mt-1.5 text-[20px] sm:text-[22px] font-semibold leading-none tabular-nums" style={{ color: "var(--text)", letterSpacing: "-0.025em" }}>
+      <div className="mt-1.5 text-[20px] sm:text-[22px] font-semibold leading-none tabular-nums" style={{ color: green === "value" ? "var(--green)" : "var(--text)", letterSpacing: "-0.025em" }}>
         {value}
       </div>
       {meter && <div className="mt-2.5">{meter}</div>}
       {caption && (
-        <div className="mt-auto pt-2 text-[11.5px] truncate" style={{ color: "var(--text-muted)" }} title={caption}>
+        <div className="mt-auto pt-2 text-[11.5px] leading-snug sm:truncate" style={{ color: "var(--text-muted)" }} title={caption}>
           {caption}
         </div>
       )}

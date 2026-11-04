@@ -139,8 +139,9 @@ deposited and the squads follow.
   the window lies inside our records.
 - **The window** is SoDEX's: the current week and the 3 before it, from the
   Tuesday 12:00 UTC that began them (checked to the dollar against SoDEX's own
-  figures). A wallet's volume counts in one squad only: the one it built, once
-  anyone has joined it, otherwise the one it joined.
+  figures). Only invitees who joined through the captain's current code are
+  members: one who joined through an older code (a captain who later set a
+  custom one) keeps the boost but isn't listed and adds no Energy.
 - **The site's figures are estimates:** Energy is the captain's and counting
   members' volume over the last 4 weeks from `account_day`; a member counts
   once it has deposited $5 (ledger) and traded. The publisher writes them
