@@ -18,23 +18,31 @@ type NavLink = { kind: "link"; label: string; href: string; icon?: React.ReactNo
   ariaLabel?: string;
   /** Only on wide screens; narrower ones find it under More instead. */
   wideOnly?: boolean;
-  /** New and still settling: marked BETA. */
-  beta?: boolean };
+  /** A small mark beside the name: NEW for a fresh page, BETA for one still settling. */
+  tag?: NavTagLabel };
 
-/** The small outlined BETA mark beside a new page's name. */
-function BetaTag() {
+type NavTagLabel = "NEW" | "BETA";
+
+/** The small mark beside a page's name: NEW in a soft green, BETA outlined. */
+function NavTag({ label }: { label: NavTagLabel }) {
+  const fresh = label === "NEW";
   return (
     <span
-      className="text-[8px] font-bold px-1 py-[2px] leading-none shrink-0 rounded-[3px]"
-      style={{ color: "var(--accent)", border: "1px solid var(--accent)", letterSpacing: "0.05em" }}
+      className="inline-flex items-center justify-center h-[14px] px-[5px] text-[8px] font-bold leading-none shrink-0 rounded-[3px]"
+      style={{
+        color: fresh ? "var(--green)" : "var(--accent)",
+        background: fresh ? "var(--green-tint-med)" : undefined,
+        border: `1px solid ${fresh ? "var(--green-edge)" : "var(--accent)"}`,
+        letterSpacing: "0.05em",
+      }}
     >
-      BETA
+      {label}
     </span>
   );
 }
 type DropdownItem = { label: string; href: string; icon: React.ReactNode;
   /** Listed under More only where the top bar has no room for it. */
-  narrowOnly?: boolean; comingSoon?: boolean; beta?: boolean };
+  narrowOnly?: boolean; comingSoon?: boolean; tag?: NavTagLabel };
 type NavDropdown = { kind: "dropdown"; label: string; badge?: string; icon: React.ReactNode; items: DropdownItem[] };
 type NavItem = NavLink | NavDropdown;
 
@@ -45,7 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { kind: "link", label: "Portfolio", href: "/portfolio" },
   { kind: "link", label: "Leaderboard", href: "/leaderboard" },
   { kind: "link", label: "SoPoints", href: "/sopoints", icon: <Zap size={13} style={{ color: "var(--green)" }} />, wideOnly: true },
-  ...(SQUADS_LIVE ? [{ kind: "link", label: "Squads", href: "/squads", wideOnly: true } as NavItem] : []),
+  ...(SQUADS_LIVE ? [{ kind: "link", label: "Squads", href: "/squads", wideOnly: true, tag: "NEW" } as NavItem] : []),
   // "Search" becomes the glyph so the item stays on one line.
   { kind: "link", label: "Reverse", href: "/reverse-search", ariaLabel: "Reverse Search", iconAfter: <SearchX size={13} />, wideOnly: true },
   {
@@ -54,7 +62,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <MoreHorizontal size={13} />,
     items: [
       { label: "SoPoints", href: "/sopoints", icon: <Zap size={14} style={{ color: "var(--green)" }} />, narrowOnly: true },
-      ...(SQUADS_LIVE ? [{ label: "Squads", href: "/squads", icon: <Users size={14} />, narrowOnly: true }] : []),
+      ...(SQUADS_LIVE ? [{ label: "Squads", href: "/squads", icon: <Users size={14} />, narrowOnly: true, tag: "NEW" as const }] : []),
       { label: "Reverse Search", href: "/reverse-search", icon: <SearchX size={14} />, narrowOnly: true },
       {
         label: "Deep Analysis",
@@ -208,7 +216,7 @@ function NavDropdownMenu({
                 >
                   <span className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[8px]" style={{ color: "var(--accent)", background: "var(--bg-elevated)" }}>{child.icon}</span>
                   <span className="flex-1 min-w-0 text-[12.5px] font-medium" style={{ color: "var(--text)" }}>{child.label}</span>
-                  {child.beta && <BetaTag />}
+                  {child.tag && <NavTag label={child.tag} />}
                 </Link>
               );
             })}
@@ -250,14 +258,14 @@ function AnimatedBookmark({ size = 16 }: { size?: number }) {
 /* ── Mobile bottom nav items ── */
 
 /* ── All pages shown in the More sheet ── */
-type SheetPage = { label: string; href: string; icon: React.ElementType; iconColor?: string; comingSoon?: boolean; beta?: boolean };
+type SheetPage = { label: string; href: string; icon: React.ElementType; iconColor?: string; comingSoon?: boolean; tag?: NavTagLabel };
 const SHEET_PAGES: SheetPage[] = [
   { label: "Stats", href: "/", icon: BarChart3 },
   { label: "Tracker", href: "/tracker", icon: Search },
   { label: "Portfolio", href: "/portfolio", icon: Wallet },
   { label: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { label: "SoPoints", href: "/sopoints", icon: Zap, iconColor: "var(--green)" },
-  ...(SQUADS_LIVE ? [{ label: "Squads", href: "/squads", icon: Users }] : []),
+  ...(SQUADS_LIVE ? [{ label: "Squads", href: "/squads", icon: Users, tag: "NEW" as const }] : []),
   { label: "Trade History", href: "/trade-history", icon: History },
   { label: "Journal", href: "/journal", icon: BookOpen },
   { label: "Demo Trading", href: "/trade/BTC-USD", icon: PlayCircle },
@@ -496,7 +504,7 @@ export function Navbar() {
                     {item.icon}
                     {item.label}
                     {item.iconAfter}
-                    {item.beta && <BetaTag />}
+                    {item.tag && <NavTag label={item.tag} />}
                   </Link>
                 );
               }
@@ -678,7 +686,7 @@ export function Navbar() {
                     style={page.iconColor ? { color: page.iconColor } : undefined}
                   />
                   <span className="text-[13.5px] font-medium">{page.label}</span>
-                  {page.beta && <BetaTag />}
+                  {page.tag && <NavTag label={page.tag} />}
                 </Link>
               );
             })}
