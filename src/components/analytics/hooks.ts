@@ -9,6 +9,32 @@ import type { WindowKey, ExchangeAnalytics } from "@/lib/exchangeAnalytics";
 export const WINDOW_KEYS: WindowKey[] = ["7D", "30D", "90D", "1Y"];
 
 /**
+ * True once the element has come within `margin` of the screen, and from then
+ * on: panels further down a page wait for this before fetching, so the first
+ * load asks only for what's in view.
+ */
+export function useSeen(margin = "400px") {
+  const [el, setEl] = useState<Element | null>(null);
+  // Browsers without IntersectionObserver simply load everything at once.
+  const [seen, setSeen] = useState(() => typeof window !== "undefined" && !("IntersectionObserver" in window));
+  useEffect(() => {
+    if (seen || !el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: margin },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [el, seen, margin]);
+  return [setEl, seen] as const;
+}
+
+/**
  * True on phone-sized screens (under 640px, Tailwind's `sm`), for the few
  * places where a phone gets a different layout rather than a smaller one.
  * Always false on the server and the first paint, so hydration matches.

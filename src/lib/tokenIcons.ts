@@ -11,6 +11,8 @@
  * `getTokenIcon(raw)` accepts any of these and returns the icon URL, or null.
  */
 
+import { LOCAL_ICONS } from "@/lib/tokenIconsLocal";
+
 // Canonical key (lowercase base coin) → image URL.
 const ICONS: Record<string, string> = {
   btc: "https://static.sosovalue.com/sosponge/droplist/23/06/13/k5xwt0j0fw1z.png",
@@ -159,6 +161,8 @@ export function getTokenIcon(raw: string): string | null {
   const base = baseSymbol(raw);
   if (!base) return null;
   const key = ALIASES[base] ?? base;
+  // Our own 64×64 copy where we have one (a couple of KB, not the originals' up to 400 KB).
+  if (LOCAL_ICONS.has(key)) return `/tokens/${key}.webp`;
   return ICONS[key] ?? null;
 }
 

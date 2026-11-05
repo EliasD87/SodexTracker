@@ -11,7 +11,7 @@ import type { WealthTvl } from "@/lib/wealthTvl";
 import { GROUP, GROUPS as WEALTH_GROUPS, GroupTag, groupOf, ProductMark, productName } from "@/components/analytics/wealthMeta";
 import { MiniChart } from "@/components/analytics/MiniChart";
 import { TierBars } from "@/components/analytics/TierBars";
-import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics } from "@/components/analytics/hooks";
+import { useAnalyticsWindow, useApi, useCompact, useExchangeAnalytics, useSeen } from "@/components/analytics/hooks";
 import { GridSkeleton, useRowLimit } from "@/components/analytics/ui";
 import { BiasTag, DeltaPill, DetailsLink, Figure, Panel, PillTabs, SegmentMeter, SplitBar } from "@/components/analytics/kit";
 import { TokenIcon } from "@/components/TokenIcon";
@@ -793,18 +793,36 @@ export function OverviewView() {
         />
         <HighlightCard data={data} win={win} />
 
-        <PositioningCard />
-        <MoneyFlowCard win={win} />
-        <CalendarCard />
+        <Deferred span="lg:col-span-4" height={320}>
+          <PositioningCard />
+        </Deferred>
+        <Deferred span="lg:col-span-4" height={320}>
+          <MoneyFlowCard win={win} />
+        </Deferred>
+        <Deferred span="md:col-span-2 lg:col-span-4" height={320}>
+          <CalendarCard />
+        </Deferred>
 
         <MoversCard data={data} win={win} />
         <Panel title="Where the activity is" right={<DetailsLink href={`/analytics/markets?w=${win}`} />} className="lg:col-span-6">
           <TierBars data={data} bare />
         </Panel>
 
-        <WealthCard />
+        <Deferred span="lg:col-span-12" height={360}>
+          <WealthCard />
+        </Deferred>
       </div>
 
     </div>
   );
+}
+
+/**
+ * A panel further down the page: a quiet placeholder of its size until it
+ * nears the screen, then the panel itself, which only then fetches its data.
+ */
+export function Deferred({ span, height, children }: { span: string; height: number; children: React.ReactNode }) {
+  const [ref, seen] = useSeen();
+  if (seen) return <>{children}</>;
+  return <div ref={ref} aria-hidden className={span} style={{ height, borderRadius: "var(--card-radius)", background: "var(--bg-elevated)", opacity: 0.5 }} />;
 }
