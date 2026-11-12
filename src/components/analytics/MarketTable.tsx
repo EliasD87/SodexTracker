@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Search } from "lucide-react";
-import type { MarketRow, Tier, WindowKey } from "@/lib/exchangeAnalytics";
+import type { MarketRow, Tier } from "@/lib/exchangeAnalytics";
+import type { PickWindow } from "@/components/analytics/hooks";
 import { growth, marketSlug, pct, signedPct, usd } from "@/lib/analyticsFormat";
 import { KindBadge, TIER_COLOR, TIER_LABEL, TierBadge, useRowLimit } from "@/components/analytics/ui";
 import { biasLabel, CARD_STYLE } from "@/components/analytics/kit";
@@ -13,6 +14,7 @@ export type SortKey =
   | "volume"
   | "share"
   | "volumeChange"
+  | "change24h"
   | "tradersPerDay"
   | "tradesPerTrader"
   | "avgTrade"
@@ -66,6 +68,13 @@ const COLUMNS: Record<SortKey, Column> = {
     title: "Volume vs the previous window of equal length",
     render: (m) => (m.volumeChange == null ? "—" : growth(m.volumeChange)),
     sign: (m) => m.volumeChange,
+  },
+  change24h: {
+    key: "change24h",
+    label: "Price 24h",
+    title: "Price change over the last 24 hours",
+    render: (m) => (m.change24h == null ? "—" : signedPct(m.change24h, 2)),
+    sign: (m) => m.change24h ?? null,
   },
   tradersPerDay: {
     key: "tradersPerDay",
@@ -167,7 +176,7 @@ export function MarketTable({
   phoneColumns,
 }: {
   markets: MarketRow[];
-  win: WindowKey;
+  win: PickWindow;
   columns?: SortKey[];
   initialSort?: SortKey;
   /** Show only perps or spot, without the kind filter. */

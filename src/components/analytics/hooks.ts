@@ -9,6 +9,13 @@ import type { WindowKey, ExchangeAnalytics } from "@/lib/exchangeAnalytics";
 export const WINDOW_KEYS: WindowKey[] = ["7D", "30D", "90D", "1Y"];
 
 /**
+ * The daily windows plus 24H: the rolling last day, live from SoDEX's tickers.
+ * Only the Markets table offers it; every other view counts complete days, so
+ * there "24H" in the link reads as the default.
+ */
+export type PickWindow = WindowKey | "24H";
+
+/**
  * True once the element has come within `margin` of the screen, and from then
  * on: panels further down a page wait for this before fetching, so the first
  * load asks only for what's in view.
@@ -56,15 +63,17 @@ export function useCompact(maxWidth = 639): boolean {
  * The window lives in the URL (?w=30D), so it survives switching tabs, opening
  * a market and sharing a link.
  */
-export function useAnalyticsWindow(): [WindowKey, (w: WindowKey) => void] {
+export function useAnalyticsWindow(): [WindowKey, (w: PickWindow) => void];
+export function useAnalyticsWindow(allowDay: true): [PickWindow, (w: PickWindow) => void];
+export function useAnalyticsWindow(allowDay = false): [PickWindow, (w: PickWindow) => void] {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const raw = params.get("w") ?? "30D";
-  const win: WindowKey = (WINDOW_KEYS as string[]).includes(raw) ? (raw as WindowKey) : "30D";
+  const win: PickWindow = allowDay && raw === "24H" ? "24H" : (WINDOW_KEYS as string[]).includes(raw) ? (raw as WindowKey) : "30D";
 
   const setWin = useCallback(
-    (w: WindowKey) => {
+    (w: PickWindow) => {
       const next = new URLSearchParams(params.toString());
       next.set("w", w);
       router.replace(`${pathname}?${next}`, { scroll: false });

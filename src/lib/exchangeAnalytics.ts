@@ -199,6 +199,8 @@ export interface MarketRow {
    * them, and the whales' lean (−1 all short, +1 all long).
    */
   longShare?: number | null;
+  /** The 24H view only: price change over the last 24 hours. */
+  change24h?: number | null;
   whaleShare?: number | null;
   whaleBias?: number | null;
 }

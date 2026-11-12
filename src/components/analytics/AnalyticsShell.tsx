@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Search } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { useAnalyticsWindow, useApi, useExchangeAnalytics, WINDOW_KEYS } from "@/components/analytics/hooks";
+import { useAnalyticsWindow, useApi, useExchangeAnalytics, WINDOW_KEYS, type PickWindow } from "@/components/analytics/hooks";
 import type { HealthStatus } from "@/lib/liveStore";
 
 const TABS = [
@@ -56,10 +56,14 @@ function AddressSearch() {
  */
 export function AnalyticsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [win, setWin] = useAnalyticsWindow();
+  // The Markets table alone can show the rolling last 24 hours.
+  const dayOk = pathname === "/analytics/markets";
+  const keys: PickWindow[] = dayOk ? ["24H", ...WINDOW_KEYS] : WINDOW_KEYS;
+  const [picked, setWin] = useAnalyticsWindow(true);
+  const win: PickWindow = picked === "24H" && !dayOk ? "30D" : picked;
   const live = LIVE_PATHS.some((p) => pathname.startsWith(p));
   // Every tab reads this same cached response, so it costs nothing extra here.
-  const { data } = useExchangeAnalytics(win);
+  const { data } = useExchangeAnalytics(win === "24H" ? "30D" : win);
   // Whether the live figures are current (SoDEX maintenance, collector down).
   const health = useApi<{ status: HealthStatus }>("/api/analytics/health", 30_000, 60_000).data?.status;
 
@@ -106,11 +110,19 @@ export function AnalyticsShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-0.5 sm:gap-1 h-9 p-[3px] rounded-[10px] shrink-0 transition-opacity"
             role="group"
             aria-label="Time window"
-            title={live ? "This view is live; the window applies to the other tabs" : through ? `Complete UTC days through ${through}` : undefined}
+            title={
+              live
+                ? "This view is live; the window applies to the other tabs"
+                : win === "24H"
+                  ? "The rolling last 24 hours, live"
+                  : through
+                    ? `Complete UTC days through ${through}`
+                    : undefined
+            }
             style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", opacity: live ? 0.45 : 1 }}
           >
             <CalendarDays size={14} className="hidden sm:block mx-1.5 shrink-0" style={{ color: "var(--text-faint)" }} aria-hidden />
-            {WINDOW_KEYS.map((k) => (
+            {keys.map((k) => (
               <button
                 key={k}
                 aria-pressed={win === k}
@@ -162,7 +174,7 @@ export function AnalyticsShell({ children }: { children: React.ReactNode }) {
               return (
                 <Link
                   key={t.href}
-                  href={`${t.href}?w=${win}`}
+                  href={`${t.href}?w=${win === "24H" && t.href !== "/analytics/markets" ? "30D" : win}`}
                   scroll={false}
                   aria-current={active ? "page" : undefined}
                   className="shrink-0 sm:shrink sm:flex-1 flex items-center justify-center gap-1.5 px-3 h-8 sm:h-9 rounded-[10px] text-[12.5px] sm:text-[13px] font-medium whitespace-nowrap transition-colors"

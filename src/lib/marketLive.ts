@@ -170,3 +170,59 @@ export async function getLiveMarket(symbol: string): Promise<LiveMarket | null> 
     takerFee: meta.takerFee,
   };
 }
+
+/** One market's last 24 hours, rolling, from SoDEX's live tickers. */
+export interface Market24h {
+  symbol: string;
+  kind: "perp" | "spot";
+  volume: number;
+  change24h: number | null;
+  openInterestUsd: number | null;
+  fundingAnnual: number | null;
+  /** Volume × standard maker + taker rate: an upper bound, as on the longer windows. */
+  fees: number | null;
+}
+
+interface RawTickerRow extends RawTicker {
+  symbol?: string;
+  closeTime?: number;
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Every market's rolling 24 hours, in two calls (one per engine, weight 2
+ * each). A market with no trade for a day keeps reporting its last day's
+ * figures, so a ticker that closed over a day ago counts as zero volume.
+ */
+export async function getMarkets24h(): Promise<{ asOf: number; markets: Market24h[] }> {
+  const meta = await getSymbolMeta();
+  const byApi = new Map([...meta.values()].map((m) => [`${m.kind}:${m.apiName}`, m]));
+  const now = Date.now();
+  const engines = await Promise.all(
+    (["perps", "spot"] as const).map(async (engine) => ({ engine, rows: (await gw<RawTickerRow[]>(`/${engine}/markets/tickers`)) ?? [] })),
+  );
+  const markets: Market24h[] = [];
+  for (const { engine, rows } of engines) {
+    const kind = engine === "perps" ? "perp" : "spot";
+    for (const t of rows) {
+      const m = byApi.get(`${kind}:${t.symbol}`);
+      if (!m) continue;
+      const fresh = t.closeTime == null || now - t.closeTime < DAY;
+      const volume = fresh ? (num(t.quoteVolume) ?? 0) : 0;
+      const mark = num(t.markPrice);
+      const oiBase = num(t.openInterest);
+      const hourly = num(t.fundingRate);
+      markets.push({
+        symbol: m.symbol,
+        kind,
+        volume,
+        change24h: fresh && t.changePct != null ? t.changePct / 100 : null,
+        openInterestUsd: kind === "perp" && oiBase != null && mark ? oiBase * mark : null,
+        fundingAnnual: kind === "perp" && hourly != null ? hourly * 24 * 365 : null,
+        fees: m.makerFee || m.takerFee ? volume * (m.makerFee + m.takerFee) : null,
+      });
+    }
+  }
+  return { asOf: now, markets };
+}
