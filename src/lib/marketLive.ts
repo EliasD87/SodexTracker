@@ -191,24 +191,41 @@ interface RawTickerRow extends RawTicker {
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
+ * All of one engine's tickers, fresh every time: a copy held in the server's
+ * fetch cache can be days old when the page hasn't been opened for a while.
+ * The route's own CDN cache (30 s) keeps this to a couple of calls a minute.
+ */
+async function tickersNow(engine: "perps" | "spot"): Promise<{ at: number; rows: RawTickerRow[] }> {
+  try {
+    const res = await fetch(`${GW}/${engine}/markets/tickers`, { headers: { Accept: "application/json" }, cache: "no-store" });
+    if (!res.ok) return { at: Date.now(), rows: [] };
+    const json = await res.json();
+    return json?.code === 0 && Array.isArray(json.data)
+      ? { at: typeof json.timestamp === "number" ? json.timestamp : Date.now(), rows: json.data }
+      : { at: Date.now(), rows: [] };
+  } catch {
+    return { at: Date.now(), rows: [] };
+  }
+}
+
+/**
  * Every market's rolling 24 hours, in two calls (one per engine, weight 2
  * each). A market with no trade for a day keeps reporting its last day's
- * figures, so a ticker that closed over a day ago counts as zero volume.
+ * figures, so a ticker that closed over a day before SoDEX's reply counts as
+ * zero volume.
  */
 export async function getMarkets24h(): Promise<{ asOf: number; markets: Market24h[] }> {
   const meta = await getSymbolMeta();
   const byApi = new Map([...meta.values()].map((m) => [`${m.kind}:${m.apiName}`, m]));
   const now = Date.now();
-  const engines = await Promise.all(
-    (["perps", "spot"] as const).map(async (engine) => ({ engine, rows: (await gw<RawTickerRow[]>(`/${engine}/markets/tickers`)) ?? [] })),
-  );
+  const engines = await Promise.all((["perps", "spot"] as const).map(async (engine) => ({ engine, ...(await tickersNow(engine)) })));
   const markets: Market24h[] = [];
-  for (const { engine, rows } of engines) {
+  for (const { engine, at, rows } of engines) {
     const kind = engine === "perps" ? "perp" : "spot";
     for (const t of rows) {
       const m = byApi.get(`${kind}:${t.symbol}`);
       if (!m) continue;
-      const fresh = t.closeTime == null || now - t.closeTime < DAY;
+      const fresh = t.closeTime == null || at - t.closeTime < DAY;
       const volume = fresh ? (num(t.quoteVolume) ?? 0) : 0;
       const mark = num(t.markPrice);
       const oiBase = num(t.openInterest);
