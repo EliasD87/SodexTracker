@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowUpRight, Check, Copy, Flame, Layers, Star } from "lucide-react";
+import { Check, Copy, Flame, Layers, Star } from "lucide-react";
 import { usd } from "@/lib/analyticsFormat";
 import type { Watchlist } from "@/components/watchlist/useWatchlist";
 import type { LbWindow } from "@/components/leaderboard/data";
@@ -74,51 +73,6 @@ export function WatchStar({ wl, address, size = 15 }: { wl: Watchlist; address: 
   );
 }
 
-/** Open the wallet in Tracker. */
-export function TrackLink({ address, label = false }: { address: string; label?: boolean }) {
-  return (
-    <Link
-      href={trackHref(address)}
-      onClick={(e) => e.stopPropagation()}
-      aria-label="Open in Tracker"
-      title="Open in Tracker"
-      className={`inline-flex items-center justify-center gap-1 h-8 rounded-[9px] text-[12px] font-medium transition-colors hover:bg-[var(--bg-elevated)] ${label ? "px-3" : "w-8"}`}
-      style={{ color: label ? "var(--text)" : "var(--text-faint)", border: label ? "1px solid var(--border)" : undefined }}
-    >
-      {label && "Track"}
-      <ArrowUpRight size={14} />
-    </Link>
-  );
-}
-
-/** A PnL curve drawn to whatever box it sits in: green above where it started, red below. */
-export function Spark({ values, height = 44, color }: { values: number[]; height?: number; color?: string }) {
-  if (values.length < 2) return <div style={{ height }} />;
-  const base = values[0];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const y = (v: number) => 2 + (1 - (v - min) / span) * 36;
-  const x = (i: number) => (i / (values.length - 1)) * 100;
-  const line = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(2)},${y(v).toFixed(2)}`).join("");
-  const end = values[values.length - 1];
-  const c = color ?? (end >= base ? "var(--green)" : "var(--red)");
-  const id = `sp${Math.round(Math.abs(base + end + values.length) * 1000) % 1e9}`;
-  return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full block" style={{ height }} aria-hidden>
-      <defs>
-        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor={c} stopOpacity="0.28" />
-          <stop offset="1" stopColor={c} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`${line}L100,40L0,40Z`} fill={`url(#${id})`} />
-      <path d={line} fill="none" stroke={c} strokeWidth={1.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** A quiet copy glyph beside an address. */
 export function CopyAddr({ address }: { address: string }) {
   const [done, setDone] = useState(false);
   return (

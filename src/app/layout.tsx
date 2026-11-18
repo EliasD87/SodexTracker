@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { PortfolioProvider } from "@/components/PortfolioProvider";
 import { WalletProvider } from "@/components/WalletProvider";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SodextraStrip } from "@/components/sodextra/SodextraStrip";
 import { Analytics } from "@vercel/analytics/next";
 
 const plexSans = IBM_Plex_Sans({
@@ -46,6 +47,7 @@ export default function RootLayout({
         <ThemeProvider>
           <WalletProvider>
             <PortfolioProvider>
+              <SodextraStrip />
               {children}
               <SiteFooter />
             </PortfolioProvider>
